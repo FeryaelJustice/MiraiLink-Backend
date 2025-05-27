@@ -1,2 +1,0 @@
-# MiraiLink-Backend
-MiraiLink Backend
