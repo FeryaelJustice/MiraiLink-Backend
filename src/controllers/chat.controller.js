@@ -244,7 +244,6 @@ export const sendMessage = async (req, res, next) => {
 export const getChatHistory = async (req, res, next) => {
     const userId = req.user.id;
     const otherUserId = req.params.userId;
-    console.log(`Fetching chat history between user ${userId} and user ${otherUserId}`);
 
     try {
         const chatQuery = `
@@ -259,18 +258,62 @@ export const getChatHistory = async (req, res, next) => {
         }
 
         const chatId = chatRes.rows[0].id;
-        const messages = await db.query(
-            `SELECT m.id, m.sender_id, m.text, m.sent_at, u.username, p.url as avatar_url
-            FROM messages m
-            JOIN users u ON u.id = m.sender_id
-            LEFT JOIN user_photos p ON p.user_id = u.id AND p.position = 1
-            WHERE m.chat_id = $1
-            ORDER BY m.sent_at ASC`,
-            [chatId]
-        );
 
-        res.status(200).json(messages.rows);
+        const messagesQuery = `
+            SELECT
+                m.id, m.text AS content, m.sent_at AS timestamp,
+                sender.id AS sender_id, sender.username AS sender_username, sender.email AS sender_email, sender.gender AS sender_gender, sender.birthdate AS sender_birthdate, p1.url AS sender_avatar_url,
+                receiver.id AS receiver_id, receiver.username AS receiver_username, receiver.email AS receiver_email, receiver.gender AS receiver_gender, receiver.birthdate AS receiver_birthdate, p2.url AS receiver_avatar_url
+            FROM messages m
+            JOIN users sender ON sender.id = m.sender_id
+            JOIN users receiver ON receiver.id = CASE
+                WHEN m.sender_id = $1 THEN $2 ELSE $1
+            END
+            LEFT JOIN user_photos p1 ON p1.user_id = sender.id AND p1.position = 1
+            LEFT JOIN user_photos p2 ON p2.user_id = receiver.id AND p2.position = 1
+            WHERE m.chat_id = $3
+            ORDER BY m.sent_at ASC
+        `;
+
+        const { rows } = await db.query(messagesQuery, [userId, otherUserId, chatId]);
+
+        const formattedMessages = rows.map(row => ({
+            id: row.id,
+            content: row.content,
+            timestamp: new Date(row.timestamp).getTime(),
+
+            sender: formatUserDto({
+                id: row.sender_id,
+                username: row.sender_username,
+                email: row.sender_email,
+                gender: row.sender_gender,
+                birthdate: row.sender_birthdate,
+                avatar_url: row.sender_avatar_url
+            }),
+
+            receiver: formatUserDto({
+                id: row.receiver_id,
+                username: row.receiver_username,
+                email: row.receiver_email,
+                gender: row.receiver_gender,
+                birthdate: row.receiver_birthdate,
+                avatar_url: row.receiver_avatar_url
+            }),
+        }));
+
+        res.status(200).json(formattedMessages);
     } catch (err) {
         next(err);
     }
 };
+
+function formatUserDto(user) {
+    return {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        gender: user.gender,
+        birthdate: user.birthdate,
+        profile_photo: user.avatar_url || null
+    };
+}

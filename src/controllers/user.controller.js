@@ -14,9 +14,7 @@ export const getProfile = async (req, res, next) => {
 
 export const getProfileFromId = async (req, res, next) => {
     try {
-        console.log('Fetching profile for user ID:', req.body.id);
         const { id } = req.body;
-        console.log('Fetching profile for user ID:', id);
         const usersResult = await db.query('SELECT * FROM users WHERE is_deleted = false AND id = $1', [id]);
         const user = usersResult.rows[0];
 
