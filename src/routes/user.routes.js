@@ -8,7 +8,7 @@ const router = express.Router();
 router.get('', authenticateToken(), getProfile);
 router.get('/byToken', authenticateToken(), getUserIdByToken);
 router.post('/byEmailPassword', getUserIdByEmailAndPassword);
-router.post('byId', authenticateToken(), getProfileFromId);
+router.post('/byId', authenticateToken(), getProfileFromId);
 router.put('', authenticateToken(), updateProfile);
 
 export default router;
