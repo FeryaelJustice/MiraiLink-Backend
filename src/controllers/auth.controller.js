@@ -115,7 +115,7 @@ export const confirmPasswordReset = async (req, res, next) => {
         if (tokenResult.rowCount === 0) return res.status(400).json({ message: 'Código inválido' });
 
         const result = tokenResult.rows[0];
-        if (result.expires_at < now) return res.status(400).json({ message: 'Código expirado' });
+        if (result.expires_at < now.toISOString()) return res.status(400).json({ message: 'Código expirado' });
 
         const salt = await genSalt(process.env.SALT_ROUNDS || 6);
         const hashedPassword = await bcrypt.hash(newPassword, salt);
@@ -180,7 +180,7 @@ export const confirmVerificationCode = async (req, res, next) => {
         if (results.rowCount === 0) return res.status(400).json({ message: 'Código inválido' });
 
         const result = results.rows[0];
-        if (result.expires_at < now) return res.status(400).json({ message: 'Código expirado' });
+        if (result.expires_at < now.toISOString()) return res.status(400).json({ message: 'Código expirado' });
 
         await db.query(`
         UPDATE users SET is_verified = true WHERE id = $1

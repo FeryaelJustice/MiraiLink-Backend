@@ -1,5 +1,5 @@
 import db from '../models/db.js';
-
+import { v4 as uuidv4 } from 'uuid';
 
 export const getChatsFromUser = async (req, res, next) => {
     try {
@@ -201,6 +201,75 @@ export const markMessagesRead = async (req, res, next) => {
         `, [chatId, userId]);
 
         res.status(200).json({ message: 'Marked as read' });
+    } catch (err) {
+        next(err);
+    }
+};
+
+export const sendMessage = async (req, res, next) => {
+    const userId = req.user.id;
+    const { toUserId, text } = req.body;
+
+    try {
+        // Verifica si ya existe un chat privado entre ambos
+        const chatCheckQuery = `
+            SELECT c.id FROM chats c
+            JOIN chat_members cm1 ON cm1.chat_id = c.id AND cm1.user_id = $1
+            JOIN chat_members cm2 ON cm2.chat_id = c.id AND cm2.user_id = $2
+            WHERE c.type = 'private';
+        `;
+        const existing = await db.query(chatCheckQuery, [userId, toUserId]);
+
+        let chatId;
+        if (existing.rows.length > 0) {
+            chatId = existing.rows[0].id;
+        } else {
+            // Crear nuevo chat privado
+            chatId = uuidv4();
+            await db.query('INSERT INTO chats (id, type, created_by) VALUES ($1, $2, $3)', [chatId, 'private', userId]);
+            await db.query('INSERT INTO chat_members (chat_id, user_id) VALUES ($1, $2), ($1, $3)', [chatId, userId, toUserId]);
+        }
+
+        await db.query(
+            'INSERT INTO messages (chat_id, sender_id, text) VALUES ($1, $2, $3)',
+            [chatId, userId, text]
+        );
+
+        res.status(201).json({ message: 'Mensaje enviado', chatId });
+    } catch (err) {
+        next(err);
+    }
+};
+
+export const getChatHistory = async (req, res, next) => {
+    const userId = req.user.id;
+    const otherUserId = req.params.userId;
+    console.log(`Fetching chat history between user ${userId} and user ${otherUserId}`);
+
+    try {
+        const chatQuery = `
+            SELECT c.id FROM chats c
+            JOIN chat_members cm1 ON cm1.chat_id = c.id AND cm1.user_id = $1
+            JOIN chat_members cm2 ON cm2.chat_id = c.id AND cm2.user_id = $2
+            WHERE c.type = 'private';
+        `;
+        const chatRes = await db.query(chatQuery, [userId, otherUserId]);
+        if (chatRes.rows.length === 0) {
+            return res.status(200).json([]);
+        }
+
+        const chatId = chatRes.rows[0].id;
+        const messages = await db.query(
+            `SELECT m.id, m.sender_id, m.text, m.sent_at, u.username, p.url as avatar_url
+            FROM messages m
+            JOIN users u ON u.id = m.sender_id
+            LEFT JOIN user_photos p ON p.user_id = u.id AND p.position = 1
+            WHERE m.chat_id = $1
+            ORDER BY m.sent_at ASC`,
+            [chatId]
+        );
+
+        res.status(200).json(messages.rows);
     } catch (err) {
         next(err);
     }
