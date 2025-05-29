@@ -6,8 +6,8 @@ import { authenticateToken } from '../middleware/auth.middleware.js';
 const router = express.Router();
 
 router.get('', authenticateToken(), getProfile);
-router.get('byToken', authenticateToken(), getUserIdByToken);
-router.post('byEmailPassword', getUserIdByEmailAndPassword);
+router.get('/byToken', authenticateToken(), getUserIdByToken);
+router.post('/byEmailPassword', getUserIdByEmailAndPassword);
 router.post('byId', authenticateToken(), getProfileFromId);
 router.put('', authenticateToken(), updateProfile);
 
