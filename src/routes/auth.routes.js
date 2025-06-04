@@ -1,11 +1,12 @@
 import express from 'express';
-import { register, login, logout, requestPasswordReset, confirmPasswordReset, requestVerificationCode, confirmVerificationCode } from '../controllers/auth.controller.js';
+import { register, login, logout, autoLogin, requestPasswordReset, confirmPasswordReset, requestVerificationCode, confirmVerificationCode } from '../controllers/auth.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
 
 router.post('/register', register);
 router.post('/login', login);
+router.post("/autologin", authenticateToken(), autoLogin);
 router.post("/logout", authenticateToken(true), logout)
 
 // Password reset

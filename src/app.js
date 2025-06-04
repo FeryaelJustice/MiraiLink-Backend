@@ -15,7 +15,6 @@ import matchRoutes from './routes/match.routes.js';
 import chatRoutes from './routes/chat.routes.js';
 import { errorHandler } from './middleware/error.middleware.js';
 import { setupSocketIO } from './sockets/socketHandler.js';
-import { authenticateToken } from './middleware/auth.middleware.js';
 
 const API_PREFIX = '/api';
 
@@ -41,13 +40,12 @@ app.use(express.json());
 // Compression middleware
 app.use(compression());
 
-// Upload directory for mediac
+// Upload directories for media
 app.use("/static", express.static(join(__dirname + '/public')));
 app.use("/assets", express.static(join(__dirname, '/assets')));
 
 // Routes
 app.get('/', (req, res) => res.send('Hello, World!'));
-app.post(API_PREFIX + "/testAuth", authenticateToken, (req, res) => { res.status(200).json({ message: 'Autenticado correctamente' }) })
 app.use(API_PREFIX + '/auth', authRoutes);
 app.use(API_PREFIX + '/user', userRoutes);
 app.use(API_PREFIX + '/user/photos', userPhotoRoutes);
@@ -59,9 +57,9 @@ app.use(API_PREFIX + '/chats', chatRoutes);
 // Error middleware al final
 app.use(errorHandler);
 
-// Chat y cosas que usen sockets
-const server = http.createServer(app);
-setupSocketIO(server); // ⬅️ conectar sockets aquí
+// Chat y cosas que usen sockets (a futuro tal vez)
+// const server = http.createServer(app);
+// setupSocketIO(server); // ⬅️ conectar sockets aquí
 
 // Start the server
 const PORT = process.env.PORT || 3000;

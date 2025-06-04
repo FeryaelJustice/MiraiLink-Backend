@@ -1,19 +1,27 @@
 import fs from 'fs';
 import path from 'path';
 import db from '../models/db.js';
-import { UPLOAD_DIR_STRING, UPLOAD_DIR_IMG_STRING, UPLOAD_DIR_PROFILES_STRING } from '../consts/photosConsts.js';
+import { UPLOAD_DIR_PROFILES_STRING } from '../consts/photosConsts.js';
 
-const UPLOAD_DIR = path.resolve(UPLOAD_DIR_STRING);
 const UPLOAD_DIR_PROFILES = path.resolve(UPLOAD_DIR_PROFILES_STRING);
 
 export const uploadPhoto = async (req, res, next) => {
     try {
         const userId = req.user.id;
         const file = req.file;
+        const position = parseInt(req.body.position) || null;
+
         if (!file) return res.status(400).json({ message: 'No file uploaded' });
 
-        const date = Date.now()
-        const fileUrl = `${UPLOAD_DIR_PROFILES_STRING}${date}${file.filename}`;
+        // Si se quiere establecer como foto de perfil
+        if (position === 1) {
+            // Elimina o desmarca la antigua con posición 1
+            await db.query(`
+                DELETE FROM user_photos WHERE user_id = $1 AND position = 1
+            `, [userId]);
+        }
+
+        const fileUrl = `${UPLOAD_DIR_PROFILES_STRING}/${userId}/${file.filename}`;
 
         // Verifica cuántas fotos tiene el usuario
         const result = await db.query('SELECT COUNT(*) FROM user_photos WHERE user_id = $1', [userId]);
@@ -22,8 +30,8 @@ export const uploadPhoto = async (req, res, next) => {
         if (count >= 4) return res.status(400).json({ message: 'Maximum 4 photos allowed' });
 
         await db.query(
-            'INSERT INTO user_photos (user_id, url, position) VALUES ($1, $2, $3, $4)',
-            [userId, fileUrl, count + 1]
+            'INSERT INTO user_photos (user_id, url, position) VALUES ($1, $2, $3)',
+            [userId, fileUrl, position ?? count + 1]
         );
 
         res.status(201).json({ url: fileUrl });

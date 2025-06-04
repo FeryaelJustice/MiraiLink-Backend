@@ -26,6 +26,11 @@ export const register = async (req, res, next) => {
         const result = await db.query('SELECT * FROM users WHERE username = $1 OR email = $2', [username, email]);
         const user = result.rows[0];
 
+        // Verificar si el usuario tiene foto de perfil
+        if (!(await hasProfilePicture(user.id))) {
+            return res.status(403).json({ message: "Profile picture required", code: "PHOTO_REQUIRED" });
+        }
+
         const token = jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET, {
             expiresIn: '24h',
         });
@@ -44,6 +49,11 @@ export const login = async (req, res, next) => {
 
         if (!user || !(await bcrypt.compare(password, user.password_hash))) {
             return res.status(401).json({ message: 'Invalid credentials' });
+        }
+
+        // Verificar si el usuario tiene foto de perfil
+        if (!(await hasProfilePicture(user.id))) {
+            return res.status(403).json({ message: "Profile picture required", code: "PHOTO_REQUIRED" });
         }
 
         const token = jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET, {
@@ -69,6 +79,15 @@ export const logout = async (req, res, next) => {
         }
 
         res.status(200).json({ message: 'Logged out successfully' });
+    } catch (err) {
+        next(err);
+    }
+}
+
+export const autoLogin = async (req, res, next) => {
+    try {
+        const userId = req.user.id;
+        res.status(200).json({ userId: userId, message: 'Autenticado correctamente' });
     } catch (err) {
         next(err);
     }
@@ -195,3 +214,13 @@ export const confirmVerificationCode = async (req, res, next) => {
         next(err);
     }
 }
+
+const hasProfilePicture = async (userId) => {
+    const result = await db.query(`
+        SELECT 1 FROM user_photos
+        WHERE user_id = $1 AND position = 1
+        LIMIT 1
+    `, [userId]);
+
+    return result.rows.length > 0;
+};
