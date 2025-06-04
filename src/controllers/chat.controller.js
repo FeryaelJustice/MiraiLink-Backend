@@ -22,7 +22,7 @@ export const getChatsFromUser = async (req, res, next) => {
                 SELECT COUNT(*) FROM messages m2
                 WHERE m2.chat_id = c.id
                     AND m2.sender_id != $1
-                    AND m2.is_read = false
+                    AND m2.sent_at > cm.last_read_at
             ) AS unread_count
         FROM chat_members cm
         JOIN chats c ON cm.chat_id = c.id
@@ -107,18 +107,20 @@ export const createPrivateChat = async (req, res, next) => {
 
         // Verificar si ya existe un chat privado entre ambos
         const existing = await db.query(`
-            SELECT c.id FROM chats c
-            JOIN chat_members cm1 ON c.id = cm1.chat_id
-            JOIN chat_members cm2 ON c.id = cm2.chat_id
-            WHERE c.type = 'private'
-                AND cm1.user_id = $1
-                AND cm2.user_id = $2
-            GROUP BY c.id
-            HAVING COUNT(*) = 2
-        `, [userId, otherUserId]);
+        SELECT c.id FROM chats c
+        JOIN chat_members cm ON c.id = cm.chat_id
+        WHERE c.type = 'private'
+        AND cm.user_id = ANY($1::uuid[])
+        GROUP BY c.id
+        HAVING COUNT(*) = 2
+        `, [[userId, otherUserId]]);
 
         if (existing.rows.length > 0) {
-            return res.status(200).json({ chatId: existing.rows[0].id, message: 'Chat ya existente' });
+            return res.status(400).json({ chatId: existing.rows[0].id, message: 'Chat ya existente' });
+        }
+
+        if (!userId || !otherUserId) {
+            return res.status(400).json({ message: 'Faltan IDs de usuario' });
         }
 
         // Crear nuevo chat
@@ -134,7 +136,7 @@ export const createPrivateChat = async (req, res, next) => {
         await db.query(`
             INSERT INTO chat_members (chat_id, user_id, role)
             VALUES
-            ($1, $2, 'member'),
+            ($1, $2, 'admin'),
             ($1, $3, 'member')
         `, [chatId, userId, otherUserId]);
 
@@ -149,6 +151,29 @@ export const createGroupChat = async (req, res, next) => {
         const { name, userIds } = req.body;
         const createdBy = req.user.id;
 
+        const totalMembers = [...userIds, createdBy].sort(); // todos los miembros
+
+        // Buscar si ya existe un grupo con mismo nombre y mismos usuarios
+        const existing = await db.query(`
+            SELECT c.id FROM chats c
+            WHERE c.type = 'group' AND c.name = $1
+        `, [name]);
+
+        for (const row of existing.rows) {
+            const membersRes = await db.query(`
+                SELECT user_id FROM chat_members
+                WHERE chat_id = $1
+                ORDER BY user_id
+            `, [row.id]);
+
+            const existingMembers = membersRes.rows.map(r => r.user_id).sort();
+
+            if (JSON.stringify(existingMembers) === JSON.stringify(totalMembers)) {
+                return res.status(200).json({ chatId: row.id, message: 'Grupo ya existente' });
+            }
+        }
+
+        // Si no existe, crearlo
         const result = await db.query(`
             INSERT INTO chats (type, name, created_by)
             VALUES ('group', $1, $2)
@@ -156,6 +181,7 @@ export const createGroupChat = async (req, res, next) => {
         `, [name, createdBy]);
 
         const chatId = result.rows[0].id;
+
         await db.query(`
             INSERT INTO chat_members (chat_id, user_id, role)
             VALUES ($1, $2, 'admin')`, [chatId, createdBy]);
@@ -166,7 +192,7 @@ export const createGroupChat = async (req, res, next) => {
                 VALUES ($1, $2)`, [chatId, uid]);
         }
 
-        res.status(201).json({ chatId });
+        res.status(201).json({ chatId, message: 'Grupo creado' });
     } catch (err) {
         next(err);
     }
@@ -189,18 +215,16 @@ export const getChatMembers = async (req, res, next) => {
     }
 };
 
-export const markMessagesRead = async (req, res, next) => {
+export const markChatAsRead = async (req, res, next) => {
+    const userId = req.user.id;
+    const chatId = req.params.chatId;
+
     try {
-        const { chatId } = req.params;
-        const userId = req.user.id;
-
-        await db.query(`
-            UPDATE messages
-            SET is_read = true
-            WHERE chat_id = $1 AND sender_id != $2
-        `, [chatId, userId]);
-
-        res.status(200).json({ message: 'Marked as read' });
+        await db.query(
+            `UPDATE chat_members SET last_read_at = now() WHERE user_id = $1 AND chat_id = $2`,
+            [userId, chatId]
+        );
+        res.status(200).json({ success: true });
     } catch (err) {
         next(err);
     }

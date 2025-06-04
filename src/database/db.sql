@@ -132,6 +132,8 @@ CREATE TABLE chat_members (
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     role TEXT CHECK (role IN ('admin', 'member')) DEFAULT 'member',
     joined_at TIMESTAMP DEFAULT NOW(),
+    last_read_at TIMESTAMP DEFAULT NOW(),
+    -- Evita duplicados de miembros en el mismo chat
     PRIMARY KEY (chat_id, user_id)
 );
 

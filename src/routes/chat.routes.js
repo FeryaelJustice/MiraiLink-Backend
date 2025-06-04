@@ -5,7 +5,7 @@ import {
     createPrivateChat,
     createGroupChat,
     getChatMembers,
-    markMessagesRead,
+    markChatAsRead,
     sendMessage,
     getChatHistory
 } from '../controllers/chat.controller.js';
@@ -17,9 +17,9 @@ const router = express.Router();
 router.get('/', authenticateToken(), getChatsFromUser);
 router.get('/:chatId/messages', authenticateToken(), getMessages);
 router.get('/:chatId/members', authenticateToken(), getChatMembers);
+router.patch('/:chatId/read', authenticateToken(), markChatAsRead);
 router.post('/private', authenticateToken(), createPrivateChat);
 router.post('/group', authenticateToken(), createGroupChat);
-router.post('/:chatId/mark-read', authenticateToken(), markMessagesRead);
 
 // Routes for sending messages and getting chat history from a chat
 router.post('/send', authenticateToken(), sendMessage);
