@@ -26,11 +26,6 @@ export const register = async (req, res, next) => {
         const result = await db.query('SELECT * FROM users WHERE username = $1 OR email = $2', [username, email]);
         const user = result.rows[0];
 
-        // Verificar si el usuario tiene foto de perfil
-        if (!(await hasProfilePicture(user.id))) {
-            return res.status(403).json({ message: "Profile picture required", code: "PHOTO_REQUIRED" });
-        }
-
         const token = jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET, {
             expiresIn: '24h',
         });
@@ -52,9 +47,9 @@ export const login = async (req, res, next) => {
         }
 
         // Verificar si el usuario tiene foto de perfil
-        if (!(await hasProfilePicture(user.id))) {
-            return res.status(403).json({ message: "Profile picture required", code: "PHOTO_REQUIRED" });
-        }
+        // if (!(await hasProfilePicture(user.id))) {
+        //     return res.status(403).json({ message: "Profile picture required", code: "PHOTO_REQUIRED" });
+        // }
 
         const token = jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET, {
             expiresIn: '24h',
