@@ -260,28 +260,52 @@ export const getChatHistory = async (req, res, next) => {
         const chatId = chatRes.rows[0].id;
 
         const messagesQuery = `
-            SELECT
-                m.id, m.text AS content, m.sent_at AS timestamp,
-                sender.id AS sender_id, sender.username AS sender_username, sender.email AS sender_email, sender.gender AS sender_gender, sender.birthdate AS sender_birthdate, p1.url AS sender_avatar_url,
-                receiver.id AS receiver_id, receiver.username AS receiver_username, receiver.email AS receiver_email, receiver.gender AS receiver_gender, receiver.birthdate AS receiver_birthdate, p2.url AS receiver_avatar_url
-            FROM messages m
-            JOIN users sender ON sender.id = m.sender_id
-            JOIN users receiver ON receiver.id = CASE
-                WHEN m.sender_id = $1 THEN $2 ELSE $1
-            END
-            LEFT JOIN user_photos p1 ON p1.user_id = sender.id AND p1.position = 1
-            LEFT JOIN user_photos p2 ON p2.user_id = receiver.id AND p2.position = 1
-            WHERE m.chat_id = $3
-            ORDER BY m.sent_at ASC
+        SELECT
+            m.id,
+            m.text AS content,
+            m.sent_at AS timestamp,
+
+            -- Sender
+            s.id AS sender_id,
+            s.username AS sender_username,
+            s.email AS sender_email,
+            s.gender AS sender_gender,
+            s.birthdate AS sender_birthdate,
+            p1.url AS sender_avatar_url,
+
+            -- Receiver (computed as the other chat member)
+            r.id AS receiver_id,
+            r.username AS receiver_username,
+            r.email AS receiver_email,
+            r.gender AS receiver_gender,
+            r.birthdate AS receiver_birthdate,
+            p2.url AS receiver_avatar_url
+
+        FROM messages m
+
+        JOIN users s ON s.id = m.sender_id
+        LEFT JOIN user_photos p1 ON p1.user_id = s.id AND p1.position = 1
+
+        -- Subquery para obtener el receiver (el otro user_id del chat)
+        JOIN LATERAL (
+            SELECT u.*
+            FROM chat_members cm
+            JOIN users u ON u.id = cm.user_id
+            WHERE cm.chat_id = m.chat_id AND cm.user_id != m.sender_id
+            LIMIT 1
+        ) r ON true
+        LEFT JOIN user_photos p2 ON p2.user_id = r.id AND p2.position = 1
+
+        WHERE m.chat_id = $1
+        ORDER BY m.sent_at ASC
         `;
 
-        const { rows } = await db.query(messagesQuery, [userId, otherUserId, chatId]);
+        const { rows } = await db.query(messagesQuery, [chatId]);
 
         const formattedMessages = rows.map(row => ({
             id: row.id,
             content: row.content,
             timestamp: new Date(row.timestamp).getTime(),
-
             sender: formatUserDto({
                 id: row.sender_id,
                 username: row.sender_username,
@@ -290,7 +314,6 @@ export const getChatHistory = async (req, res, next) => {
                 birthdate: row.sender_birthdate,
                 avatar_url: row.sender_avatar_url
             }),
-
             receiver: formatUserDto({
                 id: row.receiver_id,
                 username: row.receiver_username,
@@ -300,6 +323,10 @@ export const getChatHistory = async (req, res, next) => {
                 avatar_url: row.receiver_avatar_url
             }),
         }));
+
+        // const ids = formattedMessages.map(m => m.id);
+        // const hasDuplicates = new Set(ids).size !== ids.length;
+        // console.log("Duplicados?", hasDuplicates);
 
         res.status(200).json(formattedMessages);
     } catch (err) {

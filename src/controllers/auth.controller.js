@@ -164,7 +164,7 @@ export const requestVerificationCode = async (req, res, next) => {
 
 export const confirmVerificationCode = async (req, res, next) => {
     const { userId, token, type } = req.body;
-    const now = dayjs().add(2, 'hours').toISOString()
+    const now = dayjs().add(2, 'hours')
 
     try {
         // Verificar que el usuario existe y no está verificado
