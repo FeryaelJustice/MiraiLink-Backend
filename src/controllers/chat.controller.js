@@ -46,7 +46,7 @@ export const getChatsFromUser = async (req, res, next) => {
         if (privateChatIds.length > 0) {
             const placeholders = privateChatIds.map((_, i) => `$${i + 2}`).join(', ');
             const destinataryQuery = `
-            SELECT cm.chat_id, u.id AS user_id, u.username, COALESCE(p.url) AS avatar_url
+            SELECT cm.chat_id, u.id AS user_id, u.username, u.nickname, COALESCE(p.url) AS avatar_url
             FROM chat_members cm
             JOIN users u ON u.id = cm.user_id
             LEFT JOIN user_photos p ON p.user_id = u.id AND p.position = 1
@@ -61,7 +61,8 @@ export const getChatsFromUser = async (req, res, next) => {
                     row.chat_id,
                     {
                         id: row.user_id,
-                        name: row.username,
+                        username: row.username,
+                        nickname: row.nickname,
                         avatarUrl: row.avatar_url
                     }
                 ])
@@ -203,7 +204,7 @@ export const getChatMembers = async (req, res, next) => {
         const { chatId } = req.params;
 
         const result = await db.query(`
-            SELECT u.id, u.username, cm.role
+            SELECT u.id, u.username, u.nickname, cm.role
             FROM chat_members cm
             JOIN users u ON u.id = cm.user_id
             WHERE cm.chat_id = $1
@@ -292,6 +293,7 @@ export const getChatHistory = async (req, res, next) => {
             -- Sender
             s.id AS sender_id,
             s.username AS sender_username,
+            s.nickname AS sender_nickname,
             s.email AS sender_email,
             s.gender AS sender_gender,
             s.birthdate AS sender_birthdate,
@@ -300,6 +302,7 @@ export const getChatHistory = async (req, res, next) => {
             -- Receiver (computed as the other chat member)
             r.id AS receiver_id,
             r.username AS receiver_username,
+            r.nickname AS receiver_nickname,
             r.email AS receiver_email,
             r.gender AS receiver_gender,
             r.birthdate AS receiver_birthdate,
@@ -333,6 +336,7 @@ export const getChatHistory = async (req, res, next) => {
             sender: formatUserDto({
                 id: row.sender_id,
                 username: row.sender_username,
+                nickname: row.sender_nickname,
                 email: row.sender_email,
                 gender: row.sender_gender,
                 birthdate: row.sender_birthdate,
@@ -341,6 +345,7 @@ export const getChatHistory = async (req, res, next) => {
             receiver: formatUserDto({
                 id: row.receiver_id,
                 username: row.receiver_username,
+                nickname: row.receiver_nickname,
                 email: row.receiver_email,
                 gender: row.receiver_gender,
                 birthdate: row.receiver_birthdate,
@@ -362,6 +367,7 @@ function formatUserDto(user) {
     return {
         id: user.id,
         username: user.username,
+        nickname: user.nickname,
         email: user.email,
         gender: user.gender,
         birthdate: user.birthdate,

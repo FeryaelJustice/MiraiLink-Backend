@@ -4,7 +4,7 @@ export const getMatches = async (req, res, next) => {
     try {
         const userId = req.user.id;
         const result = await db.query(
-            `SELECT u.id, u.username, u.bio FROM matches m
+            `SELECT u.* FROM matches m
             JOIN users u ON (
                 (u.id = m.user1_id AND m.user2_id = $1)
                 OR

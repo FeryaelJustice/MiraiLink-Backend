@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 export const getProfile = async (req, res, next) => {
     try {
         const userId = req.user.id;
-        const result = await db.query('SELECT id, username, email, bio FROM users WHERE id = $1', [userId]);
+        const result = await db.query('SELECT * FROM users WHERE id = $1', [userId]);
         const user = result.rows[0];
         res.json(user);
     } catch (err) {

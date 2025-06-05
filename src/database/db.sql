@@ -5,6 +5,7 @@ CREATE TYPE auth_provider AS ENUM ('email', 'phone', 'google');
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     username VARCHAR(30) UNIQUE NOT NULL,
+    nickname VARCHAR(50) DEFAULT '-',
     email VARCHAR UNIQUE,
     phone_number VARCHAR UNIQUE,
     password_hash TEXT,
