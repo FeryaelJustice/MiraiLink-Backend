@@ -13,8 +13,9 @@ import usersRoutes from './routes/users.routes.js';
 import swipeRoutes from './routes/swipe.routes.js';
 import matchRoutes from './routes/match.routes.js';
 import chatRoutes from './routes/chat.routes.js';
+import catalogRoutes from './routes/catalog.routes.js';
 import { errorHandler } from './middleware/error.middleware.js';
-import { setupSocketIO } from './sockets/socketHandler.js';
+// import { setupSocketIO } from './sockets/socketHandler.js';
 
 const API_PREFIX = '/api';
 
@@ -53,6 +54,7 @@ app.use(API_PREFIX + '/users', usersRoutes);
 app.use(API_PREFIX + '/swipe', swipeRoutes);
 app.use(API_PREFIX + '/match', matchRoutes);
 app.use(API_PREFIX + '/chats', chatRoutes);
+app.use(API_PREFIX + '/catalog', catalogRoutes);
 
 // Error middleware al final
 app.use(errorHandler);
