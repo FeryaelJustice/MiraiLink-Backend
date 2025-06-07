@@ -7,9 +7,37 @@ import { UPLOAD_DIR_PROFILES_STRING } from '../consts/photosConsts.js';
 export const getProfile = async (req, res, next) => {
     try {
         const userId = req.user.id;
-        const result = await db.query('SELECT * FROM users WHERE id = $1', [userId]);
-        const user = result.rows[0];
-        res.json(user);
+
+        const userResult = await db.query('SELECT * FROM users WHERE id = $1', [userId]);
+        const user = userResult.rows[0];
+
+        const animesResult = await db.query(`
+            SELECT a.id, a.name, a.image_url
+            FROM animes a
+            JOIN user_anime_interests uai ON uai.anime_id = a.id
+            WHERE uai.user_id = $1
+        `, [userId]);
+
+        const gamesResult = await db.query(`
+            SELECT g.id, g.name, g.image_url
+            FROM games g
+            JOIN user_game_interests ugi ON ugi.game_id = g.id
+            WHERE ugi.user_id = $1
+        `, [userId]);
+
+        const photosResult = await db.query(`
+            SELECT id, user_id, url, position
+            FROM user_photos
+            WHERE user_id = $1
+            ORDER BY position ASC
+        `, [userId]);
+
+        res.json({
+            ...user,
+            animes: animesResult.rows,
+            games: gamesResult.rows,
+            photos: photosResult.rows
+        });
     } catch (err) {
         next(err);
     }
@@ -18,10 +46,37 @@ export const getProfile = async (req, res, next) => {
 export const getProfileFromId = async (req, res, next) => {
     try {
         const { id } = req.body;
+
         const usersResult = await db.query('SELECT * FROM users WHERE is_deleted = false AND id = $1', [id]);
         const user = usersResult.rows[0];
 
-        res.json(user);
+        const animesResult = await db.query(`
+            SELECT a.id, a.name, a.image_url
+            FROM animes a
+            JOIN user_anime_interests uai ON uai.anime_id = a.id
+            WHERE uai.user_id = $1
+        `, [id]);
+
+        const gamesResult = await db.query(`
+            SELECT g.id, g.name, g.image_url
+            FROM games g
+            JOIN user_game_interests ugi ON ugi.game_id = g.id
+            WHERE ugi.user_id = $1
+        `, [id]);
+
+        const photosResult = await db.query(`
+            SELECT id, user_id, url, position
+            FROM user_photos
+            WHERE user_id = $1
+            ORDER BY position ASC
+        `, [id]);
+
+        res.json({
+            ...user,
+            animes: animesResult.rows,
+            games: gamesResult.rows,
+            photos: photosResult.rows
+        });
     } catch (err) {
         next(err);
     }
@@ -62,33 +117,61 @@ export const getProfiles = async (req, res, next) => {
 
         // Obtener fotos para todos los usuarios
         const userIds = users.map(user => user.id);
+
         const photosResult = await db.query(
             'SELECT id, user_id, url, position FROM user_photos WHERE user_id = ANY($1::uuid[]) ORDER BY position ASC',
             [userIds]
         );
 
-        // Agrupar las fotos por user_id
+        const animesResult = await db.query(`
+            SELECT uai.user_id, a.id, a.name, a.image_url
+            FROM user_anime_interests uai
+            JOIN animes a ON uai.anime_id = a.id
+            WHERE uai.user_id = ANY($1::uuid[])
+        `, [userIds]);
+
+        const gamesResult = await db.query(`
+            SELECT ugi.user_id, g.id, g.name, g.image_url
+            FROM user_game_interests ugi
+            JOIN games g ON ugi.game_id = g.id
+            WHERE ugi.user_id = ANY($1::uuid[])
+        `, [userIds]);
+
         const photosByUser = {};
+        const animesByUser = {};
+        const gamesByUser = {};
+
         for (const photo of photosResult.rows) {
-            if (!photosByUser[photo.user_id]) {
-                photosByUser[photo.user_id] = [];
-            }
-            photosByUser[photo.user_id].push({
-                id: photo.id,
-                user_id: photo.user_id,
-                url: photo.url,
-                position: photo.position
+            if (!photosByUser[photo.user_id]) photosByUser[photo.user_id] = [];
+            photosByUser[photo.user_id].push(photo);
+        }
+
+        for (const anime of animesResult.rows) {
+            if (!animesByUser[anime.user_id]) animesByUser[anime.user_id] = [];
+            animesByUser[anime.user_id].push({
+                id: anime.id,
+                name: anime.name,
+                image_url: anime.image_url
             });
         }
 
-        // Combinar users con sus fotos
-        const usersWithPhotos = users.map(user => ({
+        for (const game of gamesResult.rows) {
+            if (!gamesByUser[game.user_id]) gamesByUser[game.user_id] = [];
+            gamesByUser[game.user_id].push({
+                id: game.id,
+                name: game.name,
+                image_url: game.image_url
+            });
+        }
+
+        const usersWithExtras = users.map(user => ({
             ...user,
-            photos: photosByUser[user.id] || []
+            photos: photosByUser[user.id] || [],
+            animes: animesByUser[user.id] || [],
+            games: gamesByUser[user.id] || []
         }));
 
-
-        res.json(usersWithPhotos);
+        res.json(usersWithExtras);
     } catch (err) {
         next(err);
     }
@@ -101,7 +184,6 @@ export const updateProfile = async (req, res, next) => {
         const userId = req.user.id;
         const { nickname, bio, animes, games, photos } = req.body;
         const files = req.files || [];
-        console.log(games, animes)
 
         await client.query('BEGIN');
 
@@ -116,7 +198,6 @@ export const updateProfile = async (req, res, next) => {
         const animeTitles = JSON.parse(animes || '[]');
         if (animeTitles.length > 0) {
             const animeIds = animeTitles.map(r => r.id);
-            console.log(animeIds)
             for (const animeId of animeIds) {
                 await client.query(
                     'INSERT INTO user_anime_interests (user_id, anime_id) VALUES ($1, $2)',
