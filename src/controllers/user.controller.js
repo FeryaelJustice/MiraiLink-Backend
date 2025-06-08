@@ -4,6 +4,9 @@ import fs from 'fs';
 import path from 'path';
 import { UPLOAD_DIR_PROFILES_STRING } from '../consts/photosConsts.js';
 
+const MAX_NICKNAME_LENGTH = 30;
+const MAX_BIO_LENGTH = 500;
+
 export const getProfile = async (req, res, next) => {
     try {
         const userId = req.user.id;
@@ -185,6 +188,15 @@ export const updateProfile = async (req, res, next) => {
         const { nickname, bio, animes, games, photos } = req.body;
         const files = req.files || [];
 
+        // Validaciones
+        if (nickname.length > MAX_NICKNAME_LENGTH) {
+            return res.status(400).json({ message: 'El apodo es demasiado largo' });
+        }
+        if (bio.length > MAX_BIO_LENGTH) {
+            return res.status(400).json({ message: 'La biografía es demasiado larga' });
+        }
+
+        // Comenzar transacción
         await client.query('BEGIN');
 
         // 1. Actualizar nickname y bio
