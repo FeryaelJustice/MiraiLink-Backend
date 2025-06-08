@@ -146,6 +146,18 @@ export const confirmPasswordReset = async (req, res, next) => {
     }
 }
 
+export const checkIsVerified = async (req, res, next) => {
+    const userId = req.user.id;
+    try {
+        const result = await db.query('SELECT is_verified FROM users WHERE id = $1', [userId]);
+        if (result.rowCount === 0) return res.status(404).json({ message: 'Usuario no encontrado' });
+        const isVerified = result.rows[0].is_verified;
+        res.status(200).json({ isVerified });
+    } catch (err) {
+        next(err);
+    }
+};
+
 export const requestVerificationCode = async (req, res, next) => {
     const { userId, type } = req.body; // type: 'email' o 'sms'
     if (!['email', 'sms'].includes(type)) return res.status(400).json({ message: 'Tipo inválido' });
