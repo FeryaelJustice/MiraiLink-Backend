@@ -39,15 +39,23 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
+const photoFields = [
+    { name: 'photo_0', maxCount: 1 },
+    { name: 'photo_1', maxCount: 1 },
+    { name: 'photo_2', maxCount: 1 },
+    { name: 'photo_3', maxCount: 1 }
+];
+
 router.get('', authenticateToken(), getProfile);
 router.get('/byToken', authenticateToken(), getUserIdByToken);
 router.post('/byEmailPassword', getUserIdByEmailAndPassword);
 router.post('/byId', authenticateToken(), getProfileFromId);
-router.put('', authenticateToken(), upload.fields([
-    { name: 'photo_1' },
-    { name: 'photo_2' },
-    { name: 'photo_3' },
-    { name: 'photo_4' }
-]), updateProfile);
+router.put('', authenticateToken(), upload.fields(photoFields), (req, res, next) => {
+    // console.log('---- BODY ----');
+    // console.log(req.body);
+    // console.log('---- FILES ----');
+    // console.log(req.files);
+    next();
+}, updateProfile);
 
 export default router;

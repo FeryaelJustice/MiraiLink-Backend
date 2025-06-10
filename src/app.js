@@ -5,7 +5,7 @@ import { join, dirname } from 'path';
 import cors from 'cors';
 import compression from 'compression';
 import dotenv from 'dotenv';
-import http from 'http';
+// import http from 'http';
 import authRoutes from './routes/auth.routes.js';
 import userRoutes from './routes/user.routes.js';
 import userPhotoRoutes from './routes/userphotos.routes.js';

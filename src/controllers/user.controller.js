@@ -1,11 +1,14 @@
 import db from '../models/db.js';
 import jwt from 'jsonwebtoken';
 import fs from 'fs';
-import path from 'path';
+import { fileURLToPath } from 'url';
+import { join, basename, dirname } from 'path';
 import { UPLOAD_DIR_PROFILES_STRING } from '../consts/photosConsts.js';
 
 const MAX_NICKNAME_LENGTH = 30;
 const MAX_BIO_LENGTH = 500;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 export const getProfile = async (req, res, next) => {
     try {
@@ -232,55 +235,44 @@ export const updateProfile = async (req, res, next) => {
         }
 
         // 4. Actualizar fotos
-        const photosArray = JSON.parse(photos || '[]');
 
-        // Obtener fotos antiguas de la base de datos
+        // Obtener fotos antiguas
         const previousPhotos = await client.query(
             'SELECT * FROM user_photos WHERE user_id = $1',
             [userId]
         );
 
-        // Borrado lógico + archivos si ya no están en el nuevo array
-        const newUrls = photosArray.map(p => p.url).filter(Boolean);
+        // Eliminar del sistema archivos antiguos (si existen físicamente)
         for (const photo of previousPhotos.rows) {
-            if (!newUrls.includes(photo.url)) {
-                const filePath = path.join(UPLOAD_DIR_PROFILES_STRING, path.basename(photo.url));
-                fs.access(filePath, fs.constants.F_OK, err => {
-                    if (!err) {
-                        fs.unlink(filePath, unlinkErr => {
-                            if (unlinkErr) {
-                                console.error('Error al eliminar la imagen:', unlinkErr);
-                            }
-                        });
-                    } else {
-                        console.warn('Archivo no encontrado, no se puede eliminar:', filePath);
-                    }
-                });
-            }
+            const filePath = join(__dirname, '..', UPLOAD_DIR_PROFILES_STRING, userId, basename(photo.url));
+            fs.access(filePath, fs.constants.F_OK, err => {
+                if (!err) {
+                    fs.unlink(filePath, unlinkErr => {
+                        if (unlinkErr) {
+                            console.error('Error al eliminar la imagen:', unlinkErr);
+                        }
+                    });
+                } else {
+                    console.warn('Archivo no encontrado, no se puede eliminar:', filePath);
+                }
+            });
         }
 
-        // Limpiar todas las fotos en BBDD
+        // Borrar referencias anteriores de la base de datos
         await client.query('DELETE FROM user_photos WHERE user_id = $1', [userId]);
 
-        // Insertar nuevas fotos según posición
-        for (const p of photosArray) {
-            const { position, url } = p;
-            const fileKey = `photo_${position}`;
-            const file = Array.isArray(files[fileKey]) ? files[fileKey][0] : files[fileKey];
+        // Insertar nuevas fotos a partir de los archivos recibidos
+        for (const [key, fileList] of Object.entries(req.files)) {
+            const file = Array.isArray(fileList) ? fileList[0] : fileList;
+            const field = key; // Ej: "photo_0"
+            const positionStr = field.split('_')[1]; // "0"
+            const position = parseInt(positionStr, 10);
 
-            let finalUrl = url;
-
-            if (file) {
-                // Nueva foto, subirla
-                finalUrl = `${UPLOAD_DIR_PROFILES_STRING}/${userId}/${file.filename}`;
-            }
-
-            if (finalUrl) {
-                await client.query(
-                    'INSERT INTO user_photos (user_id, url, position) VALUES ($1, $2, $3)',
-                    [userId, finalUrl, position]
-                );
-            }
+            const url = `${UPLOAD_DIR_PROFILES_STRING}/${userId}/${file.filename}`;
+            await client.query(
+                'INSERT INTO user_photos (user_id, url, position) VALUES ($1, $2, $3)',
+                [userId, url, position + 1] // +1 ya tenemos photo_0 al photo_3 que las posiciones deben ir del 1 al 4
+            );
         }
 
         await client.query('COMMIT');
