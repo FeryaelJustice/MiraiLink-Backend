@@ -167,6 +167,14 @@ CREATE TABLE reports (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
+-- FEEDBACK
+CREATE TABLE IF NOT EXISTS public.feedback (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    message TEXT CHECK (char_length(message) <= 10000),
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
 -- INDEXES
 CREATE INDEX idx_likes_from_user ON likes(from_user_id);
 

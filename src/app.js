@@ -15,6 +15,7 @@ import matchRoutes from './routes/match.routes.js';
 import chatRoutes from './routes/chat.routes.js';
 import catalogRoutes from './routes/catalog.routes.js';
 import reportRoutes from './routes/report.routes.js';
+import feedbackRoutes from './routes/feedback.routes.js';
 import { errorHandler } from './middleware/error.middleware.js';
 // import { setupSocketIO } from './sockets/socketHandler.js';
 
@@ -57,6 +58,7 @@ app.use(API_PREFIX + '/match', matchRoutes);
 app.use(API_PREFIX + '/chats', chatRoutes);
 app.use(API_PREFIX + '/catalog', catalogRoutes);
 app.use(API_PREFIX + '/report', reportRoutes);
+app.use(API_PREFIX + '/feedback', feedbackRoutes);
 
 // Error middleware al final
 app.use(errorHandler);
