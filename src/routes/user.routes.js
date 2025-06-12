@@ -1,6 +1,6 @@
 
 import express from 'express';
-import { getProfile, updateProfile, getProfileFromId, getUserIdByToken, getUserIdByEmailAndPassword } from '../controllers/user.controller.js';
+import { getProfile, deleteAccount, updateProfile, getProfileFromId, getUserIdByToken, getUserIdByEmailAndPassword } from '../controllers/user.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import multer from 'multer';
 import { fileURLToPath } from 'url';
@@ -57,5 +57,6 @@ router.put('', authenticateToken(), upload.fields(photoFields), (req, res, next)
     // console.log(req.files);
     next();
 }, updateProfile);
+router.delete('', authenticateToken(), deleteAccount);
 
 export default router;

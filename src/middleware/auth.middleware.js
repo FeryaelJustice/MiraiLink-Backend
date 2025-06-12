@@ -25,11 +25,12 @@ export const authenticateToken = (allowUnverified = false) => {
             }
 
             if (!user.rows[0].is_verified && !allowUnverified) {
-                return res.status(403).json({ message: 'Cuenta no verificada' });
+                return res.status(403).json({ message: 'Cuenta no verificada', verified: false });
             }
 
             // Si todo está bien, agrega el usuario decodificado al request
             req.user = decoded;
+            req.token = token; // Guarda el token en el request para usarlo después
             next();
         } catch (err) {
             res.status(401).json({ message: 'Invalid token', error: err });

@@ -114,6 +114,29 @@ export const getUserIdByEmailAndPassword = async (req, res, next) => {
     }
 }
 
+export const deleteAccount = async (req, res) => {
+    const userId = req.user.id;
+
+    try {
+        const result = await db.query(
+            `UPDATE users SET is_deleted = true, updated_at = now() WHERE id = $1 RETURNING id`,
+            [userId]
+        );
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({ message: 'Usuario no encontrado o ya eliminado.' });
+        }
+
+        // Opcional: invalidar token actual
+        await db.query('INSERT INTO token_blacklist (token) VALUES ($1)', [req.token]);
+
+        return res.status(200).json({ message: 'Cuenta eliminada correctamente.' });
+    } catch (error) {
+        console.error('Error al eliminar cuenta:', error);
+        return res.status(500).json({ message: 'Error al eliminar cuenta.' });
+    }
+};
+
 export const getProfiles = async (req, res, next) => {
     try {
         const authenticatedUserId = req.user.id;

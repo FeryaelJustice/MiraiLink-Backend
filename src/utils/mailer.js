@@ -2,16 +2,16 @@
 import nodemailer from 'nodemailer';
 
 const transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST,       // ejemplo: smtp.gmail.com
-    port: process.env.EMAIL_PORT,       // ejemplo: 587 o 465
-    secure: false,
+    host: process.env.EMAIL_HOST,
+    port: process.env.EMAIL_PORT,
+    // secure: false,
     auth: {
-        user: process.env.EMAIL_USER,     // ejemplo: your.email@gmail.com
-        pass: process.env.EMAIL_PASSWORD  // app password o clave específica
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASSWORD
     }
 });
 
-export const sendVerificationEmail = async (to, code) => {
+export const sendVerificationEmail = (to, code) => {
     try {
         const mailOptions = {
             from: `"MiraiLink" <${process.env.EMAIL_USER}>`,
@@ -21,8 +21,8 @@ export const sendVerificationEmail = async (to, code) => {
             html: `<p>Tu código de verificación es:</p><h2>${code}</h2>`
         };
 
-        await transporter.sendMail(mailOptions);
-        console.log(`Correo de verificación enviado a ${to}`);
+        transporter.sendMail(mailOptions).then(() => console.log('Enviado'))
+            .catch(err => console.error('Error:', err));
     } catch (error) {
         console.error('Error enviando correo de verificación:', error);
     }

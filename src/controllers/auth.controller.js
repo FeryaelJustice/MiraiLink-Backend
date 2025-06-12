@@ -19,8 +19,8 @@ export const register = async (req, res, next) => {
         const salt = await genSalt(process.env.SALT_ROUNDS || 6);
         const hash = await bcrypt.hash(password, salt);
         await db.query(
-            'INSERT INTO users (username, email, password_hash, auth_provider) VALUES ($1, $2, $3, $4)',
-            [username, email, hash, 'email']
+            'INSERT INTO users (username, email, password_hash, auth_provider, nickname) VALUES ($1, $2, $3, $4, $5)',
+            [username, email, hash, 'email', username]
         );
 
         const result = await db.query('SELECT * FROM users WHERE username = $1 OR email = $2', [username, email]);
@@ -39,21 +39,36 @@ export const register = async (req, res, next) => {
 export const login = async (req, res, next) => {
     try {
         const { email, username, password } = req.body;
-        const result = await db.query('SELECT * FROM users WHERE email = $1 OR username = $2 AND is_deleted = false', [email, username]);
+
+        // 1. Buscar usuario sin importar si está eliminado o no
+        const result = await db.query(
+            'SELECT * FROM users WHERE email = $1 OR username = $2',
+            [email, username]
+        );
         const user = result.rows[0];
 
-        if (!user || !(await bcrypt.compare(password, user.password_hash))) {
+        // 2. Usuario no existe
+        if (!user) {
+            return res.status(401).json({ message: 'User not found' });
+        }
+
+        // 3. Usuario está eliminado
+        if (user.is_deleted) {
+            return res.status(403).json({ message: 'Account has been deleted', code: 'USER_DELETED' });
+        }
+
+        // 4. Password incorrecto
+        const passwordValid = await bcrypt.compare(password, user.password_hash);
+        if (!passwordValid) {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
-        // Verificar si el usuario tiene foto de perfil
-        // if (!(await hasProfilePicture(user.id))) {
-        //     return res.status(403).json({ message: "Profile picture required", code: "PHOTO_REQUIRED" });
-        // }
-
-        const token = jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET, {
-            expiresIn: '24h',
-        });
+        // 5. Usuario válido → emitir token
+        const token = jwt.sign(
+            { id: user.id, username: user.username },
+            process.env.JWT_SECRET,
+            { expiresIn: '24h' }
+        );
 
         return res.json({ token });
     } catch (err) {
@@ -63,14 +78,11 @@ export const login = async (req, res, next) => {
 
 export const logout = async (req, res, next) => {
     try {
-        const authHeader = req.headers.authorization;
-        const token = authHeader?.split(' ')[1];
+        if (!req.token) return res.status(400).json({ message: 'No token provided' });
 
-        if (!token) return res.status(400).json({ message: 'No token provided' });
-
-        const check = await db.query('SELECT 1 FROM token_blacklist WHERE token = $1', [token]);
+        const check = await db.query('SELECT 1 FROM token_blacklist WHERE token = $1', [req.token]);
         if (check.rows.length <= 0) {
-            await db.query('INSERT INTO token_blacklist (token) VALUES ($1)', [token]);
+            await db.query('INSERT INTO token_blacklist (token) VALUES ($1)', [req.token]);
         }
 
         res.status(200).json({ message: 'Logged out successfully' });
@@ -129,7 +141,8 @@ export const confirmPasswordReset = async (req, res, next) => {
         if (tokenResult.rowCount === 0) return res.status(400).json({ message: 'Código inválido' });
 
         const result = tokenResult.rows[0];
-        if (result.expires_at < now.toISOString()) return res.status(400).json({ message: 'Código expirado' });
+        const expiresAt = dayjs(result.expires_at).add(2, 'hours');
+        if (expiresAt.toISOString() < now.toISOString()) return res.status(400).json({ message: 'Código expirado' });
 
         const salt = await genSalt(process.env.SALT_ROUNDS || 6);
         const hashedPassword = await bcrypt.hash(newPassword, salt);
@@ -206,7 +219,8 @@ export const confirmVerificationCode = async (req, res, next) => {
         if (results.rowCount === 0) return res.status(400).json({ message: 'Código inválido' });
 
         const result = results.rows[0];
-        if (result.expires_at < now.toISOString()) return res.status(400).json({ message: 'Código expirado' });
+        const expiresAt = dayjs(result.expires_at).add(2, 'hours');
+        if (expiresAt.toISOString() < now.toISOString()) return res.status(400).json({ message: 'Código expirado' });
 
         await db.query(`
         UPDATE users SET is_verified = true WHERE id = $1
@@ -222,12 +236,12 @@ export const confirmVerificationCode = async (req, res, next) => {
     }
 }
 
-const hasProfilePicture = async (userId) => {
-    const result = await db.query(`
-        SELECT 1 FROM user_photos
-        WHERE user_id = $1 AND position = 1
-        LIMIT 1
-    `, [userId]);
+// const hasProfilePicture = async (userId) => {
+//     const result = await db.query(`
+//         SELECT 1 FROM user_photos
+//         WHERE user_id = $1 AND position = 1
+//         LIMIT 1
+//     `, [userId]);
 
-    return result.rows.length > 0;
-};
+//     return result.rows.length > 0;
+// };
