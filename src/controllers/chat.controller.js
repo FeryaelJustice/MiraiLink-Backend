@@ -46,10 +46,16 @@ export const getChatsFromUser = async (req, res, next) => {
         if (privateChatIds.length > 0) {
             const placeholders = privateChatIds.map((_, i) => `$${i + 2}`).join(', ');
             const destinataryQuery = `
-            SELECT cm.chat_id, u.id AS user_id, u.username, u.nickname, COALESCE(p.url) AS avatar_url
+            SELECT cm.chat_id, u.id AS user_id, u.username, u.nickname, p.url AS avatar_url
             FROM chat_members cm
             JOIN users u ON u.id = cm.user_id
-            LEFT JOIN user_photos p ON p.user_id = u.id AND p.position = 1
+            LEFT JOIN LATERAL (
+                SELECT url
+                FROM user_photos
+                WHERE user_id = u.id AND position = 1
+                ORDER BY id
+                LIMIT 1
+            ) p ON true
             WHERE cm.chat_id IN (${placeholders}) AND cm.user_id != $1;
             `;
             const values = [userId, ...privateChatIds];

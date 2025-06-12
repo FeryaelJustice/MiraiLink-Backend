@@ -5,30 +5,29 @@ export const getFeed = async (req, res, next) => {
         const userId = req.user.id;
         const { limit = 10, offset = 0 } = req.query;
 
-        // Obtener todos los usuarios
+        // 1. Obtener usuarios candidatos
         const usersResult = await db.query(
             `SELECT * FROM users
             WHERE id != $1
-            AND is_deleted = false
-            AND id NOT IN (
-            SELECT to_user_id FROM likes WHERE from_user_id = $1
-            UNION
-            SELECT to_user_id FROM dislikes WHERE from_user_id = $1
-            )
+                AND is_deleted = false
+                AND id NOT IN (
+                    SELECT to_user_id FROM likes WHERE from_user_id = $1
+                    UNION
+                    SELECT to_user_id FROM dislikes WHERE from_user_id = $1
+                )
             ORDER BY created_at DESC
             LIMIT $2 OFFSET $3`,
             [userId, limit, offset]
         );
         const users = usersResult.rows;
-
-        // Obtener fotos para todos los usuarios
         const userIds = users.map(user => user.id);
+
+        // 2. Obtener fotos
         const photosResult = await db.query(
             'SELECT id, user_id, url, position FROM user_photos WHERE user_id = ANY($1::uuid[]) ORDER BY position ASC',
             [userIds]
         );
 
-        // Agrupar las fotos por user_id
         const photosByUser = {};
         for (const photo of photosResult.rows) {
             if (!photosByUser[photo.user_id]) {
@@ -42,13 +41,51 @@ export const getFeed = async (req, res, next) => {
             });
         }
 
-        // Combinar users con sus fotos
-        const usersWithPhotos = users.map(user => ({
+        // 3. Obtener animes
+        const animeResult = await db.query(`
+            SELECT uai.user_id, a.id, a.name, a.image_url
+            FROM user_anime_interests uai
+            JOIN animes a ON uai.anime_id = a.id
+            WHERE uai.user_id = ANY($1::uuid[])`, [userIds]
+        );
+
+        const animesByUser = {};
+        for (const row of animeResult.rows) {
+            if (!animesByUser[row.user_id]) animesByUser[row.user_id] = [];
+            animesByUser[row.user_id].push({
+                id: row.id,
+                name: row.name,
+                image_url: row.image_url,
+            });
+        }
+
+        // 4. Obtener games
+        const gameResult = await db.query(`
+            SELECT ugi.user_id, g.id, g.name, g.image_url
+            FROM user_game_interests ugi
+            JOIN games g ON ugi.game_id = g.id
+            WHERE ugi.user_id = ANY($1::uuid[])`, [userIds]
+        );
+
+        const gamesByUser = {};
+        for (const row of gameResult.rows) {
+            if (!gamesByUser[row.user_id]) gamesByUser[row.user_id] = [];
+            gamesByUser[row.user_id].push({
+                id: row.id,
+                name: row.name,
+                image_url: row.image_url,
+            });
+        }
+
+        // 5. Combinar todo
+        const usersWithExtras = users.map(user => ({
             ...user,
-            photos: photosByUser[user.id] || []
+            photos: photosByUser[user.id] || [],
+            animes: animesByUser[user.id] || [],
+            games: gamesByUser[user.id] || []
         }));
 
-        res.json(usersWithPhotos);
+        res.json(usersWithExtras);
     } catch (err) {
         next(err);
     }
