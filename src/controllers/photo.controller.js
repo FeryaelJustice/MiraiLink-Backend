@@ -1,9 +1,10 @@
 import fs from 'fs';
-import path from 'path';
+import { join, basename, resolve } from 'path';
 import db from '../models/db.js';
 import { UPLOAD_DIR_PROFILES_STRING } from '../consts/photosConsts.js';
+import { uploadOrReplacePhoto } from '../utils/photoUploader.js';
 
-const UPLOAD_DIR_PROFILES = path.resolve(UPLOAD_DIR_PROFILES_STRING);
+const UPLOAD_DIR_PROFILES = resolve(UPLOAD_DIR_PROFILES_STRING);
 
 export const uploadPhoto = async (req, res, next) => {
     try {
@@ -13,28 +14,17 @@ export const uploadPhoto = async (req, res, next) => {
 
         if (!file) return res.status(400).json({ message: 'No file uploaded' });
 
-        // Si se quiere establecer como foto de perfil
-        if (position === 1) {
-            // Elimina o desmarca la antigua con posición 1
-            await db.query(`
-                DELETE FROM user_photos WHERE user_id = $1 AND position = 1
-            `, [userId]);
-        }
-
-        const fileUrl = `${UPLOAD_DIR_PROFILES_STRING}/${userId}/${file.filename}`;
-
-        // Verifica cuántas fotos tiene el usuario
+        // Validación extra: máximo 4 fotos
         const result = await db.query('SELECT COUNT(*) FROM user_photos WHERE user_id = $1', [userId]);
         const count = parseInt(result.rows[0].count);
+        if (count >= 4 && position === null) {
+            return res.status(400).json({ message: 'Maximum 4 photos allowed' });
+        }
 
-        if (count >= 4) return res.status(400).json({ message: 'Maximum 4 photos allowed' });
+        const finalPosition = position ?? count + 1;
+        const url = await uploadOrReplacePhoto(userId, file, finalPosition);
 
-        await db.query(
-            'INSERT INTO user_photos (user_id, url, position) VALUES ($1, $2, $3)',
-            [userId, fileUrl, position ?? count + 1]
-        );
-
-        res.status(201).json({ url: fileUrl });
+        res.status(201).json({ url });
     } catch (err) {
         next(err);
     }
@@ -67,7 +57,7 @@ export const deletePhoto = async (req, res, next) => {
             return res.status(400).json({ message: 'At least one photo is required' });
         }
 
-        const filePath = path.join(UPLOAD_DIR_PROFILES, path.basename(photo.url));
+        const filePath = join(UPLOAD_DIR_PROFILES, basename(photo.url));
         fs.unlinkSync(filePath);
 
         await db.query('DELETE FROM user_photos WHERE id = $1', [photoId]);

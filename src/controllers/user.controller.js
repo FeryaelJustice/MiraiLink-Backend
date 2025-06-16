@@ -1,9 +1,10 @@
 import db from '../models/db.js';
 import jwt from 'jsonwebtoken';
 import fs from 'fs';
+import { join } from 'path';
 import { fileURLToPath } from 'url';
-import { join, basename, dirname } from 'path';
-import { UPLOAD_DIR_PROFILES_STRING } from '../consts/photosConsts.js';
+import { dirname } from 'path';
+import { uploadOrReplacePhoto } from '../utils/photoUploader.js';
 
 const MAX_NICKNAME_LENGTH = 30;
 const MAX_BIO_LENGTH = 500;
@@ -257,44 +258,79 @@ export const updateProfile = async (req, res, next) => {
             }
         }
 
-        // 4. Actualizar fotos
-
-        // Obtener fotos antiguas
-        const previousPhotos = await client.query(
-            'SELECT * FROM user_photos WHERE user_id = $1',
+        // 4. Validar que no se superen las 4 fotos permitidas
+        const existingPhotosResult = await client.query(
+            'SELECT position FROM user_photos WHERE user_id = $1',
             [userId]
         );
+        const existingPositions = new Set(existingPhotosResult.rows.map(row => row.position));
 
-        // Eliminar del sistema archivos antiguos (si existen físicamente)
-        for (const photo of previousPhotos.rows) {
-            const filePath = join(__dirname, '..', UPLOAD_DIR_PROFILES_STRING, userId, basename(photo.url));
-            fs.access(filePath, fs.constants.F_OK, err => {
-                if (!err) {
-                    fs.unlink(filePath, unlinkErr => {
-                        if (unlinkErr) {
-                            console.error('Error al eliminar la imagen:', unlinkErr);
-                        }
-                    });
-                } else {
-                    console.warn('Archivo no encontrado, no se puede eliminar:', filePath);
-                }
+        const newPositions = Object.entries(req.files)
+            .map(([key]) => parseInt(key.split('_')[1], 10) + 1); // photo_0 → 1
+
+        const positionsThatWouldBeAdded = newPositions.filter(pos => !existingPositions.has(pos));
+
+        if (existingPositions.size + positionsThatWouldBeAdded.length > 4) {
+            return res.status(400).json({ message: 'Máximo 4 fotos permitidas' });
+        }
+
+        // 4.1. Detectar fotos que el usuario eliminó explícitamente (no las que omitió porque no cambiaron)
+        const removedPositions = [];
+        for (const pos of [1, 2, 3, 4]) {
+            const fieldKey = `photo_${pos - 1}`;
+            const fieldInRequest = Object.prototype.hasOwnProperty.call(req.body, fieldKey);
+            const fileUploaded = Object.prototype.hasOwnProperty.call(req.files, fieldKey);
+
+            // Si se envía el campo pero no hay foto => quiere eliminarla
+            if (fieldInRequest && !fileUploaded) {
+                removedPositions.push(pos);
+            }
+        }
+
+        // 4.2. Obtener URLs de fotos eliminadas antes de borrarlas de la BD
+        let removedPhotosResult = { rows: [] };
+        if (removedPositions.length > 0) {
+            removedPhotosResult = await client.query(
+                'SELECT url FROM user_photos WHERE user_id = $1 AND position = ANY($2)',
+                [userId, removedPositions]
+            );
+
+            await client.query(
+                'DELETE FROM user_photos WHERE user_id = $1 AND position = ANY($2)',
+                [userId, removedPositions]
+            );
+        }
+
+        // 4.3. Borrar físicamente los archivos eliminados
+        for (const row of removedPhotosResult.rows) {
+            const filePath = join(__dirname, '..', 'uploads', row.url); // ajusta según tu estructura
+            fs.unlink(filePath, err => {
+                if (err) console.error(`Error deleting file ${filePath}:`, err);
             });
         }
 
-        // Borrar referencias anteriores de la base de datos
-        await client.query('DELETE FROM user_photos WHERE user_id = $1', [userId]);
-
-        // Insertar nuevas fotos a partir de los archivos recibidos
+        // 5. Actualizar fotos
         for (const [key, fileList] of Object.entries(req.files)) {
             const file = Array.isArray(fileList) ? fileList[0] : fileList;
-            const field = key; // Ej: "photo_0"
-            const positionStr = field.split('_')[1]; // "0"
-            const position = parseInt(positionStr, 10);
+            const field = key; // Ej: photo_0
+            const positionStr = field.split('_')[1];
+            const position = parseInt(positionStr, 10) + 1; // photo_0 → position 1
 
-            const url = `${UPLOAD_DIR_PROFILES_STRING}/${userId}/${file.filename}`;
+            await uploadOrReplacePhoto(userId, file, position, client);
+        }
+
+        // 6. Reordenar todas las fotos del usuario para que vayan de 1 a N sin huecos
+        const updatedPhotosResult = await client.query(
+            'SELECT id FROM user_photos WHERE user_id = $1 ORDER BY position ASC',
+            [userId]
+        );
+
+        for (let i = 0; i < updatedPhotosResult.rows.length; i++) {
+            const photoId = updatedPhotosResult.rows[i].id;
+            const newPosition = i + 1;
             await client.query(
-                'INSERT INTO user_photos (user_id, url, position) VALUES ($1, $2, $3)',
-                [userId, url, position + 1] // +1 ya tenemos photo_0 al photo_3 que las posiciones deben ir del 1 al 4
+                'UPDATE user_photos SET position = $1 WHERE id = $2 AND position != $1',
+                [newPosition, photoId]
             );
         }
 
