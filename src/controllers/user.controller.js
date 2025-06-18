@@ -434,7 +434,7 @@ export const deleteUserPhoto = async (req, res) => {
         );
 
         if (result.rowCount === 0) {
-            return res.status(404).json({ message: 'Foto no encontrada' });
+            return res.status(404).json({ message: 'Foto no encontrada', shouldLogout: false });
         }
 
         const url = result.rows[0].url;

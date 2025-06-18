@@ -50,7 +50,7 @@ export const deletePhoto = async (req, res, next) => {
 
         const result = await db.query('SELECT * FROM user_photos WHERE id = $1 AND user_id = $2', [photoId, userId]);
         const photo = result.rows[0];
-        if (!photo) return res.status(404).json({ message: 'Photo not found' });
+        if (!photo) return res.status(404).json({ message: 'Photo not found', shouldLogout: false });
 
         const all = await db.query('SELECT COUNT(*) FROM user_photos WHERE user_id = $1', [userId]);
         if (parseInt(all.rows[0].count) <= 1) {
