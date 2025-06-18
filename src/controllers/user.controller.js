@@ -246,7 +246,7 @@ export const updateProfile = async (req, res, next) => {
 
     try {
         const userId = req.user.id;
-        const { nickname, bio, animes, games } = req.body;
+        const { nickname, bio, animes, games, reorderedPositions } = req.body;
         // const files = req.files || [];
         const userDir = join(UPLOAD_DIR_PROFILES, userId);
 
@@ -348,7 +348,7 @@ export const updateProfile = async (req, res, next) => {
         }
 
         // 7.1. Si se envió un reordenamiento manual, aplicarlo
-        if (req.body.reorderedPositions) {
+        if (reorderedPositions) {
             try {
                 const reordered = JSON.parse(req.body.reorderedPositions);
                 for (const { url, position } of reordered) {
