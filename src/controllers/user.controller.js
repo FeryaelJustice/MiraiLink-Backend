@@ -347,6 +347,21 @@ export const updateProfile = async (req, res, next) => {
             }
         }
 
+        // 7.1. Si se envió un reordenamiento manual, aplicarlo
+        if (req.body.reorderedPositions) {
+            try {
+                const reordered = JSON.parse(req.body.reorderedPositions);
+                for (const { url, position } of reordered) {
+                    await client.query(
+                        `UPDATE user_photos SET position = $1 WHERE user_id = $2 AND url = $3`,
+                        [position, userId, url]
+                    );
+                }
+            } catch (err) {
+                console.error("Failed to parse or apply reorderedPositions", err);
+            }
+        }
+
         await client.query('COMMIT');
 
         // 8. Limpieza de archivos huérfanos
