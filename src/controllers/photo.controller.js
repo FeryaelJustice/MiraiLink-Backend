@@ -1,6 +1,6 @@
 import fs from 'fs';
-import { join, basename, resolve } from 'path';
 import db from '../models/db.js';
+import { join, basename, resolve } from 'path';
 import { UPLOAD_DIR_PROFILES_STRING } from '../consts/photosConsts.js';
 import { uploadOrReplacePhoto } from '../utils/photoUploader.js';
 
@@ -57,7 +57,7 @@ export const deletePhoto = async (req, res, next) => {
             return res.status(400).json({ message: 'At least one photo is required' });
         }
 
-        const filePath = join(UPLOAD_DIR_PROFILES, basename(photo.url));
+        const filePath = join(UPLOAD_DIR_PROFILES, userId, basename(photo.url));
         fs.unlinkSync(filePath);
 
         await db.query('DELETE FROM user_photos WHERE id = $1', [photoId]);

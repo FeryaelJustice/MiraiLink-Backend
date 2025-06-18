@@ -2,15 +2,13 @@ import db from '../models/db.js';
 import jwt from 'jsonwebtoken';
 import fs from 'fs';
 import bcrypt from 'bcrypt';
-import { fileURLToPath } from 'url';
-import { dirname, basename, join } from 'path';
+import { basename, join, resolve } from 'path';
 import { uploadOrReplacePhoto } from '../utils/photoUploader.js';
 import { UPLOAD_DIR_PROFILES_STRING } from '../consts/photosConsts.js';
 
 const MAX_NICKNAME_LENGTH = 30;
 const MAX_BIO_LENGTH = 500;
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const UPLOAD_DIR_PROFILES = resolve(UPLOAD_DIR_PROFILES_STRING);
 
 export const getProfile = async (req, res, next) => {
     try {
@@ -250,7 +248,7 @@ export const updateProfile = async (req, res, next) => {
         const userId = req.user.id;
         const { nickname, bio, animes, games } = req.body;
         // const files = req.files || [];
-        const userDir = join(__dirname, '..', UPLOAD_DIR_PROFILES_STRING, userId);
+        const userDir = join(UPLOAD_DIR_PROFILES, userId);
 
         // Validaciones
         if (nickname.length > MAX_NICKNAME_LENGTH) {
@@ -340,7 +338,7 @@ export const updateProfile = async (req, res, next) => {
 
         // 4.3. Borrar físicamente los archivos eliminados
         for (const row of removedPhotosResult.rows) {
-            const filePath = join(__dirname, '..', UPLOAD_DIR_PROFILES_STRING, row.url); // ajusta según tu estructura
+            const filePath = join(userDir, basename(row.url));
             fs.unlink(filePath, err => {
                 if (err) console.error(`Error deleting file ${filePath}:`, err);
             });
@@ -419,6 +417,7 @@ export const deleteUserPhoto = async (req, res) => {
     try {
         const userId = req.user.id;
         const position = parseInt(req.params.position);
+        const userDir = join(UPLOAD_DIR_PROFILES, userId);
 
         if (![1, 2, 3, 4].includes(position)) {
             return res.status(400).json({ message: 'Posición inválida' });
@@ -455,7 +454,7 @@ export const deleteUserPhoto = async (req, res) => {
         await client.query('COMMIT');
 
         // 4. Borrar archivo físicamente
-        const fsPath = join(__dirname, '..', UPLOAD_DIR_PROFILES_STRING, basename(url));
+        const fsPath = join(userDir, basename(url));
         fs.unlink(fsPath, err => {
             if (err) {
                 if (err.code === 'ENOENT') {
