@@ -1,8 +1,8 @@
 import bcrypt, { genSalt } from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import dayjs from 'dayjs';
 import { sendVerificationEmail } from '../utils/mailer.js';
 import db from '../models/db.js';
+import { getCorrectNow } from '../utils/dateUtils.js';
 
 // Utilidad para generar un código de 6 dígitos
 const generateToken = () => Math.floor(100000 + Math.random() * 900000).toString();
@@ -102,7 +102,7 @@ export const autoLogin = async (req, res, next) => {
 
 export const requestPasswordReset = async (req, res, next) => {
     const { email } = req.body;
-    const now = dayjs().add(2, 'hours');
+    const now = getCorrectNow();
     try {
         const userResult = await db.query(`SELECT id FROM users WHERE email = $1 AND is_deleted = false`, [email]);
         if (userResult.rowCount === 0) return res.status(404).json({ message: 'Usuario no encontrado' });
@@ -126,7 +126,7 @@ export const requestPasswordReset = async (req, res, next) => {
 
 export const confirmPasswordReset = async (req, res, next) => {
     const { email, token, newPassword } = req.body;
-    const now = dayjs().add(2, 'hours');
+    const now = getCorrectNow();
     try {
         const userResult = await db.query(`SELECT id FROM users WHERE email = $1 AND is_deleted = false`, [email]);
         if (userResult.rowCount === 0) return res.status(404).json({ message: 'Usuario no encontrado' });
@@ -141,7 +141,7 @@ export const confirmPasswordReset = async (req, res, next) => {
         if (tokenResult.rowCount === 0) return res.status(400).json({ message: 'Código inválido' });
 
         const result = tokenResult.rows[0];
-        const expiresAt = dayjs(result.expires_at).add(2, 'hours');
+        const expiresAt = getCorrectNow(result.expires_at);
         if (expiresAt.toISOString() < now.toISOString()) return res.status(400).json({ message: 'Código expirado' });
 
         const salt = await genSalt(process.env.SALT_ROUNDS || 6);
@@ -174,7 +174,7 @@ export const checkIsVerified = async (req, res, next) => {
 export const requestVerificationCode = async (req, res, next) => {
     const { userId, type } = req.body; // type: 'email' o 'sms'
     if (!['email', 'sms'].includes(type)) return res.status(400).json({ message: 'Tipo inválido' });
-    const now = dayjs().add(2, 'hours');
+    const now = getCorrectNow();
 
     try {
         // Verificar que el usuario existe y no está verificado
@@ -203,7 +203,7 @@ export const requestVerificationCode = async (req, res, next) => {
 
 export const confirmVerificationCode = async (req, res, next) => {
     const { userId, token, type } = req.body;
-    const now = dayjs().add(2, 'hours')
+    const now = getCorrectNow();
 
     try {
         // Verificar que el usuario existe y no está verificado
@@ -219,7 +219,7 @@ export const confirmVerificationCode = async (req, res, next) => {
         if (results.rowCount === 0) return res.status(400).json({ message: 'Código inválido' });
 
         const result = results.rows[0];
-        const expiresAt = dayjs(result.expires_at).add(2, 'hours');
+        const expiresAt = getCorrectNow(result.expires_at);
         if (expiresAt.toISOString() < now.toISOString()) return res.status(400).json({ message: 'Código expirado' });
 
         await db.query(`
