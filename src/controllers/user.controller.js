@@ -4,7 +4,7 @@ import fs from 'fs';
 import bcrypt from 'bcrypt';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
-import { dirname } from 'path';
+import { dirname, basename, join } from 'path';
 import { uploadOrReplacePhoto } from '../utils/photoUploader.js';
 import { UPLOAD_DIR_PROFILES_STRING } from '../consts/photosConsts.js';
 
@@ -456,7 +456,7 @@ export const deleteUserPhoto = async (req, res) => {
         await client.query('COMMIT');
 
         // 4. Borrar archivo físicamente
-        const fsPath = path.join(__dirname, '..', UPLOAD_DIR_PROFILES_STRING, path.basename(url));
+        const fsPath = join(__dirname, '..', UPLOAD_DIR_PROFILES_STRING, basename(url));
         fs.unlink(fsPath, err => {
             if (err) {
                 if (err.code === 'ENOENT') {
