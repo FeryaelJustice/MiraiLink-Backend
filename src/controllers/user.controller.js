@@ -370,6 +370,39 @@ export const updateProfile = async (req, res, next) => {
         }
 
         await client.query('COMMIT');
+
+        // 7. Limpieza de archivos basura (no referenciados en BD)
+        try {
+            const userDir = join(__dirname, '..', 'uploads', userId);
+            fs.readdir(userDir, async (err, files) => {
+                if (err) {
+                    console.error(`Error leyendo carpeta de usuario ${userDir}:`, err);
+                    return;
+                }
+
+                try {
+                    const result = await db.query(
+                        'SELECT url FROM user_photos WHERE user_id = $1',
+                        [userId]
+                    );
+                    const usedFiles = result.rows.map(row => row.url);
+
+                    for (const file of files) {
+                        if (!usedFiles.includes(file)) {
+                            const pathToDelete = join(userDir, file);
+                            fs.unlink(pathToDelete, err => {
+                                if (err) console.error(`Error eliminando archivo basura ${pathToDelete}:`, err);
+                            });
+                        }
+                    }
+                } catch (queryErr) {
+                    console.error('Error al consultar archivos válidos en la BD:', queryErr);
+                }
+            });
+        } catch (fsError) {
+            console.error('Error al limpiar archivos basura:', fsError);
+        }
+
         res.status(200).json({ message: 'Profile updated' });
     } catch (err) {
         await client.query('ROLLBACK');
