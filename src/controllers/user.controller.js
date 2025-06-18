@@ -352,9 +352,12 @@ export const updateProfile = async (req, res, next) => {
             try {
                 const reordered = JSON.parse(reorderedPositions);
                 for (const { url, position } of reordered) {
+                    const relativeUrl = url.includes('assets/')
+                        ? url.split('assets/')[1]
+                        : url;
                     await client.query(
                         `UPDATE user_photos SET position = $1 WHERE user_id = $2 AND url = $3`,
-                        [position, userId, url]
+                        [position, userId, `assets/${relativeUrl}`]
                     );
                 }
             } catch (err) {
