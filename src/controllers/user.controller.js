@@ -138,6 +138,41 @@ export const deleteAccount = async (req, res) => {
     }
 };
 
+export const publicDeleteAccount = async (req, res) => {
+    const { email, password } = req.body;
+
+    try {
+        // 1. Buscar el usuario por email
+        const userResult = await db.query(
+            'SELECT id, password_hash FROM users WHERE email = $1 AND is_deleted = false',
+            [email]
+        );
+
+        if (userResult.rowCount === 0) {
+            return res.status(404).json({ message: 'Usuario no encontrado o ya eliminado.' });
+        }
+
+        const user = userResult.rows[0];
+
+        // 2. Verificar la contraseña
+        const isValid = await bcrypt.compare(password, user.password_hash);
+        if (!isValid) {
+            return res.status(401).json({ message: 'Contraseña incorrecta.' });
+        }
+
+        // 3. Marcar como eliminado
+        await db.query(
+            `UPDATE users SET is_deleted = true, updated_at = now() WHERE id = $1`,
+            [user.id]
+        );
+
+        return res.status(200).json({ message: 'Cuenta eliminada correctamente.' });
+    } catch (error) {
+        console.error('Error eliminando cuenta públicamente:', error);
+        return res.status(500).json({ message: 'Error interno del servidor.' });
+    }
+};
+
 export const getProfiles = async (req, res, next) => {
     try {
         const authenticatedUserId = req.user.id;
