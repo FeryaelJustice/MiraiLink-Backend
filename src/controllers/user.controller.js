@@ -293,116 +293,86 @@ export const updateProfile = async (req, res, next) => {
             }
         }
 
-        // 4. Validar que no se superen las 4 fotos permitidas
-        const existingPhotosResult = await client.query(
+        // 4. Validar máximo 4 fotos
+        const existingPhotos = await client.query(
             'SELECT position FROM user_photos WHERE user_id = $1',
             [userId]
         );
-        const existingPositions = new Set(existingPhotosResult.rows.map(row => row.position));
+        const existingPositions = new Set(existingPhotos.rows.map(r => r.position));
 
-        const newPositions = Object.entries(req.files)
-            .map(([key]) => parseInt(key.split('_')[1], 10) + 1); // photo_0 → 1
+        const newPositions = Object.keys(req.files).map(key => parseInt(key.split('_')[1], 10) + 1);
+        const positionsToAdd = newPositions.filter(pos => !existingPositions.has(pos));
 
-        const positionsThatWouldBeAdded = newPositions.filter(pos => !existingPositions.has(pos));
-
-        if (existingPositions.size + positionsThatWouldBeAdded.length > 4) {
+        if (existingPositions.size + positionsToAdd.length > 4) {
             return res.status(400).json({ message: 'Máximo 4 fotos permitidas' });
         }
 
-        // 4.1. Detectar fotos que el usuario eliminó explícitamente (no las que omitió porque no cambiaron)
+        // 5. Eliminar explícitamente fotos que el usuario quitó
         const removedPositions = [];
         for (const pos of [1, 2, 3, 4]) {
             const fieldKey = `photo_${pos - 1}`;
-            const fieldInRequest = Object.prototype.hasOwnProperty.call(req.body, fieldKey);
-            const fileUploaded = Object.prototype.hasOwnProperty.call(req.files, fieldKey);
-
-            // Si se envía el campo pero no hay foto => quiere eliminarla
-            if (fieldInRequest && !fileUploaded) {
+            if (Object.prototype.hasOwnProperty.call(req.body, fieldKey) &&
+                !Object.prototype.hasOwnProperty.call(req.files, fieldKey)) {
                 removedPositions.push(pos);
             }
         }
 
-        // 4.2. Obtener URLs de fotos eliminadas antes de borrarlas de la BD
-        let removedPhotosResult = { rows: [] };
         if (removedPositions.length > 0) {
-            removedPhotosResult = await client.query(
-                'SELECT url FROM user_photos WHERE user_id = $1 AND position = ANY($2)',
-                [userId, removedPositions]
-            );
-
             await client.query(
                 'DELETE FROM user_photos WHERE user_id = $1 AND position = ANY($2)',
                 [userId, removedPositions]
             );
         }
 
-        // 4.3. Borrar físicamente los archivos eliminados
-        for (const row of removedPhotosResult.rows) {
-            const filePath = join(userDir, basename(row.url));
-            fs.unlink(filePath, err => {
-                if (err) console.error(`Error deleting file ${filePath}:`, err);
-            });
-        }
-
-        // 5. Actualizar fotos
+        // 6. Subir o reemplazar fotos enviadas
         for (const [key, fileList] of Object.entries(req.files)) {
             const file = Array.isArray(fileList) ? fileList[0] : fileList;
-            const field = key; // Ej: photo_0
-            const positionStr = field.split('_')[1];
-            const position = parseInt(positionStr, 10) + 1; // photo_0 → position 1
-
+            const position = parseInt(key.split('_')[1], 10) + 1;
             await uploadOrReplacePhoto(userId, file, position, client);
         }
 
-        // 6. Reordenar todas las fotos del usuario para que vayan de 1 a N sin huecos
-        const updatedPhotosResult = await client.query(
-            'SELECT id FROM user_photos WHERE user_id = $1 ORDER BY position ASC',
+        // 7. Si no hay foto en posición 1, reajustar posiciones
+        const remainingPhotos = await client.query(
+            'SELECT id, position FROM user_photos WHERE user_id = $1 ORDER BY position ASC',
             [userId]
         );
 
-        for (let i = 0; i < updatedPhotosResult.rows.length; i++) {
-            const photoId = updatedPhotosResult.rows[i].id;
-            const newPosition = i + 1;
-            await client.query(
-                'UPDATE user_photos SET position = $1 WHERE id = $2 AND position != $1',
-                [newPosition, photoId]
-            );
+        if (!remainingPhotos.rows.some(p => p.position === 1)) {
+            for (let i = 0; i < remainingPhotos.rows.length; i++) {
+                const { id } = remainingPhotos.rows[i];
+                await client.query(
+                    'UPDATE user_photos SET position = $1 WHERE id = $2',
+                    [i + 1, id]
+                );
+            }
         }
 
         await client.query('COMMIT');
 
-        // 7. Limpieza de archivos basura (no referenciados en BD)
+        // 8. Limpieza de archivos huérfanos
         try {
-            fs.readdir(userDir, async (err, files) => {
-                if (err) {
-                    console.error(`Error leyendo carpeta de usuario ${userDir}:`, err);
-                    return;
-                }
+            const diskFiles = await fs.promises.readdir(userDir);
+            const dbPhotos = await db.query(
+                'SELECT url FROM user_photos WHERE user_id = $1',
+                [userId]
+            );
+            const dbFilenames = dbPhotos.rows.map(row => basename(row.url));
 
-                try {
-                    const result = await db.query(
-                        'SELECT url FROM user_photos WHERE user_id = $1',
-                        [userId]
-                    );
-                    const usedFiles = result.rows.map(row => row.url);
-
-                    for (const file of files) {
-                        if (!usedFiles.includes(file)) {
-                            const pathToDelete = join(userDir, file);
-                            fs.unlink(pathToDelete, err => {
-                                if (err) console.error(`Error eliminando archivo basura ${pathToDelete}:`, err);
-                            });
-                        }
+            for (const file of diskFiles) {
+                if (!dbFilenames.includes(file)) {
+                    const toDelete = join(userDir, file);
+                    try {
+                        await fs.promises.unlink(toDelete);
+                    } catch (err) {
+                        console.error(`Error eliminando archivo basura ${toDelete}:`, err.message);
                     }
-                } catch (queryErr) {
-                    console.error('Error al consultar archivos válidos en la BD:', queryErr);
                 }
-            });
-        } catch (fsError) {
-            console.error('Error al limpiar archivos basura:', fsError);
+            }
+        } catch (fsErr) {
+            console.error('Error leyendo carpeta de usuario:', fsErr.message);
         }
 
-        res.status(200).json({ message: 'Profile updated' });
+        return res.status(200).json({ message: 'Profile updated' });
     } catch (err) {
         await client.query('ROLLBACK');
         console.error('Error updating profile:', err);
