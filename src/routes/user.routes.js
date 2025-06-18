@@ -1,6 +1,6 @@
 
 import express from 'express';
-import { getProfile, deleteAccount, updateProfile, getProfileFromId, getUserIdByToken, getUserIdByEmailAndPassword, publicDeleteAccount, deleteUserPhoto } from '../controllers/user.controller.js';
+import { getProfile, deleteAccount, updateProfile, getProfileFromId, getUserIdByToken, getUserIdByEmailAndPassword, publicDeleteAccount } from '../controllers/user.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import multer from 'multer';
 import { fileURLToPath } from 'url';
