@@ -350,7 +350,7 @@ export const updateProfile = async (req, res, next) => {
         // 7.1. Si se envió un reordenamiento manual, aplicarlo
         if (reorderedPositions) {
             try {
-                const reordered = JSON.parse(req.body.reorderedPositions);
+                const reordered = JSON.parse(reorderedPositions);
                 for (const { url, position } of reordered) {
                     await client.query(
                         `UPDATE user_photos SET position = $1 WHERE user_id = $2 AND url = $3`,
