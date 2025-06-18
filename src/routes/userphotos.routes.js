@@ -8,7 +8,7 @@ import { UPLOAD_DIR_PROFILES_STRING } from '../consts/photosConsts.js';
 
 const router = express.Router();
 
-const UPLOAD_DIR_PROFILES = resolve(UPLOAD_DIR_PROFILES_STRING);
+const UPLOAD_DIR_PROFILES = resolve('src', UPLOAD_DIR_PROFILES_STRING);
 
 const storage = multer.diskStorage({
     destination: async (req, file, cb) => {

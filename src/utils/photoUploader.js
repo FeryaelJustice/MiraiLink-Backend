@@ -3,7 +3,7 @@ import { join, basename, resolve } from 'path';
 import db from '../models/db.js';
 import { UPLOAD_DIR_PROFILES_STRING } from '../consts/photosConsts.js';
 
-const UPLOAD_DIR_PROFILES = resolve(UPLOAD_DIR_PROFILES_STRING);
+const UPLOAD_DIR_PROFILES = resolve('src', UPLOAD_DIR_PROFILES_STRING);
 
 export async function uploadOrReplacePhoto(userId, file, position, client = db) {
     // Eliminar antigua si existe en esa posición

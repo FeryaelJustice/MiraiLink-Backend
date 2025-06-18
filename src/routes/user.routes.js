@@ -9,7 +9,7 @@ import { UPLOAD_DIR_PROFILES_STRING } from '../consts/photosConsts.js';
 
 const router = express.Router();
 
-const UPLOAD_DIR_PROFILES = resolve(UPLOAD_DIR_PROFILES_STRING);
+const UPLOAD_DIR_PROFILES = resolve('src', UPLOAD_DIR_PROFILES_STRING);
 
 // Para las fotos, aunque este en el photos.routes.js, es necesario importar multer y configurarlo aquí
 // porque multer necesita acceso al request para saber a qué carpeta subir la foto del usuario.

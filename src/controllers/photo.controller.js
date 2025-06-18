@@ -4,7 +4,7 @@ import { join, basename, resolve } from 'path';
 import { UPLOAD_DIR_PROFILES_STRING } from '../consts/photosConsts.js';
 import { uploadOrReplacePhoto } from '../utils/photoUploader.js';
 
-const UPLOAD_DIR_PROFILES = resolve(UPLOAD_DIR_PROFILES_STRING);
+const UPLOAD_DIR_PROFILES = resolve('src', UPLOAD_DIR_PROFILES_STRING);
 
 export const uploadPhoto = async (req, res, next) => {
     try {

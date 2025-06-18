@@ -8,7 +8,7 @@ import { UPLOAD_DIR_PROFILES_STRING } from '../consts/photosConsts.js';
 
 const MAX_NICKNAME_LENGTH = 30;
 const MAX_BIO_LENGTH = 500;
-const UPLOAD_DIR_PROFILES = resolve(UPLOAD_DIR_PROFILES_STRING);
+const UPLOAD_DIR_PROFILES = resolve('src', UPLOAD_DIR_PROFILES_STRING);
 
 export const getProfile = async (req, res, next) => {
     try {
