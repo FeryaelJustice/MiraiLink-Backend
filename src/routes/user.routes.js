@@ -59,6 +59,5 @@ router.put('', authenticateToken(), upload.fields(photoFields), (req, res, next)
 }, updateProfile);
 router.post('/public/delete-account', publicDeleteAccount);
 router.delete('', authenticateToken(), deleteAccount);
-router.delete('/photo/:position', authenticateToken(), deleteUserPhoto);
 
 export default router;
