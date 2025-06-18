@@ -414,3 +414,65 @@ export const updateProfile = async (req, res, next) => {
         client.release();
     }
 };
+
+export const deleteUserPhoto = async (req, res) => {
+    const client = await db.connect();
+    try {
+        const userId = req.user.id;
+        const position = parseInt(req.params.position);
+
+        if (![1, 2, 3, 4].includes(position)) {
+            return res.status(400).json({ message: 'Posición inválida' });
+        }
+
+        await client.query('BEGIN');
+
+        // 1. Obtener la URL para borrarla físicamente
+        const result = await client.query(
+            'SELECT url FROM user_photos WHERE user_id = $1 AND position = $2',
+            [userId, position]
+        );
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({ message: 'Foto no encontrada' });
+        }
+
+        const url = result.rows[0].url;
+
+        // 2. Borrar de la BD
+        await client.query(
+            'DELETE FROM user_photos WHERE user_id = $1 AND position = $2',
+            [userId, position]
+        );
+
+        // 3. Reordenar las posiciones
+        await client.query(
+            `UPDATE user_photos
+            SET position = position - 1
+            WHERE user_id = $1 AND position > $2`,
+            [userId, position]
+        );
+
+        await client.query('COMMIT');
+
+        // 4. Borrar archivo físicamente
+        const fsPath = path.join(__dirname, '..', UPLOAD_DIR_PROFILES_STRING, path.basename(url));
+        fs.unlink(fsPath, err => {
+            if (err) {
+                if (err.code === 'ENOENT') {
+                    console.warn(`Archivo ya no existía: ${fsPath}`);
+                } else {
+                    console.error(`Error borrando el archivo: ${fsPath}`, err);
+                }
+            }
+        });
+
+        return res.status(200).json({ message: 'Foto eliminada correctamente' });
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error(error);
+        return res.status(500).json({ message: 'Error al eliminar la foto' });
+    } finally {
+        client.release();
+    }
+};
