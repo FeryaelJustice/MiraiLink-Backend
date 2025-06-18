@@ -1,17 +1,8 @@
 -- USERS
-INSERT INTO
-  users (
-    id,
-    username,
-    email,
-    phone_number,
-    password_hash,
-    auth_provider,
-    is_verified,
-    bio,
-    gender,
-    birthdate
-  )
+INSERT INTO users (
+    id, username, email, phone_number, password_hash, auth_provider,
+    is_verified, bio, gender, birthdate
+)
 VALUES
   (
     '11111111-1111-1111-1111-111111111111',
@@ -39,9 +30,7 @@ VALUES
   );
 
 -- ANIMES
-INSERT INTO
-  animes (id, name, description, image_url)
-VALUES
+INSERT INTO animes (id, name, description, image_url) VALUES
   (
     '33333333-3333-3333-3333-333333333333',
     'Attack on Titan',
@@ -56,9 +45,7 @@ VALUES
   );
 
 -- GAMES
-INSERT INTO
-  games (id, name, description, image_url)
-VALUES
+INSERT INTO games (id, name, description, image_url) VALUES
   (
     '55555555-5555-5555-5555-555555555555',
     'Genshin Impact',
@@ -73,89 +60,50 @@ VALUES
   );
 
 -- USER ANIME INTERESTS
-INSERT INTO
-  user_anime_interests (user_id, anime_id)
-VALUES
-  (
-    '11111111-1111-1111-1111-111111111111',
-    '44444444-4444-4444-4444-444444444444'
-  ),
-  -- kirito → SAO
-  (
-    '22222222-2222-2222-2222-222222222222',
-    '33333333-3333-3333-3333-333333333333'
-  );
+INSERT INTO user_anime_interests (user_id, anime_id) VALUES
+  ('11111111-1111-1111-1111-111111111111', '44444444-4444-4444-4444-444444444444'), -- kirito → SAO
+  ('22222222-2222-2222-2222-222222222222', '33333333-3333-3333-3333-333333333333'); -- asuna → AOT
 
--- asuna → AOT
 -- USER GAME INTERESTS
-INSERT INTO
-  user_game_interests (user_id, game_id)
-VALUES
-  (
-    '11111111-1111-1111-1111-111111111111',
-    '66666666-6666-6666-6666-666666666666'
-  ),
-  -- kirito → Elden Ring
-  (
-    '22222222-2222-2222-2222-222222222222',
-    '55555555-5555-5555-5555-555555555555'
-  );
+INSERT INTO user_game_interests (user_id, game_id) VALUES
+  ('11111111-1111-1111-1111-111111111111', '66666666-6666-6666-6666-666666666666'), -- kirito → Elden Ring
+  ('22222222-2222-2222-2222-222222222222', '55555555-5555-5555-5555-555555555555'); -- asuna → Genshin
 
--- asuna → Genshin
 -- LIKES
-INSERT INTO
-  likes (id, from_user_id, to_user_id)
-VALUES
-  (
-    '77777777-7777-7777-7777-777777777777',
-    '11111111-1111-1111-1111-111111111111',
-    '22222222-2222-2222-2222-222222222222'
-  );
+INSERT INTO likes (id, from_user_id, to_user_id) VALUES
+  ('77777777-7777-7777-7777-777777777777', '11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222');
 
 -- MATCHES
-INSERT INTO
-  matches (id, user1_id, user2_id)
-VALUES
-  (
-    '88888888-8888-8888-8888-888888888888',
-    '11111111-1111-1111-1111-111111111111',
-    '22222222-2222-2222-2222-222222222222'
-  );
+INSERT INTO matches (id, user1_id, user2_id) VALUES
+  ('88888888-8888-8888-8888-888888888888', '11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222');
+
+-- CHATS (uno privado por el match)
+INSERT INTO chats (id, type, created_by) VALUES
+  ('cccccccc-cccc-cccc-cccc-cccccccccccc', 'private', '11111111-1111-1111-1111-111111111111');
+
+-- CHAT MEMBERS
+INSERT INTO chat_members (chat_id, user_id, role) VALUES
+  ('cccccccc-cccc-cccc-cccc-cccccccccccc', '11111111-1111-1111-1111-111111111111', 'member'),
+  ('cccccccc-cccc-cccc-cccc-cccccccccccc', '22222222-2222-2222-2222-222222222222', 'member');
 
 -- MESSAGES
-INSERT INTO
-  messages (id, match_id, sender_id, text, sent_at)
-VALUES
+INSERT INTO messages (id, chat_id, sender_id, text, sent_at) VALUES
   (
     '99999999-9999-9999-9999-999999999999',
-    '88888888-8888-8888-8888-888888888888',
+    'cccccccc-cccc-cccc-cccc-cccccccccccc',
     '11111111-1111-1111-1111-111111111111',
     'Hola Asuna, ¿jugamos juntos?',
     NOW()
   ),
   (
     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-    '88888888-8888-8888-8888-888888888888',
+    'cccccccc-cccc-cccc-cccc-cccccccccccc',
     '22222222-2222-2222-2222-222222222222',
     '¡Claro Kirito!',
     NOW() + INTERVAL '1 minute'
   );
 
 -- USER PHOTOS
-INSERT INTO
-  user_photos (user_id, url, position)
-VALUES
-  (
-    '11111111-1111-1111-1111-111111111111',
-    'https://loremflickr.com/320/240/dog',
-    1
-  );
-
-INSERT INTO
-  user_photos (user_id, url, position)
-VALUES
-  (
-    '11111111-1111-1111-1111-111111111111',
-    'https://loremflickr.com/320/240/paris',
-    2
-  );
+INSERT INTO user_photos (user_id, url, position) VALUES
+  ('11111111-1111-1111-1111-111111111111', 'https://loremflickr.com/320/240/dog', 1),
+  ('11111111-1111-1111-1111-111111111111', 'https://loremflickr.com/320/240/paris', 2);

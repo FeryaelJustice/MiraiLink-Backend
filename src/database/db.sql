@@ -184,14 +184,7 @@ CREATE INDEX idx_matches_user1 ON matches(user1_id);
 
 CREATE INDEX idx_matches_user2 ON matches(user2_id);
 
--- Para las notificacion de tienes un nuevo match
-ALTER TABLE
-    matches
-ADD
-    COLUMN seen_by_user1 BOOLEAN DEFAULT FALSE,
-ADD
-    COLUMN seen_by_user2 BOOLEAN DEFAULT FALSE;
-
+-- ALTER TABLES
 ALTER TABLE
     chats DROP CONSTRAINT chats_created_by_fkey,
 ADD
