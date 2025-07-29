@@ -48,7 +48,7 @@ export const getChatsFromUser = async (req, res, next) => {
             const destinataryQuery = `
             SELECT cm.chat_id, u.id AS user_id, u.username, u.nickname, p.url AS avatar_url
             FROM chat_members cm
-            JOIN users u ON u.id = cm.user_id
+            JOIN users u ON u.id = cm.user_id AND u.is_deleted = false
             LEFT JOIN LATERAL (
                 SELECT url
                 FROM user_photos
