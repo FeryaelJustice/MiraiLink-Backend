@@ -316,14 +316,14 @@ export const getChatHistory = async (req, res, next) => {
 
         FROM messages m
 
-        JOIN users s ON s.id = m.sender_id
+        JOIN users s ON s.id = m.sender_id AND s.is_deleted = false
         LEFT JOIN user_photos p1 ON p1.user_id = s.id AND p1.position = 1
 
         -- Subquery para obtener el receiver (el otro user_id del chat)
         JOIN LATERAL (
             SELECT u.*
             FROM chat_members cm
-            JOIN users u ON u.id = cm.user_id
+            JOIN users u ON u.id = cm.user_id AND u.is_deleted = false
             WHERE cm.chat_id = m.chat_id AND cm.user_id != m.sender_id
             LIMIT 1
         ) r ON true
