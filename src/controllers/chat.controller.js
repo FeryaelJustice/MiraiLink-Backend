@@ -78,7 +78,8 @@ export const getChatsFromUser = async (req, res, next) => {
         const fullResult = chatSummaries.map(chat => ({
             ...chat,
             destinatary: destinataryMap[chat.chat_id] || null
-        }));
+        })).filter(chat => destinataryMap[chat.chat_id]);
+
         res.status(200).json(fullResult);
     } catch (error) {
         next(error);
