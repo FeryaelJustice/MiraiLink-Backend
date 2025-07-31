@@ -175,6 +175,21 @@ CREATE TABLE IF NOT EXISTS public.feedback (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
+-- USER 2FA (TWO-FACTOR AUTHENTICATION)
+CREATE TABLE user_2fa (
+    user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    secret TEXT NOT NULL,
+    enabled BOOLEAN DEFAULT FALSE
+);
+
+-- RECOVERY CODES
+CREATE TABLE recovery_codes (
+    id SERIAL PRIMARY KEY,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    code TEXT NOT NULL,
+    used BOOLEAN DEFAULT FALSE
+);
+
 -- INDEXES
 CREATE INDEX idx_likes_from_user ON likes(from_user_id);
 

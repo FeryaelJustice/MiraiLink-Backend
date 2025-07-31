@@ -4,8 +4,8 @@
     "description": "The official mirailink backend",
     "main": "./src/app.js",
     "scripts": {
-        "dev": "set NODE_ENV=development && nodemon src/app.js",
-        "start": "set NODE_ENV=production && node src/app.js",
+        "dev": "set NODE_ENV=development && nodemon --env-file=.env src/app.js",
+        "start": "set NODE_ENV=production && node --env-file=.env src/app.js",
         "build": "echo 'No build step needed for pure Node.js app'",
         "test": "echo 'No tests configured yet'",
         "lint": "eslint ."
@@ -24,8 +24,8 @@
         "bcrypt": "^6.0.0",
         "compression": "^1.8.0",
         "cors": "^2.8.5",
+        "crypto": "^1.0.1",
         "dayjs": "^1.11.13",
-        "dotenv": "^17.2.1",
         "express": "^5.1.0",
         "fs": "^0.0.1-security",
         "helmet": "^8.1.0",
@@ -35,7 +35,9 @@
         "nodemailer": "^7.0.3",
         "path": "^0.12.7",
         "pg": "^8.16.0",
+        "qrcode": "^1.5.4",
         "socket.io": "^4.8.1",
+        "speakeasy": "^2.0.0",
         "uuid": "^11.1.0"
     },
     "devDependencies": {

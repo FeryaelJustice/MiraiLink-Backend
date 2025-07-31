@@ -4,7 +4,6 @@ import { fileURLToPath } from 'url';
 import { join, dirname } from 'path';
 import cors from 'cors';
 import compression from 'compression';
-import dotenv from 'dotenv';
 import helmet from 'helmet';
 // import http from 'http';
 import authRoutes from './routes/auth.routes.js';
@@ -24,9 +23,6 @@ const API_PREFIX = '/api';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-
-// Load environment variables from .env file
-dotenv.config();
 
 // Express app instance
 const app = express();

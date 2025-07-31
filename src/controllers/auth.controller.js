@@ -1,8 +1,11 @@
 import bcrypt, { genSalt } from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { sendVerificationEmail } from '../utils/mailer.js';
+import speakeasy from 'speakeasy';
+import qrcode from 'qrcode';
 import db from '../models/db.js';
+import { sendVerificationEmail } from '../utils/mailer.js';
 import { getCorrectNow } from '../utils/dateUtils.js';
+import { encrypt, decrypt } from '../utils/cryptoUtils.js';
 
 // Utilidad para generar un código de 6 dígitos
 const generateToken = () => Math.floor(100000 + Math.random() * 900000).toString();
@@ -26,7 +29,7 @@ export const register = async (req, res, next) => {
         const result = await db.query('SELECT * FROM users WHERE username = $1 OR email = $2', [username, email]);
         const user = result.rows[0];
 
-        const token = jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET, {
+        const token = jwt.sign({ id: user.id, username: user.username, email: user.email }, process.env.JWT_SECRET, {
             expiresIn: '24h',
         });
 
@@ -231,6 +234,133 @@ export const confirmVerificationCode = async (req, res, next) => {
         `, [userId, type]);
 
         res.status(200).json({ message: 'Cuenta verificada correctamente' });
+    } catch (err) {
+        next(err);
+    }
+}
+
+// 2FA
+
+export const setup2FA = async (req, res, next) => {
+    const userId = req.user.id;
+    try {
+        // 1. Generar secreto
+        const secret = speakeasy.generateSecret({
+            name: `MiraiLink:${req.user.email || req.user.username || userId}`, // puede usar username también
+        });
+
+        // 2. Encriptar y guardar en BBDD (pero sin habilitar aún)
+        const encrypted = encrypt(secret.base32);
+        await db.query(`
+            INSERT INTO user_2fa (user_id, secret, enabled)
+            VALUES ($1, $2, FALSE)
+            ON CONFLICT (user_id) DO UPDATE SET secret = EXCLUDED.secret, enabled = FALSE
+        `, [userId, encrypted]);
+
+        // 3. Crear códigos de recuperación
+        const codes = Array.from({ length: 5 }, () =>
+            crypto.randomBytes(6).toString('hex')
+        );
+
+        await Promise.all(
+            codes.map(code =>
+                db.query(`
+                    INSERT INTO recovery_codes (user_id, code, used)
+                    VALUES ($1, $2, FALSE)
+            `, [userId, code])
+            )
+        );
+
+        // 4. Devolver URL + recoveryCodes
+        return res.json({
+            otpauth_url: secret.otpauth_url,
+            recovery_codes: codes,
+            base32: secret.base32, // para apps sin QR
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+export const verify2FA = async (req, res, next) => {
+    const { token } = req.body;
+    const userId = req.user.id;
+    try {
+        const result = await db.query('SELECT secret FROM user_2fa WHERE user_id = $1', [userId]);
+        if (result.rowCount === 0) return res.status(404).json({ message: '2FA no configurado' });
+
+        const decrypted = decrypt(result.rows[0].secret);
+
+        const verified = speakeasy.totp.verify({
+            secret: decrypted,
+            encoding: 'base32',
+            token,
+            window: 1
+        });
+
+        if (!verified) return res.status(400).json({ message: 'Código inválido' });
+
+        await db.query('UPDATE user_2fa SET enabled = TRUE WHERE user_id = $1', [userId]);
+
+        res.json({ message: '2FA habilitado correctamente' });
+    } catch (err) {
+        next(err);
+    }
+}
+
+export const disable2FA = async (req, res, next) => {
+    const userId = req.user.id;
+    try {
+        await db.query('DELETE FROM user_2fa WHERE user_id = $1', [userId]);
+        await db.query('DELETE FROM recovery_codes WHERE user_id = $1', [userId]);
+
+        res.json({ message: '2FA desactivado' });
+    } catch (err) {
+        next(err);
+    }
+}
+
+export const check2FAStatus = async (req, res, next) => {
+    const userId = req.user.id;
+    try {
+        const result = await db.query('SELECT enabled FROM user_2fa WHERE user_id = $1', [userId]);
+        res.json({ enabled: result.rows[0]?.enabled || false });
+    } catch (err) {
+        next(err);
+    }
+}
+
+export const loginWith2FA = async (req, res, next) => {
+    const { userId, token } = req.body;
+    try {
+        const result = await db.query('SELECT secret FROM user_2fa WHERE user_id = $1 AND enabled = TRUE', [userId]);
+        if (result.rowCount === 0) return res.status(400).json({ message: '2FA no requerido' });
+
+        const decrypted = decrypt(result.rows[0].secret);
+
+        const verified = speakeasy.totp.verify({
+            secret: decrypted,
+            encoding: 'base32',
+            token,
+            window: 1
+        });
+
+        // Si no válido, intentar como código de recuperación
+        if (!verified) {
+            const rec = await db.query(`
+            SELECT * FROM recovery_codes
+            WHERE user_id = $1 AND code = $2 AND used = FALSE
+        `, [userId, token]);
+
+            if (rec.rowCount === 0) return res.status(400).json({ message: 'Código inválido' });
+
+            await db.query(`UPDATE recovery_codes SET used = TRUE WHERE id = $1`, [rec.rows[0].id]);
+        }
+
+        // Generar nuevo token de sesión
+        const jwtToken = jwt.sign({ id: userId }, process.env.JWT_SECRET, { expiresIn: '30d' });
+
+        res.json({ token: jwtToken });
     } catch (err) {
         next(err);
     }

@@ -1,5 +1,5 @@
 import express from 'express';
-import { register, login, logout, autoLogin, requestPasswordReset, confirmPasswordReset, requestVerificationCode, confirmVerificationCode, checkIsVerified } from '../controllers/auth.controller.js';
+import { register, login, logout, autoLogin, requestPasswordReset, confirmPasswordReset, requestVerificationCode, confirmVerificationCode, checkIsVerified, setup2FA, verify2FA, disable2FA, check2FAStatus, loginWith2FA } from '../controllers/auth.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
@@ -17,5 +17,16 @@ router.post('/password/confirm-reset', confirmPasswordReset);
 router.post('/verification/request', requestVerificationCode);
 router.post('/verification/confirm', confirmVerificationCode);
 router.get('/verification/check', authenticateToken(), checkIsVerified);
+
+// 2FA
+router.post('/2fa/setup', authenticateToken(), setup2FA);
+
+router.post('/2fa/verify', authenticateToken(), verify2FA);
+
+router.post('/2fa/disable', authenticateToken(), disable2FA);
+
+router.get('/2fa/status', authenticateToken(), check2FAStatus);
+
+router.post('/2fa/login', authenticateToken(), loginWith2FA);
 
 export default router;
