@@ -5,6 +5,7 @@ import { join, dirname } from 'path';
 import cors from 'cors';
 import compression from 'compression';
 import dotenv from 'dotenv';
+import helmet from 'helmet';
 // import http from 'http';
 import authRoutes from './routes/auth.routes.js';
 import userRoutes from './routes/user.routes.js';
@@ -43,6 +44,9 @@ app.use(express.json());
 // Compression middleware
 app.use(compression());
 
+// Security middleware
+app.use(helmet());
+
 // Upload directories for media
 app.use("/static", express.static(join(__dirname + '/public')));
 app.use("/assets", express.static(join(__dirname, '/assets')));
@@ -60,12 +64,20 @@ app.use(API_PREFIX + '/catalog', catalogRoutes);
 app.use(API_PREFIX + '/report', reportRoutes);
 app.use(API_PREFIX + '/feedback', feedbackRoutes);
 
+// Custom 404
+app.use((req, res, next) => {
+    res.status(404).send("Sorry can't find that!")
+})
+
 // Error middleware al final
 app.use(errorHandler);
 
 // Chat y cosas que usen sockets (a futuro tal vez)
 // const server = http.createServer(app);
 // setupSocketIO(server); // ⬅️ conectar sockets aquí
+
+// Security
+app.disable('x-powered-by'); // Disable 'X-Powered-By' header for security
 
 // Start the server
 const PORT = process.env.PORT || 3000;
