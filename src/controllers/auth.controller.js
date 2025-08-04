@@ -1,14 +1,22 @@
 import bcrypt, { genSalt } from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import speakeasy from 'speakeasy';
-import qrcode from 'qrcode';
 import db from '../models/db.js';
+import { randomBytes } from 'crypto';
 import { sendVerificationEmail } from '../utils/mailer.js';
 import { getCorrectNow } from '../utils/dateUtils.js';
 import { encrypt, decrypt } from '../utils/cryptoUtils.js';
 
 // Utilidad para generar un código de 6 dígitos
 const generateToken = () => Math.floor(100000 + Math.random() * 900000).toString();
+
+// Configuración de Speakeasy para TOTP (2FA)
+const SPEAKEASY_CONFIG = {
+    secretKeyLength: 20,
+    digits: 6,
+    encoding: 'base32',
+    step: 30, // Time step in seconds
+};
 
 export const register = async (req, res, next) => {
     try {
@@ -254,12 +262,12 @@ export const setup2FA = async (req, res, next) => {
         await db.query(`
             INSERT INTO user_2fa (user_id, secret, enabled)
             VALUES ($1, $2, FALSE)
-            ON CONFLICT (user_id) DO UPDATE SET secret = EXCLUDED.secret, enabled = FALSE
+            ON CONFLICT (user_id) DO UPDATE SET secret = EXCLUDED.secret
         `, [userId, encrypted]);
 
         // 3. Crear códigos de recuperación
         const codes = Array.from({ length: 5 }, () =>
-            crypto.randomBytes(6).toString('hex')
+            randomBytes(6).toString('hex')
         );
 
         await Promise.all(
@@ -310,11 +318,52 @@ export const verify2FA = async (req, res, next) => {
 
 export const disable2FA = async (req, res, next) => {
     const userId = req.user.id;
+    const { code } = req.body;
+
+    if (!code) return res.status(400).json({ message: 'Se requiere un código o código de recuperación' });
+
     try {
+        // 1. Obtener secreto TOTP
+        const result = await db.query('SELECT secret FROM user_2fa WHERE user_id = $1 AND enabled = TRUE', [userId]);
+        if (result.rowCount === 0) return res.status(400).json({ message: '2FA no está activado' });
+
+        const decrypted = decrypt(result.rows[0].secret);
+
+        // 2. Verificar TOTP
+        const isTotpValid = speakeasy.totp.verify({
+            secret: decrypted,
+            encoding: SPEAKEASY_CONFIG.encoding,
+            token: code,
+            window: 1,
+            digits: SPEAKEASY_CONFIG.digits,
+            step: SPEAKEASY_CONFIG.step
+        });
+
+        let valid = isTotpValid;
+
+        // 3. Si no es TOTP, verificar si es código de recuperación
+        if (!valid) {
+            const recovery = await db.query(`
+                SELECT * FROM recovery_codes
+                WHERE user_id = $1 AND code = $2 AND used = FALSE
+            `, [userId, code]);
+
+            if (recovery.rowCount > 0) {
+                valid = true;
+                await db.query(`UPDATE recovery_codes SET used = TRUE WHERE id = $1`, [recovery.rows[0].id]);
+            }
+        }
+
+        // 4. Si ninguno fue válido, rechazar
+        if (!valid) {
+            return res.status(401).json({ message: 'Código o código de recuperación inválido' });
+        }
+
+        // 5. Desactivar 2FA
         await db.query('DELETE FROM user_2fa WHERE user_id = $1', [userId]);
         await db.query('DELETE FROM recovery_codes WHERE user_id = $1', [userId]);
 
-        res.json({ message: '2FA desactivado' });
+        res.json({ message: '2FA desactivado correctamente' });
     } catch (err) {
         next(err);
     }
@@ -340,9 +389,11 @@ export const loginWith2FA = async (req, res, next) => {
 
         const verified = speakeasy.totp.verify({
             secret: decrypted,
-            encoding: 'base32',
+            encoding: SPEAKEASY_CONFIG.encoding,
             token,
-            window: 1
+            window: 1,
+            digits: SPEAKEASY_CONFIG.digits,
+            step: SPEAKEASY_CONFIG.step
         });
 
         // Si no válido, intentar como código de recuperación
@@ -364,6 +415,32 @@ export const loginWith2FA = async (req, res, next) => {
     } catch (err) {
         next(err);
     }
+}
+
+function generateOtpSecretKey() {
+    const secretKey = speakeasy.generateSecret({
+        length: SPEAKEASY_CONFIG.secretKeyLength,
+    });
+    return secretKey.base32;
+}
+
+function generateOtp(secretKey) {
+    return speakeasy.totp({
+        secret: secretKey,
+        encoding: SPEAKEASY_CONFIG.encoding,
+        digits: SPEAKEASY_CONFIG.digits,
+        step: SPEAKEASY_CONFIG.step,
+    });
+}
+
+function verifyOtp(secret, token) {
+    return speakeasy.totp.verify({
+        secret,
+        token,
+        encoding: SPEAKEASY_CONFIG.encoding,
+        step: SPEAKEASY_CONFIG.step,
+        digits: SPEAKEASY_CONFIG.digits,
+    });
 }
 
 // const hasProfilePicture = async (userId) => {

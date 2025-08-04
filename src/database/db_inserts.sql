@@ -29,45 +29,18 @@ VALUES
     '1998-03-15'
   );
 
--- ANIMES
-INSERT INTO animes (id, name, description, image_url) VALUES
-  (
-    '33333333-3333-3333-3333-333333333333',
-    'Attack on Titan',
-    'Titans everywhere',
-    'https://img.com/aot.jpg'
-  ),
-  (
-    '44444444-4444-4444-4444-444444444444',
-    'Sword Art Online',
-    'MMORPG virtual world',
-    'https://img.com/sao.jpg'
-  );
-
 -- GAMES
-INSERT INTO games (id, name, description, image_url) VALUES
+INSERT INTO games (name, description, image_url) VALUES
   (
-    '55555555-5555-5555-5555-555555555555',
     'Genshin Impact',
     'Open world RPG',
     'https://img.com/genshin.jpg'
   ),
   (
-    '66666666-6666-6666-6666-666666666666',
     'Elden Ring',
     'Souls-like RPG',
     'https://img.com/eldenring.jpg'
   );
-
--- USER ANIME INTERESTS
-INSERT INTO user_anime_interests (user_id, anime_id) VALUES
-  ('11111111-1111-1111-1111-111111111111', '44444444-4444-4444-4444-444444444444'), -- kirito → SAO
-  ('22222222-2222-2222-2222-222222222222', '33333333-3333-3333-3333-333333333333'); -- asuna → AOT
-
--- USER GAME INTERESTS
-INSERT INTO user_game_interests (user_id, game_id) VALUES
-  ('11111111-1111-1111-1111-111111111111', '66666666-6666-6666-6666-666666666666'), -- kirito → Elden Ring
-  ('22222222-2222-2222-2222-222222222222', '55555555-5555-5555-5555-555555555555'); -- asuna → Genshin
 
 -- LIKES
 INSERT INTO likes (id, from_user_id, to_user_id) VALUES
@@ -107,3 +80,56 @@ INSERT INTO messages (id, chat_id, sender_id, text, sent_at) VALUES
 INSERT INTO user_photos (user_id, url, position) VALUES
   ('11111111-1111-1111-1111-111111111111', 'https://loremflickr.com/320/240/dog', 1),
   ('11111111-1111-1111-1111-111111111111', 'https://loremflickr.com/320/240/paris', 2);
+
+-- ANIMES
+INSERT INTO animes (name, description, image_url) VALUES
+  ('Attack on Titan', 'Dark fantasy about humanity fighting giant humanoid Titans.', 'https://img.com/attackontitan.jpg'),
+  ('Berserk', 'Cursed swordsman battles demons in a dark and brutal world.', 'https://img.com/berserk.jpg'),
+  ('Bleach', 'A teenager gains Shinigami powers to protect the living from evil spirits.', 'https://img.com/bleach.jpg'),
+  ('Clannad', 'Romantic drama about school life, family, and emotional growth.', 'https://img.com/clannad.jpg'),
+  ('Code Geass', 'Political rebellion and mecha battles powered by the Geass ability.', 'https://img.com/codegeass.jpg'),
+  ('Cowboy Bebop', 'Space western following bounty hunters across the solar system.', 'https://img.com/cowboybebop.jpg'),
+  ('Death Note', 'Psychological thriller where a notebook kills those whose names are written.', 'https://img.com/deathnote.jpg'),
+  ('Demon Slayer: Kimetsu no Yaiba', 'Young swordsman fights demons to save his sister.', 'https://img.com/demonslayerkimetsunoyaiba.jpg'),
+  ('Dragon Ball Z', 'Warriors protect Earth from increasingly powerful foes.', 'https://img.com/dragonballz.jpg'),
+  ('Erased', 'Time travel used to prevent murders and change tragic events.', 'https://img.com/erased.jpg'),
+  ('Evangelion', 'Teens pilot mechas to save humanity from mysterious creatures.', 'https://img.com/evangelion.jpg'),
+  ('Fate/Zero', 'Mages and legendary heroes battle for the Holy Grail.', 'https://img.com/fatezero.jpg'),
+  ('Fruits Basket', 'Girl discovers a cursed family that transforms into zodiac animals.', 'https://img.com/fruitsbasket.jpg'),
+  ('Fullmetal Alchemist: Brotherhood', 'Alchemist brothers seek the Philosophers Stone to restore their bodies.', 'https://img.com/fullmetalalchemistbrotherhood.jpg'),
+  ('Gintama', 'Samurai parody full of absurd comedy in alien-invaded Japan.', 'https://img.com/gintama.jpg'),
+  ('Haikyuu!!', 'High school volleyball team strives for national glory.', 'https://img.com/haikyuu.jpg'),
+  ('Hellsing', 'Organization fights vampires with the help of a powerful undead.', 'https://img.com/hellsing.jpg'),
+  ('Higurashi no Naku Koro ni', 'Mysteries and murders cycle in a rural village.', 'https://img.com/higurashinonakukoroni.jpg'),
+  ('Hunter × Hunter', 'Boy seeks to become a Hunter and find his missing father.', 'https://img.com/hunterhunter.jpg'),
+  ('Inuyasha', 'Girl travels to feudal Japan and teams up with a half-demon.', 'https://img.com/inuyasha.jpg'),
+  ('Jujutsu Kaisen', 'Sorcerers fight curses to protect humanity.', 'https://img.com/jujutsukaisen.jpg'),
+  ('Kaguya-sama: Love is War', 'Two brilliant students engage in a war of love confessions.', 'https://img.com/kaguyasamaloveiswar.jpg'),
+  ('Kamisama Kiss', 'Girl becomes a shrine deity and interacts with spirits.', 'https://img.com/kamisamakiss.jpg'),
+  ('Kill la Kill', 'Student searches for her fathers killer at a tyrannical academy.', 'https://img.com/killlakill.jpg'),
+  ('Kuroko no Basket', 'Basketball team faces off against the legendary Generation of Miracles.', 'https://img.com/kurokonobasket.jpg'),
+  ('Mob Psycho 100', 'Psychic boy tries to live a normal life while controlling his power.', 'https://img.com/mobpsycho100.jpg'),
+  ('Monogatari Series', 'Student helps girls with supernatural and existential problems.', 'https://img.com/monogatariseries.jpg'),
+  ('My Hero Academia', 'Students train to become heroes in a world full of superpowers.', 'https://img.com/myheroacademia.jpg'),
+  ('Naruto', 'Outcast ninja dreams of becoming his villages leader.', 'https://img.com/naruto.jpg'),
+  ('Neon Genesis Evangelion', 'Teens pilot mechas to battle mysterious beings called angels.', 'https://img.com/neongenesisevangelion.jpg'),
+  ('No Game No Life', 'Genius siblings are transported to a world ruled by games.', 'https://img.com/nogamenolife.jpg'),
+  ('Noragami', 'Minor god gains recognition by helping humans and spirits.', 'https://img.com/noragami.jpg'),
+  ('One Piece', 'Pirates journey to find the ultimate treasure in a world of adventure.', 'https://img.com/onepiece.jpg'),
+  ('One Punch Man', 'Invincible hero defeats enemies with a single punch.', 'https://img.com/onepunchman.jpg'),
+  ('Parasyte', 'Teen shares his body with a parasitic alien.', 'https://img.com/parasyte.jpg'),
+  ('Psycho-Pass', 'Futuristic society controls crime using psychological analysis.', 'https://img.com/psychopass.jpg'),
+  ('Re:Zero', 'Young man revives repeatedly to prevent tragedy in a fantasy world.', 'https://img.com/rezero.jpg'),
+  ('Samurai Champloo', 'Three travelers roam Edo Japan in search of the samurai who smells of sunflowers.', 'https://img.com/samuraichamploo.jpg'),
+  ('Serial Experiments Lain', 'Girl dives into a virtual network blurring digital and real life.', 'https://img.com/serialexperimentslain.jpg'),
+  ('Shingeki no Kyojin', 'Humanity fights back against giant Titans behind protective walls.', 'https://img.com/shingekinokyojin.jpg'),
+  ('Soul Eater', 'Academy students hunt evil souls with human weapon partners.', 'https://img.com/souleater.jpg'),
+  ('Steins;Gate', 'Group discovers time travel and alters history through emails.', 'https://img.com/steinsgate.jpg'),
+  ('Sword Art Online', 'Gamers are trapped in a deadly virtual reality MMORPG.', 'https://img.com/swordartonline.jpg'),
+  ('The Promised Neverland', 'Orphanage children uncover a dark secret and plan their escape.', 'https://img.com/thepromisedneverland.jpg'),
+  ('Tokyo Ghoul', 'Half-ghoul teen struggles to adapt and survive.', 'https://img.com/tokyoghoul.jpg'),
+  ('Tokyo Revengers', 'Man travels back in time to change fate and save loved ones.', 'https://img.com/tokyorevengers.jpg'),
+  ('Toradora!', 'Romantic comedy between two opposite-personality students.', 'https://img.com/toradora.jpg'),
+  ('Trigun', 'Peaceful outlaw avoids violence while being chased for his reputation.', 'https://img.com/trigun.jpg'),
+  ('Vinland Saga', 'Young Viking seeks revenge and eventually purpose.', 'https://img.com/vinlandsaga.jpg'),
+  ('Violet Evergarden', 'Ex-soldier learns emotions by writing heartfelt letters for others.', 'https://img.com/violetevergarden.jpg');
