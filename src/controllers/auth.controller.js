@@ -372,7 +372,7 @@ export const disable2FA = async (req, res, next) => {
 }
 
 export const check2FAStatus = async (req, res, next) => {
-    const userId = req.user.id;
+    const { userId } = req.body;
     try {
         const result = await db.query('SELECT enabled FROM user_2fa WHERE user_id = $1', [userId]);
         res.json({ enabled: result.rows[0]?.enabled || false });

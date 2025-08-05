@@ -22,7 +22,7 @@ router.get('/verification/check', authenticateToken(), checkIsVerified);
 router.post('/2fa/setup', authenticateToken(), setup2FA);
 router.post('/2fa/verify', authenticateToken(), verify2FA);
 router.post('/2fa/disable', authenticateToken(), disable2FA);
-router.get('/2fa/status', authenticateToken(), check2FAStatus);
-router.post('/2fa/loginVerifyLastStep', authenticateToken(), loginVerify2FALastStep);
+router.post('/2fa/status', check2FAStatus);
+router.post('/2fa/loginVerifyLastStep', loginVerify2FALastStep);
 
 export default router;
