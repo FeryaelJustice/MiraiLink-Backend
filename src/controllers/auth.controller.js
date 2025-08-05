@@ -301,9 +301,11 @@ export const verify2FA = async (req, res, next) => {
 
         const verified = speakeasy.totp.verify({
             secret: decrypted,
-            encoding: 'base32',
+            encoding: SPEAKEASY_CONFIG.encoding,
             token,
-            window: 1
+            window: 1,
+            digits: SPEAKEASY_CONFIG.digits,
+            step: SPEAKEASY_CONFIG.step
         });
 
         if (!verified) return res.status(400).json({ message: 'Código inválido' });
@@ -379,8 +381,8 @@ export const check2FAStatus = async (req, res, next) => {
     }
 }
 
-export const loginWith2FA = async (req, res, next) => {
-    const { userId, token } = req.body;
+export const loginVerify2FALastStep = async (req, res, next) => {
+    const { userId, code } = req.body;
     try {
         const result = await db.query('SELECT secret FROM user_2fa WHERE user_id = $1 AND enabled = TRUE', [userId]);
         if (result.rowCount === 0) return res.status(400).json({ message: '2FA no requerido' });
@@ -390,7 +392,7 @@ export const loginWith2FA = async (req, res, next) => {
         const verified = speakeasy.totp.verify({
             secret: decrypted,
             encoding: SPEAKEASY_CONFIG.encoding,
-            token,
+            token: code,
             window: 1,
             digits: SPEAKEASY_CONFIG.digits,
             step: SPEAKEASY_CONFIG.step
@@ -401,46 +403,17 @@ export const loginWith2FA = async (req, res, next) => {
             const rec = await db.query(`
             SELECT * FROM recovery_codes
             WHERE user_id = $1 AND code = $2 AND used = FALSE
-        `, [userId, token]);
+            `, [userId, code]);
 
             if (rec.rowCount === 0) return res.status(400).json({ message: 'Código inválido' });
 
             await db.query(`UPDATE recovery_codes SET used = TRUE WHERE id = $1`, [rec.rows[0].id]);
         }
 
-        // Generar nuevo token de sesión
-        const jwtToken = jwt.sign({ id: userId }, process.env.JWT_SECRET, { expiresIn: '30d' });
-
-        res.json({ token: jwtToken });
+        res.status(200).json({ message: '2FA verificado correctamente' });
     } catch (err) {
         next(err);
     }
-}
-
-function generateOtpSecretKey() {
-    const secretKey = speakeasy.generateSecret({
-        length: SPEAKEASY_CONFIG.secretKeyLength,
-    });
-    return secretKey.base32;
-}
-
-function generateOtp(secretKey) {
-    return speakeasy.totp({
-        secret: secretKey,
-        encoding: SPEAKEASY_CONFIG.encoding,
-        digits: SPEAKEASY_CONFIG.digits,
-        step: SPEAKEASY_CONFIG.step,
-    });
-}
-
-function verifyOtp(secret, token) {
-    return speakeasy.totp.verify({
-        secret,
-        token,
-        encoding: SPEAKEASY_CONFIG.encoding,
-        step: SPEAKEASY_CONFIG.step,
-        digits: SPEAKEASY_CONFIG.digits,
-    });
 }
 
 // const hasProfilePicture = async (userId) => {
