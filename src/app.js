@@ -6,6 +6,7 @@ import cors from 'cors';
 import compression from 'compression';
 import helmet from 'helmet';
 // import http from 'http';
+import appRoutes from './routes/app.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import userRoutes from './routes/user.routes.js';
 import userPhotoRoutes from './routes/userphotos.routes.js';
@@ -49,6 +50,7 @@ app.use("/assets", express.static(join(__dirname, '/assets')));
 
 // Routes
 app.get('/', (req, res) => res.send('Hello, World!'));
+app.use(API_PREFIX + '/app', appRoutes);
 app.use(API_PREFIX + '/auth', authRoutes);
 app.use(API_PREFIX + '/user', userRoutes);
 app.use(API_PREFIX + '/user/photos', userPhotoRoutes);

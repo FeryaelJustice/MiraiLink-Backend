@@ -190,6 +190,16 @@ CREATE TABLE recovery_codes (
     used BOOLEAN DEFAULT FALSE
 );
 
+-- APP VERSIONS
+CREATE TABLE app_versions (
+    platform TEXT PRIMARY KEY,
+    min_supported_version_code INTEGER NOT NULL,
+    latest_version_code INTEGER NOT NULL,
+    message TEXT,
+    play_store_url TEXT NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- INDEXES
 CREATE INDEX idx_likes_from_user ON likes(from_user_id);
 

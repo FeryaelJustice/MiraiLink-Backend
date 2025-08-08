@@ -133,3 +133,7 @@ INSERT INTO animes (name, description, image_url) VALUES
   ('Trigun', 'Peaceful outlaw avoids violence while being chased for his reputation.', 'https://img.com/trigun.jpg'),
   ('Vinland Saga', 'Young Viking seeks revenge and eventually purpose.', 'https://img.com/vinlandsaga.jpg'),
   ('Violet Evergarden', 'Ex-soldier learns emotions by writing heartfelt letters for others.', 'https://img.com/violetevergarden.jpg');
+
+-- APP VERSIONS
+INSERT INTO app_versions(platform, min_supported_version_code, latest_version_code, message, play_store_url)
+VALUES ('android', 8, 8, 'Hay una versión nueva con mejoras importantes.', 'https://play.google.com/store/apps/details?id=com.feryaeljustice.mirailink');
