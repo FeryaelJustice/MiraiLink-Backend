@@ -2,7 +2,7 @@ import db from '../models/db.js';
 
 export const checkAndroidAppVersion = async (req, res, next) => {
     try {
-        const { rows } = await db.query('SELECT * FROM app_versions WHERE platform = $1', ['android']);
+        const { rows } = await db.query('SELECT * FROM app_versions WHERE platform = $1 ORDER BY updated_at DESC', ['android']);
         if (rows.length === 0) return res.status(404).json({ message: 'Not configured' });
 
         const v = rows[0];
