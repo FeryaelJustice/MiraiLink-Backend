@@ -4,6 +4,7 @@ import fs from 'fs';
 import bcrypt from 'bcrypt';
 import { basename, join, resolve } from 'path';
 import { uploadOrReplacePhoto } from '../utils/photoUploader.js';
+import { normalizeBirthdate } from '../utils/dateUtils.js';
 import { UPLOAD_DIR_PROFILES_STRING } from '../consts/photosConsts.js';
 
 const MAX_NICKNAME_LENGTH = 30;
@@ -14,7 +15,7 @@ export const getProfile = async (req, res, next) => {
     try {
         const userId = req.user.id;
 
-        const userResult = await db.query('SELECT * FROM users WHERE id = $1', [userId]);
+        const userResult = await db.query("SELECT id, username, nickname, bio, gender, TO_CHAR(birthdate, 'YYYY-MM-DD') AS birthdate, is_verified, two_fa_enabled, created_at, updated_at, is_deleted FROM users WHERE id = $1", [userId]);
         const user = userResult.rows[0];
 
         const animesResult = await db.query(`
@@ -53,7 +54,7 @@ export const getProfileFromId = async (req, res, next) => {
     try {
         const { id } = req.body;
 
-        const usersResult = await db.query('SELECT * FROM users WHERE is_deleted = false AND id = $1', [id]);
+        const usersResult = await db.query("SELECT id, username, nickname, bio, gender, TO_CHAR(birthdate, 'YYYY-MM-DD') AS birthdate, is_verified, two_fa_enabled, created_at, updated_at, is_deleted FROM users WHERE is_deleted = false AND id = $1", [id]);
         const user = usersResult.rows[0];
 
         const animesResult = await db.query(`
@@ -101,7 +102,7 @@ export const getUserIdByToken = async (req, res, next) => {
 export const getUserIdByEmailAndPassword = async (req, res, next) => {
     try {
         const { email, password } = req.body;
-        const result = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+        const result = await db.query("SELECT id, username, nickname, bio, gender, TO_CHAR(birthdate, 'YYYY-MM-DD') AS birthdate, is_verified, two_fa_enabled, created_at, updated_at, is_deleted FROM users WHERE email = $1", [email]);
         const user = result.rows[0];
 
         if (!user || !(await bcrypt.compare(password, user.password_hash))) {
@@ -176,7 +177,7 @@ export const getProfiles = async (req, res, next) => {
     try {
         const authenticatedUserId = req.user.id;
 
-        const usersResult = await db.query('SELECT * FROM users WHERE is_deleted = false AND id != $1', [authenticatedUserId]);
+        const usersResult = await db.query("SELECT id, username, nickname, bio, gender, TO_CHAR(birthdate, 'YYYY-MM-DD') AS birthdate, is_verified, two_fa_enabled, created_at, updated_at, is_deleted FROM users WHERE is_deleted = false AND id != $1", [authenticatedUserId]);
         const users = usersResult.rows;
 
         // Obtener fotos para todos los usuarios
@@ -246,16 +247,37 @@ export const updateProfile = async (req, res, next) => {
 
     try {
         const userId = req.user.id;
-        const { nickname, bio, animes, games, reorderedPositions } = req.body;
+        const { nickname, bio, animes, games, reorderedPositions, gender } = req.body;
+        let { birthdate } = req.body;
         // const files = req.files || [];
         const userDir = join(UPLOAD_DIR_PROFILES, userId);
 
         // Validaciones
-        if (nickname.length > MAX_NICKNAME_LENGTH) {
+        if ((nickname ?? '').length > MAX_NICKNAME_LENGTH) {
             return res.status(400).json({ message: 'El apodo es demasiado largo' });
         }
-        if (bio.length > MAX_BIO_LENGTH) {
+        if ((bio ?? '').length > MAX_BIO_LENGTH) {
             return res.status(400).json({ message: 'La biografía es demasiado larga' });
+        }
+
+        // Género
+        const allowedGenders = new Set(['male', 'female', 'non_binary', 'other', 'prefer_not_to_say', '', null, undefined]);
+        if (!allowedGenders.has(gender)) {
+            return res.status(400).json({ message: 'Género no válido' });
+        }
+
+        // Normalizar birthdate: acepta "YYYY-MM-DD" o "YYYY-MM-DDThh:mm:ssZ"
+        let birthdateSql = null;
+        if (birthdate != null && birthdate !== '') {
+            const normalized = normalizeBirthdate(birthdate);
+            if (!normalized) return res.status(400).json({ message: 'Fecha de nacimiento inválida' });
+
+            // Verificación no-futuro (usa medianoche UTC para evitar desfases)
+            const d = new Date(normalized + 'T00:00:00Z');
+            if (isNaN(d.getTime())) return res.status(400).json({ message: 'Fecha de nacimiento inválida' });
+            if (d > new Date()) return res.status(400).json({ message: 'La fecha no puede ser futura' });
+
+            birthdateSql = normalized; // "YYYY-MM-DD"
         }
 
         // Comenzar transacción
@@ -263,8 +285,14 @@ export const updateProfile = async (req, res, next) => {
 
         // 1. Actualizar nickname y bio
         await client.query(
-            'UPDATE users SET nickname = $1, bio = $2 WHERE id = $3',
-            [nickname, bio, userId]
+            `UPDATE users
+            SET nickname = $1,
+                bio = $2,
+                gender = $3,
+                birthdate = $4,
+                updated_at = now()
+            WHERE id = $5`,
+            [nickname ?? '', bio ?? '', gender ?? null, birthdateSql, userId]
         );
 
         // 2. Actualizar gustos (anime)
