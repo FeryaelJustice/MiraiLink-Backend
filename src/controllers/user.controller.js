@@ -1,6 +1,6 @@
 import db from '../models/db.js';
 import jwt from 'jsonwebtoken';
-import fs from 'fs';
+import fs from 'node:fs';
 import bcrypt from 'bcrypt';
 import { basename, join, resolve } from 'path';
 import { uploadOrReplacePhoto } from '../utils/photoUploader.js';

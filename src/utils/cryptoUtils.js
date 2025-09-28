@@ -1,4 +1,4 @@
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 
 const ALGORITHM = 'aes-256-cbc';
 const KEY = Buffer.from(process.env.SECRET_2FA_KEY, 'hex'); // 32 bytes

@@ -1,4 +1,4 @@
-import fs from 'fs/promises';
+import fs from 'node:fs/promises';
 import { join, basename, resolve } from 'path';
 import db from '../models/db.js';
 import { UPLOAD_DIR_PROFILES_STRING } from '../consts/photosConsts.js';

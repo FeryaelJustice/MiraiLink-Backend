@@ -1,7 +1,7 @@
 import express from 'express';
 import multer from 'multer';
 import { join, extname, resolve } from 'path';
-import fs from 'fs';
+import fs from 'node:fs/promises';
 import { uploadPhoto, getUserPhotos, deletePhoto } from '../controllers/photo.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { UPLOAD_DIR_PROFILES_STRING } from '../consts/photosConsts.js';
@@ -17,7 +17,7 @@ const storage = multer.diskStorage({
 
         // Asegúrate de que existe la carpeta del usuario
         try {
-            await fs.promises.mkdir(userFolder, { recursive: true });
+            await fs.mkdir(userFolder, { recursive: true });
             cb(null, userFolder);
         } catch (err) {
             cb(err, userFolder); // Error al crear la carpeta
