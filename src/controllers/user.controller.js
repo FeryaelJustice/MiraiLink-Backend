@@ -40,7 +40,7 @@ export const getProfile = async (req, res, next) => {
         `, [userId]);
 
         const fcmTokenResult = await db.query(`
-            SELECT fcm_token
+            SELECT token
             FROM push_tokens
             WHERE user_id = $1
         `, [userId]);
@@ -49,7 +49,7 @@ export const getProfile = async (req, res, next) => {
             ...user,
             animes: animesResult.rows,
             games: gamesResult.rows,
-            fcm_token: fcmTokenResult.rows[0]?.fcm_token || null,
+            fcm_token: fcmTokenResult.rows[0]?.token || null,
             photos: photosResult.rows
         });
     } catch (err) {
@@ -504,10 +504,10 @@ export const saveFCMToken = async (req, res, next) => {
         const { fcm } = req.body;
 
         await db.query(
-            `INSERT INTO push_tokens (user_id, fcm_token, created_at, updated_at)
+            `INSERT INTO push_tokens (user_id, token, created_at, updated_at)
             VALUES ($1, $2, now(), now())
             ON CONFLICT (user_id) DO UPDATE
-            SET fcm_token = $2, updated_at = now()`,
+            SET token = $2, updated_at = now()`,
             [userId, fcm]
         );
 
