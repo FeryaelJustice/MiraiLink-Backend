@@ -152,7 +152,7 @@ CREATE TABLE messages (
 -- PUSH NOTIFICATIONS
 CREATE TABLE push_tokens (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id) UNIQUE ON DELETE CASCADE,
     token TEXT NOT NULL,
     platform TEXT CHECK (platform IN ('android', 'ios', 'web')),
     created_at TIMESTAMP DEFAULT NOW()
@@ -230,3 +230,7 @@ ADD
     CONSTRAINT reports_reported_user_fkey FOREIGN KEY (reported_user) REFERENCES users(id) ON DELETE
 SET
     NULL;
+
+-- SI NO TIENE EL UNIQUE, HACERLO
+ALTER TABLE push_tokens
+ADD CONSTRAINT unique_user_token UNIQUE (user_id);
