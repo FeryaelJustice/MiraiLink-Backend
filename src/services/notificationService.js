@@ -18,7 +18,7 @@ export async function getUserFcmToken(userId) {
         LEFT JOIN
             push_tokens t ON u.id = t.user_id
         WHERE
-            u.id = '$1'
+            u.id = $1
         `,
         [userId]
     );
@@ -65,7 +65,7 @@ export async function sendPushToToken(token, { title, body, data = {} }) {
     };
 
     try {
-        await fcm.messaging().send(message);
+        await fcm.send(message);
     } catch (err) {
         console.error('Error enviando notificación FCM:', err?.message);
     }
