@@ -49,7 +49,7 @@ export const getProfile = async (req, res, next) => {
             ...user,
             animes: animesResult.rows,
             games: gamesResult.rows,
-            fcm_token: fcmTokenResult.rows[0]?.token || null,
+            fcm_token: fcmTokenResult.rows[0]?.token || "",
             photos: photosResult.rows
         });
     } catch (err) {
