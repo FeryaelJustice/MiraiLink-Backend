@@ -502,13 +502,14 @@ export const saveFCMToken = async (req, res, next) => {
     try {
         const userId = req.user.id;
         const { fcm } = req.body;
+        const platform = req.body.platform || 'android';
 
         await db.query(
-            `INSERT INTO push_tokens (user_id, token, created_at)
-            VALUES ($1, $2, now())
+            `INSERT INTO push_tokens (user_id, token, platform, created_at)
+            VALUES ($1, $2, $3, now())
             ON CONFLICT (user_id) DO UPDATE
-            SET token = $2`,
-            [userId, fcm]
+            SET token = $2, platform = $3, created_at = now()`,
+            [userId, fcm, platform]
         );
 
         res.status(200).json({ message: 'FCM token saved' });
