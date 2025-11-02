@@ -1,4 +1,5 @@
 import { fcm } from '../config/firebaseAdmin.js';
+import db from '../models/db.js';
 
 /**
  * Obtiene el FCM token de un usuario. Aquí asumimos que lo guardas en la tabla users.
