@@ -18,7 +18,7 @@ export async function getUserFcmToken(userId) {
         LEFT JOIN
             push_tokens t ON u.id = t.user_id
         WHERE
-            u.id = $1
+            u.id = '$1'
         `,
         [userId]
     );
