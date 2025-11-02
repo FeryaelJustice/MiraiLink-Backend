@@ -1,6 +1,6 @@
 
 import express from 'express';
-import { getProfile, deleteAccount, updateProfile, getProfileFromId, getUserIdByToken, getUserIdByEmailAndPassword, publicDeleteAccount, deleteUserPhoto } from '../controllers/user.controller.js';
+import { getProfile, deleteAccount, updateProfile, getProfileFromId, getUserIdByToken, getUserIdByEmailAndPassword, publicDeleteAccount, deleteUserPhoto, saveFCMToken } from '../controllers/user.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import multer from 'multer';
 import { join, extname, resolve } from 'path';
@@ -47,6 +47,8 @@ router.get('', authenticateToken(), getProfile);
 router.get('/byToken', authenticateToken(), getUserIdByToken);
 router.post('/byEmailPassword', getUserIdByEmailAndPassword);
 router.post('/byId', authenticateToken(), getProfileFromId);
+router.post('/public/delete-account', publicDeleteAccount);
+router.post('/fcm', authenticateToken(), saveFCMToken);
 router.put('', authenticateToken(), upload.fields(photoFields), (req, res, next) => {
     // console.log('---- BODY ----');
     // console.log(req.body);
@@ -54,7 +56,6 @@ router.put('', authenticateToken(), upload.fields(photoFields), (req, res, next)
     // console.log(req.files);
     next();
 }, updateProfile);
-router.post('/public/delete-account', publicDeleteAccount);
 router.delete('', authenticateToken(), deleteAccount);
 router.delete('/photo/:position', authenticateToken(), deleteUserPhoto);
 
