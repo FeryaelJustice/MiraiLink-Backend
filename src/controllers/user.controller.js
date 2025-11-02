@@ -504,10 +504,10 @@ export const saveFCMToken = async (req, res, next) => {
         const { fcm } = req.body;
 
         await db.query(
-            `INSERT INTO push_tokens (user_id, token, created_at, updated_at)
-            VALUES ($1, $2, now(), now())
+            `INSERT INTO push_tokens (user_id, token, created_at)
+            VALUES ($1, $2, now())
             ON CONFLICT (user_id) DO UPDATE
-            SET token = $2, updated_at = now()`,
+            SET token = $2`,
             [userId, fcm]
         );
 
