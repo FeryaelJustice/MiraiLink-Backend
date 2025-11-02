@@ -1,5 +1,6 @@
 import db from '../models/db.js';
 import { v4 as uuidv4 } from 'uuid';
+import { sendChatMessageNotification } from '../services/notificationService.js';
 
 export const getChatsFromUser = async (req, res, next) => {
     try {
@@ -262,12 +263,25 @@ export const sendMessage = async (req, res, next) => {
             await db.query('INSERT INTO chat_members (chat_id, user_id) VALUES ($1, $2), ($1, $3)', [chatId, userId, toUserId]);
         }
 
+        // Guardar mensaje
         await db.query(
             'INSERT INTO messages (chat_id, sender_id, text) VALUES ($1, $2, $3)',
             [chatId, userId, text]
         );
 
+        // Responder al cliente RÁPIDO
         res.status(201).json({ message: 'Mensaje enviado', chatId });
+
+        // Lanzar notificación al destinatario
+        // no await para no retrasar la respuesta
+        sendChatMessageNotification({
+            toUserId,
+            fromUserId: userId,
+            chatId,
+            text,
+        }).catch((err) =>
+            console.error('Error enviando notificación de chat:', err?.message)
+        );
     } catch (err) {
         next(err);
     }

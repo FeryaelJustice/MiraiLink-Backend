@@ -19,6 +19,7 @@ import reportRoutes from './routes/report.routes.js';
 import feedbackRoutes from './routes/feedback.routes.js';
 import { errorHandler } from './middleware/error.middleware.js';
 // import { setupSocketIO } from './sockets/socketHandler.js';
+import { fcm } from './config/firebaseAdmin.js';
 
 const API_PREFIX = '/api';
 

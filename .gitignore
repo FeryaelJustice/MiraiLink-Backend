@@ -5,3 +5,5 @@ node_modules
 /src/assets
 src/assets
 package-lock.json
+/src/serviceAccountKey.json
+./src/serviceAccountKey.json
