@@ -1,135 +1,126 @@
 # MiraiLink Backend
 
-Backend de MiraiLink, una aplicación social y de citas orientada a personas interesadas en videojuegos y anime. La API está implementada con Node.js, Express y PostgreSQL e incluye autenticación, perfiles, descubrimiento, matches, chats, catálogos, reportes, feedback y notificaciones push.
+Backend REST de MiraiLink, una aplicación social orientada a personas interesadas en videojuegos y anime. Está construido con Node.js 22, Express 5 y PostgreSQL, e incluye autenticación con 2FA, perfiles, descubrimiento, matches, chat, fotos, catálogos, reportes, feedback y notificaciones push.
 
-## Estado real del proyecto
+Este es el único README del repositorio. Funciona como punto de entrada para personas, herramientas y agentes de IA.
 
-El repositorio contiene un prototipo funcional, pero todavía no debe considerarse listo para producción. La API expone 46 endpoints bajo `/api`, el chat REST está conectado y el esquema PostgreSQL cubre los dominios principales. No hay tests automatizados, el lint no está operativo, Socket.IO está desactivado y existen riesgos de seguridad y consistencia descritos en [docs/security-review.md](docs/security-review.md).
+## Estado verificado
 
-La documentación distingue de forma explícita entre:
+- 43 operaciones bajo `/api`, más `/`, `/healthz`, `/static` y `/assets`.
+- Aplicación Express separada del proceso HTTP mediante `createApp()` y `src/server.js`.
+- Validación Zod, JWT Bearer, revocación, 2FA en dos fases, rate limiting y errores normalizados.
+- Tests unitarios, de integración HTTP, contrato OpenAPI y esquema PostgreSQL.
+- GitHub Actions ejecuta CI sin desplegar.
+- SMTP y Firebase se inicializan solo cuando se usan.
+- `src/assets` queda fuera de análisis, mantenimiento, documentación y tests.
 
-- Comportamiento observado en el código actual.
-- Contrato que un cliente puede consumir hoy.
-- Riesgos que deben corregirse antes de publicar la API.
-- Mejoras propuestas, que no están implementadas todavía.
+## Cómo entender el proyecto
 
-## Documentación
+Lee en este orden:
 
-- [Indice general](docs/README.md)
-- [Arquitectura](docs/architecture.md)
-- [Mapa del código](docs/codebase-map.md)
-- [Referencia de módulos y funciones](docs/code-reference.md)
-- [Referencia de la API](docs/api-reference.md)
-- [Especificación OpenAPI 3.1](docs/openapi.yaml)
-- [Modelo de datos](docs/database.md)
-- [Runtime y configuración](docs/runtime-and-configuration.md)
-- [Estrategia de testing](docs/testing-strategy.md)
-- [Revisión de seguridad y riesgos](docs/security-review.md)
+1. [Arquitectura](docs/architecture.md): recorrido de una petición, límites, dependencias y decisiones técnicas.
+2. [Mapa del código](docs/codebase-map.md): función de cada carpeta y archivo relevante.
+3. [Referencia de código](docs/code-reference.md): clases, funciones, métodos exportados, parámetros, efectos y consumidores.
+4. [Guía de API](docs/api-reference.md): autenticación, requests, responses, errores, multipart y las 43 operaciones vigentes.
+5. [OpenAPI 3.1](docs/openapi.yaml): contrato procesable por Swagger, Redoc, generadores y agentes.
+6. [Base de datos](docs/database.md): tablas, relaciones, migración de seguridad y forma de inicializar PostgreSQL.
+7. [Runtime y configuración](docs/runtime-and-configuration.md): variables, integraciones, arranque y operación.
+8. [Testing](docs/testing-strategy.md): suites, cobertura, comandos y límites actuales.
+9. [Seguridad](docs/security-review.md): estado actual, controles implementados y riesgos residuales.
+10. [Futuro VPS](docs/future-vps-deployment.md): contexto no implementado para Debian, PM2, nginx y futuro CD.
 
-## Tecnologías observadas
+Los documentos de [diseño](docs/superpowers/specs/2026-07-16-backend-security-testing-ci-design.md) y [plan de implementación](docs/plans/2026-07-16-backend-security-testing-ci.md) son registros históricos. No sustituyen al contrato actual.
 
-- Node.js con módulos ES.
-- Express 5.
-- PostgreSQL mediante `pg.Pool`.
-- JWT y bcrypt para autenticación.
-- Speakeasy para TOTP y 2FA.
-- Multer para subida de fotos.
-- Nodemailer para correo SMTP.
-- Firebase Admin para FCM.
-- Socket.IO presente en el código, pero no activado en el arranque.
+## Flujo principal
+
+```text
+Cliente
+  -> src/server.js
+  -> src/app.js
+  -> middleware global
+  -> src/routes/*.routes.js
+  -> validación y autorización
+  -> src/controllers/*.controller.js
+  -> servicios, utilidades y PostgreSQL
+  -> errorHandler o respuesta JSON
+```
+
+No hay una capa de repositorios independiente: los controladores ejecutan consultas parametrizadas mediante el pool compartido de `src/models/db.js`.
 
 ## Requisitos
 
-- Node.js 20 o superior. El import JSON con atributos usado por Firebase no es compatible con la promesa anterior de Node.js 18.
-- PostgreSQL 15 o superior.
-- npm.
-- Un archivo privado `src/serviceAccountKey.json` válido para Firebase Admin. El servidor lo importa durante el arranque aunque no se envíen notificaciones.
-- Credenciales SMTP si se utilizan verificación y recuperación de contraseña.
+- Node.js 22 o superior.
+- npm compatible con `package-lock.json`.
+- PostgreSQL 16 recomendado.
+- SMTP solo para verificación y recuperación por correo.
+- Firebase solo para notificaciones push.
 
-## Puesta en marcha
-
-1. Instala las dependencias:
+## Instalación
 
 ```powershell
-npm install
-```
-
-2. Crea la base de datos y carga el esquema:
-
-```powershell
-psql -U postgres -d mirailink -f src/database/db.sql
-psql -U postgres -d mirailink -f src/database/db_inserts.sql
-```
-
-`db_inserts.sql` contiene datos de desarrollo. No debe ejecutarse en producción. El SQL no es un sistema de migraciones y no es seguro repetirlo sobre una base ya inicializada.
-
-3. Copia `.env.example` a `.env` y sustituye todos los valores de ejemplo:
-
-```powershell
+npm ci
 Copy-Item .env.example .env
-```
-
-Genera valores criptográficos para 2FA:
-
-```powershell
-node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
-node -e "console.log(require('node:crypto').randomBytes(16).toString('hex'))"
-```
-
-4. Coloca la credencial de Firebase en `src/serviceAccountKey.json`.
-
-5. Inicia el servidor:
-
-```powershell
+psql -U postgres -d mirailink -f src/database/db.sql
 npm run dev
 ```
 
-La URL predeterminada es `http://localhost:3000`. La API vive bajo `http://localhost:3000/api`.
+En una instalación creada con el esquema anterior, aplica también:
 
-## Comandos disponibles
-
-| Comando | Estado | Uso |
-| --- | --- | --- |
-| `npm run dev` | Configurado para Windows | Arranca Nodemon con `.env` y `NODE_ENV=development`. |
-| `npm start` | Configurado para Windows | Arranca Node con `.env` y `NODE_ENV=production`. |
-| `npm run build` | Marcador de posición | No compila ni genera artefactos. |
-| `npm test` | Marcador de posición | No ejecuta tests. |
-| `npm run lint` | No operativo | El proyecto no declara ESLint ni incluye configuración. |
-
-## Estructura principal
-
-```text
-src/
-  app.js                 Arranque de Express y montaje de rutas
-  config/                Integraciones que se inicializan al arrancar
-  consts/                Constantes compartidas
-  controllers/           Handlers HTTP y lógica de negocio
-  database/              Esquema y datos de desarrollo PostgreSQL
-  middleware/            Autenticación y errores
-  models/                 Pool de PostgreSQL
-  public/                 Contenido estático no sensible
-  routes/                 Definición de rutas Express
-  services/               Notificaciones push
-  sockets/                Prototipo Socket.IO no conectado
-  utils/                  Cifrado, fechas, correo y fotos
+```powershell
+psql -U postgres -d mirailink -f src/database/migrations/002_security_hardening.sql
 ```
 
-`src/assets` almacena archivos subidos y queda fuera del alcance de la documentación y de los cambios de mantenimiento. No debe tratarse como código fuente ni incluirse en Git.
+La migración invalida recovery codes antiguos porque el formato actual solo guarda hashes bcrypt. Sustituye todos los placeholders de `.env.example` antes de arrancar.
 
-## Autenticación básica
+## Comandos
 
-Las rutas protegidas esperan un JWT en:
+| Comando | Resultado |
+| --- | --- |
+| `npm run dev` | Nodemon, `.env` y `NODE_ENV=development` |
+| `npm start` | Proceso de producción con `.env` |
+| `npm run build` | Comprueba la sintaxis del entrypoint |
+| `npm test` | Ejecuta toda la suite Vitest |
+| `npm run test:unit` | Tests unitarios |
+| `npm run test:integration` | Integración Express y autenticación |
+| `npm run test:database` | Esquema PostgreSQL, obligatorio con `REQUIRE_DATABASE_TESTS=true` |
+| `npm run test:coverage` | Tests con cobertura V8 y umbrales |
+| `npm run lint` | ESLint sobre código, scripts y tests |
+| `npm run check:routes` | Compara rutas Express con OpenAPI |
+| `npm run check` | Lint, cobertura y contrato de rutas |
+
+## Autenticación resumida
+
+Las rutas protegidas usan:
 
 ```http
-Authorization: Bearer <token>
+Authorization: Bearer <access-token>
 ```
 
-El token se obtiene en `POST /api/auth/register` o `POST /api/auth/login`. El flujo 2FA está implementado parcialmente y todavía no forma una barrera completa durante el login. Consulta [docs/api-reference.md](docs/api-reference.md) antes de integrar un cliente.
+El login sin 2FA entrega `token` y `userId`. Con 2FA entrega `requires2FA`, `challengeToken` y `expiresIn`; el token final se obtiene en `POST /api/auth/2fa/loginVerifyLastStep` con el challenge y un TOTP o recovery code.
 
-## Calidad y contribución
+## Errores
 
-Antes de ampliar funcionalidades conviene ejecutar el plan de [docs/testing-strategy.md](docs/testing-strategy.md) y resolver primero los riesgos P0 y P1 de [docs/security-review.md](docs/security-review.md). Los commits siguen Conventional Commits con asuntos breves e imperativos.
+El formato general es:
+
+```json
+{
+  "code": "VALIDATION_ERROR",
+  "message": "Request validation failed",
+  "requestId": "request-correlation-id",
+  "details": []
+}
+```
+
+`details` solo aparece cuando aporta información segura, normalmente en validación. La respuesta incluye `x-request-id`.
+
+## Limitaciones conocidas
+
+- El rate limit usa memoria local. Un despliegue con varias réplicas necesitará un store compartido.
+- No hay despliegue automático, logs estructurados, métricas ni readiness de dependencias.
+- La prueba PostgreSQL se omite localmente salvo que `REQUIRE_DATABASE_TESTS=true`; CI la fuerza contra PostgreSQL 16.
+- La compatibilidad de lectura AES-CBC debe retirarse después de migrar todos los secretos 2FA.
+- La API no está versionada en el path.
 
 ## Licencia
 
-ISC, según `package.json`.
+ISC.

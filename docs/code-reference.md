@@ -1,212 +1,179 @@
-# Referencia de módulos y funciones
+# Referencia de código
 
-## Convención
+Esta referencia cubre los archivos activos, la única clase propia y las funciones exportadas. Los handlers Express reciben `(req, res, next)` salvo que se indique lo contrario.
 
-El proyecto no define clases. La unidad pública de código son funciones exportadas, constantes y objetos singleton. Esta referencia cubre todos los exports observados y los helpers internos que influyen en el contrato.
+## Entry points y configuración
 
-Los handlers Express siguen en general la firma `async (req, res, next)`. Cuando delegan el error con `next(err)`, el fallback responde 500. Algunos handlers capturan y responden 500 directamente.
-
-## `src/app.js`
-
-No exporta símbolos. Construye la instancia Express, monta middleware y rutas, e invoca `app.listen`. Importar el módulo produce efectos laterales de Firebase y red.
-
-## Controladores
-
-### `app.controller.js`
-
-| Función | Entrada principal | Resultado | Dependencias |
-| --- | --- | --- | --- |
-| `checkAndroidAppVersion` | Ninguna | Política Android más reciente y cache de 5 minutos | `app_versions` |
-
-### `auth.controller.js`
-
-| Función | Entrada principal | Resultado y notas |
+| Archivo | Export | Contrato |
 | --- | --- | --- |
-| `register` | `username`, `email`, `password` | Crea usuario email, nickname igual a username y JWT de 24 horas. Comprueba duplicado por username o email. |
-| `login` | `email`, `username`, `password` | Busca por email o username, comprueba soft delete y bcrypt, y emite JWT. No aplica segundo factor. |
-| `logout` | `req.token` | Inserta el JWT en blacklist si no estaba y responde éxito. |
-| `autoLogin` | `req.user.id` | Devuelve el id autenticado. |
-| `requestPasswordReset` | `email` | Crea código de 6 dígitos con 5 minutos de vida e inicia correo. |
-| `confirmPasswordReset` | `email`, `token`, `newPassword` | Valida último código, cambia hash y elimina todos los tokens de reset del usuario. |
-| `checkIsVerified` | Usuario autenticado | Devuelve `isVerified`. |
-| `requestVerificationCode` | `userId`, `type` | Crea código de 15 minutos. Solo envía cuando el tipo es email. |
-| `confirmVerificationCode` | `userId`, `token`, `type` | Marca cuenta verificada y elimina tokens del mismo tipo. |
-| `setup2FA` | Usuario autenticado | Genera TOTP, cifra el secreto, crea cinco recovery codes y devuelve secreto y códigos. |
-| `verify2FA` | `token` TOTP | Comprueba secreto almacenado y habilita `user_2fa.enabled`. |
-| `disable2FA` | `code` | Acepta TOTP o recovery code, y elimina configuración y códigos. |
-| `check2FAStatus` | `userId` | Devuelve el estado de `user_2fa`, sin autenticación en la ruta actual. |
-| `loginVerify2FALastStep` | `userId`, `code` | Comprueba TOTP o recovery code y devuelve mensaje. No emite JWT. |
+| `src/app.js` | `createApp(options)` | Crea Express sin escuchar. `options.uploadRoot` inyecta media y `enableRateLimits=false` estabiliza tests. |
+| `src/app.js` | default `createApp` | Alias del factory. |
+| `src/server.js` | sin exports | Valida env, crea app, escucha, configura timeouts y señales. |
+| `src/config/env.js` | `parseEnv(input=process.env)` | Valida y normaliza variables; lanza `Error` con campos inválidos. |
+| `src/config/firebaseAdmin.js` | `getFcm()` | Inicializa Firebase Admin y devuelve Messaging solo al primer uso. |
+| `src/config/firebaseAdmin.js` | `resetFirebaseForTests()` | Limpia la referencia lazy usada por tests. |
+| `src/models/db.js` | default `pool` | Instancia compartida de `pg.Pool` construida con `DB_URL`. |
 
-Helpers internos:
+## Clase de error
 
-- `generateToken()`: usa `Math.random` para producir seis dígitos.
-- `SPEAKEASY_CONFIG`: encoding base32, seis dígitos y paso de 30 segundos. `secretKeyLength` no se pasa al generador.
+### `AppError extends Error`
 
-### `catalog.controller.js`
+Archivo: `src/errors/AppError.js`.
 
-| Función | Resultado |
-| --- | --- |
-| `getAllAnimes` | `id`, `name`, `image_url` ordenados por nombre. |
-| `getAllGames` | `id`, `name`, `image_url` ordenados por nombre. |
+Constructor: `new AppError({ status, code, message, details, cause })`.
 
-### `chat.controller.js`
+- `status`: HTTP, default 500.
+- `code`: identificador estable, default `INTERNAL_ERROR`.
+- `message`: texto seguro para cliente.
+- `details`: información opcional, normalmente validación.
+- `cause`: error original para encadenamiento interno.
 
-| Función | Entrada principal | Resultado y notas |
-| --- | --- | --- |
-| `getChatsFromUser` | Usuario autenticado | Resúmenes, último mensaje, no leídos y destinatario privado. El filtro final omite grupos. |
-| `getMessages` | `chatId`, `limit`, `before` | Mensajes ordenados de antiguo a nuevo. No valida membresía. |
-| `createPrivateChat` | `otherUserId` | Devuelve chat existente como 400 o crea chat y dos miembros como 201. |
-| `createGroupChat` | `name`, `userIds` | Reutiliza grupo con mismo nombre y miembros o crea uno. |
-| `getChatMembers` | `chatId` | Lista id, username, nickname y rol. No valida membresía. |
-| `markChatAsRead` | `chatId` | Actualiza `last_read_at` para el usuario autenticado. |
-| `sendMessage` | `toUserId`, `text` | Reutiliza o crea chat privado, inserta mensaje y lanza FCM sin esperar. |
-| `getChatHistory` | `userId` de la otra persona | Historial privado con DTO de sender y receiver. |
-
-Helper interno:
-
-- `formatUserDto(user)`: proyecta id, username, nickname, email, gender, birthdate y foto.
-
-### `feedback.controller.js`
-
-| Función | Entrada | Regla |
-| --- | --- | --- |
-| `sendFeedback` | `feedback` | Exige texto no vacío y máximo 10000 caracteres. |
-
-### `match.controller.js`
-
-| Función | Entrada | Resultado |
-| --- | --- | --- |
-| `getMatches` | Usuario autenticado | Usuarios matched con fotos e intereses. Devuelve columnas internas por `u.*`. |
-| `getUnseenMatches` | Usuario autenticado | Match ids y ambos user ids no vistos por el solicitante. |
-| `markMatchesSeen` | `matchIds` | Marca el lado correspondiente en cada match. |
-
-### `message.controller.js`
-
-| Función | Estado |
-| --- | --- |
-| `createMessage` | No conectada. Usa `conversation_id`, `conversation_participants`, `user_devices` y `sendNewChatMessageNotification`, ausentes en el modelo activo. Importar el archivo fallaría por el export inexistente del servicio. |
-
-### `photo.controller.js`
-
-| Función | Entrada | Resultado y reglas |
-| --- | --- | --- |
-| `uploadPhoto` | Archivo `photo`, `position` opcional | Máximo cuatro si añade sin posición. Reemplaza por posición mediante utilidad. |
-| `getUserPhotos` | Query `userId` | Lista fotos del usuario solicitado. |
-| `deletePhoto` | Param `photoId` | Solo propietario. Exige conservar al menos una foto y reordena posiciones. |
-
-### `report.controller.js`
-
-| Función | Entrada | Regla |
-| --- | --- | --- |
-| `reportUser` | `reportedUser`, `reason` | Exige usuario y razón recortada con al menos cinco caracteres. |
-
-### `swipe.controller.js`
-
-| Función | Entrada | Resultado |
-| --- | --- | --- |
-| `getFeed` | Query `limit`, `offset` | Usuarios no evaluados con fotos e intereses. Devuelve columnas internas por `SELECT *`. |
-| `likeUser` | `toUserId` | Inserta like, crea match si existe like recíproco y devuelve flag `match`. |
-| `dislikeUser` | `toUserId` | Inserta dislike idempotente. No rechaza auto-dislike. |
-
-### `user.controller.js`
-
-| Función | Entrada | Resultado y notas |
-| --- | --- | --- |
-| `getProfile` | Usuario autenticado | Perfil propio, intereses, FCM y fotos. |
-| `getProfileFromId` | Body `id` | Perfil no borrado con intereses y fotos. |
-| `getUserIdByToken` | Body `token` en una ruta GET | Verifica de nuevo el token recibido y devuelve id. La ruta ya exige Bearer. |
-| `getUserIdByEmailAndPassword` | `email`, `password` | Pretende comprobar credenciales, pero la consulta no selecciona `password_hash`, por lo que el flujo actual puede terminar en 500. |
-| `deleteAccount` | Usuario autenticado | Soft delete y blacklist del token actual. |
-| `publicDeleteAccount` | `email`, `password` | Soft delete sin JWT tras comprobar password. |
-| `getProfiles` | Usuario autenticado | Lista perfiles no borrados excepto el propio, con fotos e intereses. |
-| `updateProfile` | Multipart con perfil, intereses y fotos | Valida parcialmente, usa transacción SQL, reemplaza fotos y limpia archivos. |
-| `deleteUserPhoto` | Param `position` | Borra por posición y reordena, sin exigir conservar una foto. |
-| `saveFCMToken` | `fcm`, `platform` opcional | Upsert de un token por usuario. Plataforma predeterminada android. |
-
-Constantes internas:
-
-- `MAX_NICKNAME_LENGTH = 30`.
-- `MAX_BIO_LENGTH = 500`.
-- `UPLOAD_DIR_PROFILES`: path absoluto resuelto desde el directorio de trabajo.
+No existen más clases propias. La aplicación se compone principalmente de funciones, routers Express y objetos Zod.
 
 ## Middleware
 
-### `authenticateToken(allowUnverified = false)`
+| Export | Archivo | Comportamiento |
+| --- | --- | --- |
+| `authenticateToken(allowUnverified=false)` | `auth.middleware.js` | Devuelve middleware Bearer. Comprueba blacklist, HS256, purpose, usuario y verificación. Añade `req.user` y `req.token`. |
+| `requireChatMember({db}={})` | `chatMember.middleware.js` | Factory inyectable. Oculta con 404 los chats donde el usuario no es miembro. |
+| `errorHandler` | `error.middleware.js` | Serializa `AppError`, errores Multer y 500 genérico. |
+| `requestId` | `requestId.middleware.js` | Acepta un `x-request-id` corto o genera UUID y lo devuelve en header. |
+| `validate(schemas)` | `validate.middleware.js` | Ejecuta schemas para params, query y body; reemplaza datos con resultados parseados. |
+| `authLimiter` | `rateLimit.middleware.js` | 10 requests cada 15 minutos. |
+| `emailLimiter` | `rateLimit.middleware.js` | 5 requests por hora. |
+| `writeLimiter` | `rateLimit.middleware.js` | 30 writes por minuto. |
+| `profilePhotoUpload` | `photoUpload.middleware.js` | Multer memory storage, hasta cuatro campos `photo_0` a `photo_3`. |
+| `singlePhotoUpload` | `photoUpload.middleware.js` | Multer para un campo `photo`. |
+| `validateUploadedImages` | `photoUpload.middleware.js` | Verifica firma y adjunta `detectedType` a cada archivo. |
 
-Factory que devuelve middleware async.
-
-1. Lee `Authorization` y toma el segundo fragmento separado por espacio.
-2. Exige token.
-3. Busca el token en `token_blacklist`.
-4. Si lo encuentra, lo elimina y responde 401.
-5. Verifica firma y expiración JWT.
-6. Comprueba existencia, soft delete y verificación del usuario.
-7. Escribe `req.user` y `req.token`.
-
-El borrado de blacklist es un defecto crítico, no un comportamiento deseado.
-
-### `errorHandler(err, req, res, next)`
-
-Registra `err.stack` y responde 500 con `{ message: 'Internal Server Error' }`. No utiliza `req` ni `next`.
+Los limiters se saltan si `app.locals.enableRateLimits === false`.
 
 ## Servicios
 
-### `notificationService.js`
+### Tokens - `src/services/tokenService.js`
 
-| Función | Responsabilidad |
+| Función | Entrada | Salida y efectos |
+| --- | --- | --- |
+| `createAccessToken(user)` | `{id, username}` | JWT HS256 de 24 horas, `purpose: access`. |
+| `createTwoFactorChallenge(user)` | `{id}` | JWT HS256 de 5 minutos, `purpose: 2fa-login`. |
+| `verifyTwoFactorChallenge(token)` | JWT | Payload válido o excepción. Rechaza otro purpose. |
+| `decodeTokenExpiry(token)` | JWT sin verificar | `Date` desde `exp`; se usa al persistir revocación. |
+
+### 2FA - `src/services/twoFactorService.js`
+
+| Función | Contrato |
 | --- | --- |
-| `getUserFcmToken(userId)` | Une `users` y `push_tokens`, y devuelve token, username y nickname o null. |
-| `sendPushToToken(token, payload)` | Convierte `data` a strings y llama a `fcm.send`. Captura errores sin propagarlos. |
-| `sendChatMessageNotification(options)` | Obtiene destinatario y emisor, recorta texto a 60 caracteres y envía evento `chat_message`. |
+| `verifyTotp(encryptedSecret, token)` | Descifra el secreto y valida TOTP de 6 dígitos, step 30, window 1. |
+| `hashRecoveryCodes(codes)` | Devuelve hashes bcrypt usando `SALT_ROUNDS`. |
+| `useRecoveryCode(client, userId, candidate)` | Bloquea códigos sin usar, compara bcrypt y consume uno de forma condicional. |
 
-El nombre del emisor depende hoy de que el emisor también tenga un token FCM, porque se reutiliza `getUserFcmToken` para obtener su perfil.
+### Notificaciones - `src/services/notificationService.js`
 
-## Utilidades
+| Función | Contrato |
+| --- | --- |
+| `getUserFcmToken(userId)` | Devuelve token push o `null`. |
+| `sendPushToToken(token, payload)` | Convierte data a strings y llama Firebase Messaging. |
+| `sendChatMessageNotification(args)` | Obtiene token y nombre del sender; envía push best-effort. |
 
-### `cryptoUtils.js`
+## Utilidades y DTO
 
-- `encrypt(text)`: AES-256-CBC a hex con clave e IV globales.
-- `decrypt(encrypted)`: operación inversa.
+| Export | Archivo | Contrato |
+| --- | --- | --- |
+| `encrypt(text, options)` | `cryptoUtils.js` | AES-256-GCM, nonce 12 bytes, salida `v2:nonce:tag:ciphertext`. |
+| `decrypt(value, options)` | `cryptoUtils.js` | Lee v2 y, temporalmente, AES-CBC heredado con `SECRET_2FA_IV`. |
+| `isLegacyEncrypted(value)` | `cryptoUtils.js` | Indica si falta prefijo `v2:`. |
+| `detectImageType(buffer)` | `imageValidation.js` | Devuelve MIME/extensión de JPEG, PNG o WebP por magic bytes. |
+| `validateImage(file)` | `imageValidation.js` | Comprueba firma y coincidencia MIME; lanza `AppError` 415. |
+| `sendVerificationEmail(to, code)` | `mailer.js` | Inicializa Nodemailer lazy y espera `sendMail`. |
+| `profileUploadRoot()` | `photoStorage.js` | Resuelve `UPLOAD_ROOT` o la ubicación lógica por defecto. |
+| `stagePhoto(userId, file, root)` | `photoStorage.js` | Crea directorio, UUID y archivo staging con modo 0600. |
+| `finalizePhoto(staged)` | `photoStorage.js` | Renombra staging a path final. |
+| `removePhotoFile(url, root)` | `photoStorage.js` | Borra de forma segura, tolera ENOENT. |
+| `cleanupStagedPhoto(staged)` | `photoStorage.js` | Elimina staging y final durante compensación. |
+| `toPublicUser(row)` | `user.dto.js` | Allowlist de id, username, nickname, bio, gender y birthdate. |
+| `toPublicUsers(rows)` | `user.dto.js` | Aplica el DTO a una lista. |
+| `PUBLIC_USER_SQL_COLUMNS` | `user.dto.js` | Proyección SQL pública con alias `u`. |
 
-Las variables se convierten a `Buffer` durante el import. Longitudes inválidas pueden impedir cargar el módulo.
+## Controladores
 
-### `dateUtils.js`
+### App y catálogos
 
-- `getCorrectNow(from)`: crea un objeto Day.js y suma dos horas.
-- `normalizeBirthdate(input)`: acepta `YYYY-MM-DD`, toma la parte de fecha de ISO o intenta parsear con `Date`; devuelve string o null.
+| Handler | Archivo | Resultado |
+| --- | --- | --- |
+| `checkAndroidAppVersion` | `app.controller.js` | Política Android más reciente y cache 5 minutos. |
+| `getAllAnimes` | `catalog.controller.js` | Catálogo ordenado por nombre. |
+| `getAllGames` | `catalog.controller.js` | Catálogo ordenado por nombre. |
 
-### `mailer.js`
+### Auth - `src/controllers/auth.controller.js`
 
-- `sendVerificationEmail(to, code)`: construye texto y HTML y lanza `transporter.sendMail`. No devuelve ni espera la promesa del envío.
+| Handler | Responsabilidad |
+| --- | --- |
+| `register` | Unicidad, bcrypt, insert y access token. |
+| `login` | Credenciales neutrales; access token o challenge 2FA. |
+| `logout` | Inserta token y expiración en blacklist. |
+| `autoLogin` | Confirma autenticación y devuelve userId. |
+| `requestPasswordReset` | Respuesta neutra, reemplaza código y espera SMTP. |
+| `confirmPasswordReset` | Compara hash, actualiza password y elimina tokens. |
+| `checkIsVerified` | Lee flag del usuario Bearer. |
+| `requestVerificationCode` | Reemplaza código del usuario autenticado. |
+| `confirmVerificationCode` | Consume código y marca cuenta verificada. |
+| `setup2FA` | Genera secreto, ocho recovery codes y hashes; reemplaza setup previo. |
+| `verify2FA` | Valida TOTP y habilita 2FA. |
+| `disable2FA` | Exige TOTP o recovery code y elimina material 2FA. |
+| `check2FAStatus` | Devuelve estado del usuario Bearer. |
+| `loginVerify2FALastStep` | Valida challenge y segundo factor; entrega access token. |
 
-### `photoUploader.js`
+### Usuarios y fotos
 
-- `uploadOrReplacePhoto(userId, file, position, client = db)`: busca foto previa, intenta borrar archivo, elimina registro, inserta el nuevo y devuelve la URL relativa.
+| Handler | Archivo | Responsabilidad |
+| --- | --- | --- |
+| `getProfile` | `user.controller.js` | Perfil propio, email/teléfono, intereses y fotos. |
+| `getProfileFromId` | `user.controller.js` | Perfil público expandido. |
+| `getProfiles` | `user.controller.js` | Perfiles públicos paginados. |
+| `deleteAccount` | `user.controller.js` | Soft delete y revocación actual. |
+| `updateProfile` | `user.controller.js` | Perfil, intereses y fotos con transacción y compensación. |
+| `deleteUserPhoto` | `user.controller.js` | Borra por posición y compacta posiciones. |
+| `saveFCMToken` | `user.controller.js` | Upsert de token y plataforma. |
+| `uploadPhoto` | `photo.controller.js` | Inserta/reemplaza una foto con lock y staging. |
+| `getUserPhotos` | `photo.controller.js` | Fotos propias o de `query.userId`. |
+| `deletePhoto` | `photo.controller.js` | Borra por UUID si pertenece al usuario y conserva al menos una. |
 
-## Configuración y constantes
+### Social
 
-### `models/db.js`
+| Handler | Archivo | Responsabilidad |
+| --- | --- | --- |
+| `getFeed` | `swipe.controller.js` | Candidatos públicos paginados con extras. |
+| `likeUser` | `swipe.controller.js` | Valida target, inserta like y crea match recíproco. |
+| `dislikeUser` | `swipe.controller.js` | Valida target e inserta dislike. |
+| `getMatches` | `match.controller.js` | Matches públicos con fotos e intereses. |
+| `getUnseenMatches` | `match.controller.js` | Matches no vistos por el usuario actual. |
+| `markMatchesSeen` | `match.controller.js` | Marca solo matches donde el usuario participa. |
+| `reportUser` | `report.controller.js` | Inserta reporte del usuario autenticado. |
+| `sendFeedback` | `feedback.controller.js` | Inserta feedback ligado al usuario. |
 
-Export default de un `pg.Pool` configurado solo con `process.env.DB_URL`.
+### Chat - `src/controllers/chat.controller.js`
 
-### `config/firebaseAdmin.js`
+| Handler | Responsabilidad |
+| --- | --- |
+| `getChatsFromUser` | Resúmenes, último mensaje y unread count. |
+| `getMessages` | Mensajes paginados por `before`, después de guard de membresía. |
+| `createPrivateChat` | Advisory lock, target válido y creación transaccional. |
+| `createGroupChat` | Grupo y miembros en una transacción. |
+| `getChatMembers` | Miembros públicos del chat autorizado. |
+| `markChatAsRead` | Actualiza `last_read_at` del miembro actual. |
+| `sendMessage` | Reusa o crea chat privado, inserta mensaje y lanza push. |
+| `getChatHistory` | Historial privado filtrado por ambos miembros, sin email. |
 
-Importa la credencial JSON fija, llama a `firebaseAdmin.initializeApp` y exporta `fcm = firebaseAdmin.messaging()`.
+## Schemas Zod
 
-### `consts/photosConsts.js`
+| Archivo | Exports |
+| --- | --- |
+| `common.schemas.js` | `uuid`, `shortText`, `pagination`, `chatIdParams`, `userIdParams` |
+| `auth.schemas.js` | registro, login, email, reset, verificación, TOTP, 2FA y challenge |
+| `chat.schemas.js` | paginación de mensajes, chat privado/grupo y envío |
+| `social.schemas.js` | target, match ids, report y feedback |
+| `user.schemas.js` | perfil por id, FCM, posición, photo id y query de fotos |
 
-- `UPLOAD_DIR_STRING = 'assets'`.
-- `UPLOAD_DIR_IMG_STRING = 'assets/img'`.
-- `UPLOAD_DIR_PROFILES_STRING = 'assets/img/profiles'`.
+## Script de contrato
 
-## Socket.IO
-
-### `setupSocketIO(httpServer)`
-
-Crea un servidor Socket.IO, autentica el handshake con JWT, mantiene un mapa en memoria de usuario a socket y registra:
-
-- Entrada `send_message` con `{ matchId, text }`.
-- Salida `receive_message` con remitente, texto, match y fecha.
-- `disconnect` para limpiar el mapa.
-
-No se ejecuta en el runtime actual y su SQL no coincide con el esquema. El mapa en memoria tampoco funcionaría entre varias réplicas sin un adapter compartido.
+`collectExpressRoutes(root)` extrae method y path de los once routers. `validateContract(root)` parsea OpenAPI, exige cobertura de cada ruta activa y operationIds no duplicados. El script se ejecuta directamente con `npm run check:routes` y también se importa desde tests.

@@ -1,0 +1,44 @@
+name: Backend CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mirailink_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      NODE_ENV: test
+      DB_URL: postgres://postgres:postgres@localhost:5432/mirailink_test
+      REQUIRE_DATABASE_TESTS: true
+      ORIGIN: http://localhost:5173
+      JWT_SECRET: ci-only-secret-with-at-least-32-characters
+      SECRET_2FA_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      SALT_ROUNDS: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run test:coverage
+      - run: npm run test:database
+      - run: npm run check:routes
+      - run: npm audit --omit=dev --audit-level=high

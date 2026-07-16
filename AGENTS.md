@@ -1,67 +1,47 @@
 # Repository Guidelines
 
-## Scope and protected content
+## Scope
 
-This repository is the MiraiLink Node.js backend. Runtime source lives under `src` and documentation lives under `docs`.
+MiraiLink Backend is an Express 5 and PostgreSQL service. Treat `README.md` as the documentation entrypoint and keep the focused files under `docs/` synchronized with code changes.
 
-Do not read, rewrite, move, delete, format, inventory by filename, or otherwise touch files inside `src/assets` unless the user explicitly changes this rule. That directory contains uploaded media and is not source code. Tests that exercise uploads must use a temporary directory.
+Never read, inventory, modify, stage or document the contents of `src/assets`. Tests involving uploads must use operating-system temporary directories or an injected `UPLOAD_ROOT`.
 
-Preserve user changes in a dirty working tree. Avoid broad formatting changes, especially in `src/app.js` and dependency files.
+## Structure
 
-## Documentation map
+- `src/server.js`: validates environment, creates the app and owns the HTTP process.
+- `src/app.js`: Express factory, global middleware, static delivery and router mounting.
+- `src/routes/`: HTTP method/path composition, validation, authentication and authorization.
+- `src/controllers/`: handlers, business orchestration, SQL and transactions.
+- `src/middleware/`: auth, chat membership, errors, rate limits, request ids, uploads and validation.
+- `src/services/`: tokens, 2FA and notifications.
+- `src/utils/`: encryption, image validation, mail and photo storage.
+- `src/validation/`: Zod request schemas.
+- `src/dto/`: public output allowlists.
+- `src/database/`: baseline schema, development inserts and migrations.
+- `tests/`: unit, HTTP integration and PostgreSQL schema tests.
+- `docs/`: focused documentation. Do not create another README inside it.
 
-- `README.md`: honest project status and setup.
-- `docs/architecture.md`: components, boundaries and flows.
-- `docs/api-reference.md`: human API contract.
-- `docs/openapi.yaml`: machine-readable OpenAPI 3.1 contract.
-- `docs/code-reference.md`: modules and all exported functions.
-- `docs/database.md`: PostgreSQL model.
-- `docs/testing-strategy.md`: current gaps and test plan.
-- `docs/security-review.md`: prioritized risks.
+## Commands
 
-When a route or response changes, update both API documents in the same change.
+- `npm run dev`: development server with nodemon and `.env`.
+- `npm start`: production-like process.
+- `npm run lint`: ESLint.
+- `npm test`: all Vitest suites.
+- `npm run test:coverage`: coverage and thresholds.
+- `npm run test:database`: PostgreSQL tests; set `REQUIRE_DATABASE_TESTS=true` when a disposable database is available.
+- `npm run check:routes`: active Express operations against OpenAPI.
+- `npm run check`: lint, coverage and route contract.
 
-## Project structure
+## Conventions
 
-- `src/app.js` creates Express, mounts middleware and routers, and starts listening.
-- `src/routes` defines the 46 API endpoints.
-- `src/controllers` mixes HTTP handling, validation, business rules and SQL.
-- `src/models/db.js` exports the shared PostgreSQL pool.
-- `src/database` contains the initial schema and development seed data.
-- `src/services` contains FCM notification logic.
-- `src/utils` contains crypto, date, mail and photo helpers.
-- `src/sockets` is disabled prototype code and does not match the current message schema.
+Use ES modules, four-space indentation, single quotes, trailing commas in multiline structures, PascalCase for classes and camelCase for functions and variables. Keep route filenames in kebab-style domain form such as `chat.routes.js`. Use parameterized SQL and existing shared services instead of duplicating security logic.
 
-## Commands and current reality
+When an API route changes, update `docs/api-reference.md`, `docs/openapi.yaml`, `docs/code-reference.md` when exports change, and root `README.md` when onboarding or the reading path changes.
 
-- `npm run dev`: Windows development command using Nodemon and `.env`.
-- `npm start`: Windows production-like command.
-- `npm run build`: placeholder only.
-- `npm test`: placeholder only and does not validate behavior.
-- `npm run lint`: currently fails because ESLint is not installed or configured.
+## Security
 
-Do not claim lint or tests pass until real tooling exists and has run successfully.
+Never commit `.env`, provider credentials, generated media or production data. Public user responses must go through explicit projections or DTO allowlists. Resource authorization is separate from authentication. Uploaded content must remain size-bounded and signature-validated. Do not expose raw JWT, SQL, SMTP or Firebase errors.
 
-## Coding conventions
+## Commits and PRs
 
-Use ES modules. Follow four-space indentation and existing local style. Prefer focused changes over repository-wide formatting. Use parameterized PostgreSQL queries. Define explicit response DTOs instead of returning `SELECT *` rows. Route input should be validated before controllers perform SQL or filesystem work.
-
-Files use a mix of quote styles because `src/app.js` has user-owned formatting changes. Do not normalize unrelated files.
-
-## Database changes
-
-`src/database/db.sql` is a non-idempotent creation script, not a migration system. Any schema change should include a versioned migration once migration tooling is introduced. Keep development seeds separate from production data.
-
-## Testing expectations
-
-The first implementation step for tests is to separate Express app creation from `app.listen` and inject PostgreSQL, Firebase, SMTP and upload paths. Prioritize auth revocation, response privacy, chat authorization, 2FA login enforcement and multipart consistency. See `docs/testing-strategy.md`.
-
-## Security guardrails
-
-Never commit `.env`, `src/serviceAccountKey.json`, tokens, passwords, SMTP credentials or real user media. Do not expose `password_hash`, phone, email or secret fields in public profile responses. Add authorization checks for resources identified by UUID, especially chats and photos.
-
-Consult `docs/security-review.md` before expanding public API surface.
-
-## Commits and pull requests
-
-Use lightweight Conventional Commits with imperative subjects under 72 characters. Pull requests should describe API and schema changes, configuration changes, migrations, test evidence and compatibility impact.
+Use lightweight Conventional Commit subjects under 72 characters. PRs should list API breaks, migrations, environment changes, verification commands and residual operational work.

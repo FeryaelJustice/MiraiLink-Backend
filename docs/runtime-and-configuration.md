@@ -1,108 +1,71 @@
 # Runtime y configuración
 
-## Runtime soportado por el código
+## Versiones
 
-El proyecto usa módulos ES y un import JSON con atributos en `firebaseAdmin.js`. La base práctica documentada es Node.js 20 o superior. No hay compilación ni transpilación.
+- Node.js: 22 o superior, declarado en `engines`.
+- PostgreSQL: 16 en CI.
+- Módulos: ESM mediante `type: module`.
 
-Los scripts de `package.json` usan `set VARIABLE=valor`, por lo que son específicos de `cmd.exe` en Windows:
+Los scripts usan `cross-env` y `node --env-file`, por lo que funcionan en Windows, Linux y macOS.
 
-| Script | Ejecución real |
-| --- | --- |
-| `npm run dev` | `set NODE_ENV=development && nodemon --env-file=.env src/app.js` |
-| `npm start` | `set NODE_ENV=production && node --env-file=.env src/app.js` |
-| `npm run build` | Solo imprime un mensaje. |
-| `npm test` | Solo imprime que no hay tests. |
-| `npm run lint` | Intenta `eslint .`, pero ESLint no está instalado. |
+## Variables
 
-## Variables de entorno
+| Variable | Obligatoria | Validación y uso |
+| --- | --- | --- |
+| `NODE_ENV` | No | `development`, `test` o `production`; default development |
+| `PORT` | No | Entero 1-65535; default 3000 |
+| `DB_URL` | Sí | URL que comienza por `postgres`; pool y tests de base |
+| `JWT_SECRET` | Sí | Mínimo 32 caracteres; HS256 access y challenge |
+| `ORIGIN` | Sí | Lista separada por comas de origins HTTP/HTTPS exactos |
+| `SALT_ROUNDS` | No | Entero 4-15; default 12 |
+| `UPLOAD_MAX_BYTES` | No | 1 KiB-20 MiB; default 5 MiB |
+| `UPLOAD_ROOT` | No | Directorio persistente de perfiles fuera del checkout en producción |
+| `SECRET_2FA_KEY` | Sí | 64 caracteres hex, 32 bytes para AES-256-GCM |
+| `SECRET_2FA_IV` | Solo legado | 32 hex, necesario para descifrar secretos AES-CBC antiguos |
+| `EMAIL_HOST` | Para correo | Host SMTP; default `smtp.hostinger.com` en la utilidad |
+| `EMAIL_PORT` | No | 1-65535; default 587 |
+| `EMAIL_SECURE` | No | String `true` o `false` |
+| `EMAIL_USER` | Para correo | Usuario y remitente |
+| `EMAIL_PASSWORD` | Para correo | Secreto SMTP |
+| `FIREBASE_SERVICE_ACCOUNT_FILE_NAME` | Para push | Ruta al JSON de service account |
+| `REQUIRE_DATABASE_TESTS` | En CI | `true` obliga a ejecutar el test PostgreSQL |
 
-| Variable | Obligatoria | Consumidor | Formato o valor |
-| --- | --- | --- | --- |
-| `PORT` | No | `app.js` | Entero. Predeterminado `3000`. |
-| `ORIGIN` | Sí para clientes web | `app.js`, Socket.IO si se activara | Origen completo, por ejemplo `http://localhost:5173`. |
-| `DB_URL` | Sí | `models/db.js` | URL PostgreSQL. |
-| `JWT_SECRET` | Sí | Auth y sockets | Secreto largo y aleatorio. |
-| `SALT_ROUNDS` | No | `auth.controller.js` | Entero para bcrypt. Predeterminado real `6`. |
-| `EMAIL_HOST` | No | `mailer.js` | Predeterminado `smtp.hostinger.com`. |
-| `EMAIL_PORT` | No | `mailer.js` | Predeterminado `587`. |
-| `EMAIL_SECURE` | No | `mailer.js` | String `true` o `false`. |
-| `EMAIL_USER` | Sí para correo | `mailer.js` | Cuenta remitente SMTP. |
-| `EMAIL_PASSWORD` | Sí para correo | `mailer.js` | Credencial SMTP. |
-| `SECRET_2FA_KEY` | Sí para importar auth | `cryptoUtils.js` | 64 caracteres hex, equivalentes a 32 bytes. |
-| `SECRET_2FA_IV` | Sí para importar auth | `cryptoUtils.js` | 32 caracteres hex, equivalentes a 16 bytes. |
+`parseEnv()` falla antes de escuchar si la configuración estructural es inválida. SMTP y Firebase pueden estar ausentes hasta que se invoque su función.
 
-El ejemplo antiguo declaraba `BCRYPT_ROUNDS`, pero el código lee `SALT_ROUNDS`. También declaraba `FIREBASE_SERVICE_ACCOUNT_FILE_NAME`, pero la implementación no usa esa variable.
-
-## Archivos sensibles
-
-### `.env`
-
-Debe permanecer fuera de Git. No se inspeccionó durante esta revisión. Cada entorno debe usar secretos distintos.
-
-### `src/serviceAccountKey.json`
-
-Firebase Admin lo importa mediante una ruta fija. Debe existir antes de arrancar y está ignorado por Git. No debe copiarse a documentación, logs, imágenes de contenedor públicas ni artefactos de CI.
-
-Una mejora futura es permitir credenciales por variables estándar de Google o inyección de configuración, sin forzar un archivo local en todos los entornos.
-
-## Dependencias externas
-
-### PostgreSQL
-
-- Conexión única a través de `pg.Pool` y `DB_URL`.
-- No hay comprobación explícita de salud al arrancar.
-- No hay cierre ordenado del pool al recibir señales.
-- No hay configuración propia de tamaño, timeout o SSL.
-
-### SMTP
-
-- El transporte se crea al importar el módulo.
-- `sendVerificationEmail` inicia `sendMail`, pero no espera su finalización.
-- Los endpoints pueden responder éxito antes de confirmar la entrega.
-- No hay plantillas, reintentos ni proveedor alternativo.
-
-### Firebase Cloud Messaging
-
-- Se inicializa durante el arranque global.
-- El servidor guarda un token por usuario.
-- El envío de chat ocurre después de responder al cliente y los errores solo se registran.
-- Todos los valores del mapa `data` se convierten a string.
-
-### Filesystem local
-
-- Los uploads se escriben bajo `src/assets/img/profiles/<userId>`.
-- Se sirven públicamente desde `/assets`.
-- No hay límites de tamaño, filtro MIME ni almacenamiento externo.
-- El almacenamiento local no se comparte entre varias réplicas del servidor.
-- `src/assets` no fue leído ni modificado durante esta tarea.
-
-## Arranque local
+## Arranque
 
 ```powershell
-npm install
+npm ci
 Copy-Item .env.example .env
-psql -U postgres -d mirailink -f src/database/db.sql
-psql -U postgres -d mirailink -f src/database/db_inserts.sql
 npm run dev
 ```
 
-Antes del último comando debe existir una credencial Firebase válida en la ruta fija.
+Producción local:
 
-## Señales de salud disponibles
+```powershell
+npm start
+```
 
-- `GET /` responde texto plano `Hello, World!`.
-- `GET /api/app/version/android` prueba indirectamente el acceso a PostgreSQL.
-- No existe `/health`, `/ready` ni métrica de proceso.
+`src/server.js` configura request timeout de 30 s, headers timeout de 35 s y keep-alive de 5 s. Atiende `SIGTERM` y `SIGINT` con cierre del servidor HTTP.
 
-Para operación real se recomienda:
+## PostgreSQL
 
-- Liveness sin dependencias externas.
-- Readiness con consulta PostgreSQL y estado de configuración.
-- Logging estructurado con request id.
-- Cierre ordenado de HTTP y pool.
-- Timeouts, límites de body y rate limiting.
-- Métricas de latencia, errores, pool, correo y FCM.
+Para una base vacía:
 
-## Despliegue
+```powershell
+psql -d mirailink -f src/database/db.sql
+psql -d mirailink -f src/database/migrations/002_security_hardening.sql
+```
 
-No hay Dockerfile, pipeline CI, manifiestos de infraestructura ni configuración de plataforma. Tampoco hay evidencia de proxy, TLS, balanceo o almacenamiento persistente. Cualquier guía de despliegue más concreta sería especulativa hasta añadir esos archivos.
+`db_inserts.sql` solo contiene datos de desarrollo. No hay runner de migraciones integrado al arranque.
+
+## Health y estáticos
+
+- `GET /`: identidad del servicio.
+- `GET /healthz`: liveness del proceso, sin comprobar dependencias.
+- `/static`: contenido de `src/public`.
+- `/assets`: media con dotfiles denegados, sin índice, CSP y `nosniff`.
+
+## Operación pendiente
+
+No existen readiness de PostgreSQL, logging JSON, métricas, tracing, alertas ni despliegue automático. El diseño futuro está en [future-vps-deployment.md](future-vps-deployment.md).

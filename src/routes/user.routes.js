@@ -1,62 +1,27 @@
-
 import express from 'express';
-import { getProfile, deleteAccount, updateProfile, getProfileFromId, getUserIdByToken, getUserIdByEmailAndPassword, publicDeleteAccount, deleteUserPhoto, saveFCMToken } from '../controllers/user.controller.js';
+import { z } from 'zod';
+import { deleteAccount, deleteUserPhoto, getProfile, getProfileFromId, saveFCMToken, updateProfile } from '../controllers/user.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
-import multer from 'multer';
-import { join, extname, resolve } from 'path';
-import fs from 'node:fs/promises';
-import { UPLOAD_DIR_PROFILES_STRING } from '../consts/photosConsts.js';
+import { profilePhotoUpload, validateUploadedImages } from '../middleware/photoUpload.middleware.js';
+import { validate } from '../middleware/validate.middleware.js';
+import { fcmSchema, photoPositionParams, profileByIdSchema } from '../validation/user.schemas.js';
 
 const router = express.Router();
-
-const UPLOAD_DIR_PROFILES = resolve('src', UPLOAD_DIR_PROFILES_STRING);
-
-// Para las fotos, aunque este en el photos.routes.js, es necesario importar multer y configurarlo aquí
-// porque multer necesita acceso al request para saber a qué carpeta subir la foto del usuario.
-const storage = multer.diskStorage({
-    destination: async (req, file, cb) => {
-        const userId = req.user.id;
-        const userFolder = join(UPLOAD_DIR_PROFILES, userId);
-
-        // Asegúrate de que existe la carpeta del usuario
-        try {
-            await fs.mkdir(userFolder, { recursive: true });
-            cb(null, userFolder);
-        } catch (err) {
-            cb(err, userFolder); // Error al crear la carpeta
-        }
-    },
-    filename: (req, file, cb) => {
-        const ext = extname(file.originalname); // conserva la extensión original
-        const filename = `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
-        cb(null, filename);
-    }
+const profileUpdateSchema = z.object({
+    nickname: z.string().trim().max(30).optional(),
+    bio: z.string().trim().max(500).optional(),
+    gender: z.enum(['male', 'female', 'non_binary', 'other', 'prefer_not_to_say', '']).optional(),
+    birthdate: z.iso.date().or(z.literal('')).optional(),
+    animes: z.string().max(20_000).optional(), games: z.string().max(20_000).optional(),
+    reorderedPositions: z.string().max(20_000).optional(),
+    photo_0: z.string().optional(), photo_1: z.string().optional(),
+    photo_2: z.string().optional(), photo_3: z.string().optional(),
 });
-
-
-const upload = multer({ storage });
-
-const photoFields = [
-    { name: 'photo_0', maxCount: 1 },
-    { name: 'photo_1', maxCount: 1 },
-    { name: 'photo_2', maxCount: 1 },
-    { name: 'photo_3', maxCount: 1 }
-];
-
-router.get('', authenticateToken(), getProfile);
-router.get('/byToken', authenticateToken(), getUserIdByToken);
-router.post('/byEmailPassword', getUserIdByEmailAndPassword);
-router.post('/byId', authenticateToken(), getProfileFromId);
-router.post('/public/delete-account', publicDeleteAccount);
-router.post('/fcm', authenticateToken(), saveFCMToken);
-router.put('', authenticateToken(), upload.fields(photoFields), (req, res, next) => {
-    // console.log('---- BODY ----');
-    // console.log(req.body);
-    // console.log('---- FILES ----');
-    // console.log(req.files);
-    next();
-}, updateProfile);
-router.delete('', authenticateToken(), deleteAccount);
-router.delete('/photo/:position', authenticateToken(), deleteUserPhoto);
-
+router.use(authenticateToken());
+router.get('/', getProfile);
+router.post('/byId', validate({ body: profileByIdSchema }), getProfileFromId);
+router.post('/fcm', validate({ body: fcmSchema }), saveFCMToken);
+router.put('/', profilePhotoUpload, validateUploadedImages, validate({ body: profileUpdateSchema }), updateProfile);
+router.delete('/', deleteAccount);
+router.delete('/photo/:position', validate({ params: photoPositionParams }), deleteUserPhoto);
 export default router;

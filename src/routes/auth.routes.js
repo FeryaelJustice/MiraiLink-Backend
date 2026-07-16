@@ -1,28 +1,23 @@
 import express from 'express';
-import { register, login, logout, autoLogin, requestPasswordReset, confirmPasswordReset, requestVerificationCode, confirmVerificationCode, checkIsVerified, setup2FA, verify2FA, disable2FA, check2FAStatus, loginVerify2FALastStep } from '../controllers/auth.controller.js';
+import { autoLogin, check2FAStatus, checkIsVerified, confirmPasswordReset, confirmVerificationCode, disable2FA, login, loginVerify2FALastStep, logout, register, requestPasswordReset, requestVerificationCode, setup2FA, verify2FA } from '../controllers/auth.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
+import { authLimiter, emailLimiter } from '../middleware/rateLimit.middleware.js';
+import { validate } from '../middleware/validate.middleware.js';
+import { emailSchema, loginSchema, passwordResetSchema, registerSchema, totpSchema, twoFactorCodeSchema, twoFactorLoginSchema, verificationConfirmSchema, verificationRequestSchema } from '../validation/auth.schemas.js';
 
 const router = express.Router();
-
-router.post('/register', register);
-router.post('/login', login);
-router.post("/autologin", authenticateToken(), autoLogin);
-router.post("/logout", authenticateToken(true), logout)
-
-// Password reset
-router.post('/password/request-reset', requestPasswordReset);
-router.post('/password/confirm-reset', confirmPasswordReset);
-
-// Account verification
-router.post('/verification/request', requestVerificationCode);
-router.post('/verification/confirm', confirmVerificationCode);
-router.get('/verification/check', authenticateToken(), checkIsVerified);
-
-// 2FA
+router.post('/register', authLimiter, validate({ body: registerSchema }), register);
+router.post('/login', authLimiter, validate({ body: loginSchema }), login);
+router.post('/autologin', authenticateToken(), autoLogin);
+router.post('/logout', authenticateToken(true), logout);
+router.post('/password/request-reset', emailLimiter, validate({ body: emailSchema }), requestPasswordReset);
+router.post('/password/confirm-reset', authLimiter, validate({ body: passwordResetSchema }), confirmPasswordReset);
+router.post('/verification/request', emailLimiter, authenticateToken(true), validate({ body: verificationRequestSchema }), requestVerificationCode);
+router.post('/verification/confirm', authLimiter, authenticateToken(true), validate({ body: verificationConfirmSchema }), confirmVerificationCode);
+router.get('/verification/check', authenticateToken(true), checkIsVerified);
 router.post('/2fa/setup', authenticateToken(), setup2FA);
-router.post('/2fa/verify', authenticateToken(), verify2FA);
-router.post('/2fa/disable', authenticateToken(), disable2FA);
-router.post('/2fa/status', check2FAStatus);
-router.post('/2fa/loginVerifyLastStep', loginVerify2FALastStep);
-
+router.post('/2fa/verify', authLimiter, authenticateToken(), validate({ body: totpSchema }), verify2FA);
+router.post('/2fa/disable', authLimiter, authenticateToken(), validate({ body: twoFactorCodeSchema }), disable2FA);
+router.post('/2fa/status', authenticateToken(true), check2FAStatus);
+router.post('/2fa/loginVerifyLastStep', authLimiter, validate({ body: twoFactorLoginSchema }), loginVerify2FALastStep);
 export default router;
