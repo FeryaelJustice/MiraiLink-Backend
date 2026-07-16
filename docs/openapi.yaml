@@ -1,0 +1,1288 @@
+openapi: 3.1.0
+info:
+  title: MiraiLink Backend API
+  version: 2.0.0-observed
+  description: |
+    Contrato derivado del código actual. No equivale a una garantía de producción.
+    Los campos x-current-issue describen defectos observados que un cliente no debe
+    convertir en dependencias. Consultar api-reference.md y security-review.md.
+servers:
+  - url: http://localhost:3000
+    description: Desarrollo local
+tags:
+  - name: System
+  - name: App
+  - name: Auth
+  - name: Users
+  - name: Photos
+  - name: Catalog
+  - name: Swipe
+  - name: Matches
+  - name: Chats
+  - name: Safety
+
+paths:
+  /:
+    get:
+      tags: [System]
+      operationId: getRoot
+      summary: Comprobar que Express responde
+      responses:
+        '200':
+          description: Texto de bienvenida
+          content:
+            text/plain:
+              schema:
+                type: string
+                const: Hello, World!
+
+  /api/app/version/android:
+    get:
+      tags: [App]
+      operationId: getAndroidVersionPolicy
+      summary: Obtener política de versión Android
+      responses:
+        '200':
+          description: Política vigente
+          headers:
+            Cache-Control:
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AppVersion' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /api/auth/register:
+    post:
+      tags: [Auth]
+      operationId: register
+      summary: Registrar usuario con email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterRequest' }
+      responses:
+        '201':
+          description: Usuario creado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TokenWithMessage' }
+        '409':
+          description: Username o email ya existe
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Message' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /api/auth/login:
+    post:
+      tags: [Auth]
+      operationId: login
+      summary: Iniciar sesión con password
+      x-current-issue: Emite JWT sin exigir el segundo factor.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200':
+          description: JWT de 24 horas
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Token' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /api/auth/autologin:
+    post:
+      tags: [Auth]
+      operationId: autoLogin
+      summary: Validar JWT y devolver userId
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Token aceptado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserIdWithMessage' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /api/auth/logout:
+    post:
+      tags: [Auth]
+      operationId: logout
+      summary: Añadir JWT a blacklist
+      security: [{ bearerAuth: [] }]
+      x-current-issue: El middleware elimina el token de blacklist en el primer rechazo.
+      responses:
+        '200': { $ref: '#/components/responses/MessageSuccess' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /api/auth/password/request-reset:
+    post:
+      tags: [Auth]
+      operationId: requestPasswordReset
+      summary: Solicitar código de recuperación
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EmailRequest' }
+      responses:
+        '200': { $ref: '#/components/responses/MessageSuccess' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /api/auth/password/confirm-reset:
+    post:
+      tags: [Auth]
+      operationId: confirmPasswordReset
+      summary: Confirmar código y cambiar password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PasswordResetConfirm' }
+      responses:
+        '200': { $ref: '#/components/responses/MessageSuccess' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /api/auth/verification/request:
+    post:
+      tags: [Auth]
+      operationId: requestVerification
+      summary: Solicitar código de verificación
+      x-current-issue: El tipo sms se acepta pero no se envía.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VerificationRequest' }
+      responses:
+        '200': { $ref: '#/components/responses/MessageSuccess' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /api/auth/verification/confirm:
+    post:
+      tags: [Auth]
+      operationId: confirmVerification
+      summary: Confirmar código de verificación
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VerificationConfirm' }
+      responses:
+        '200': { $ref: '#/components/responses/MessageSuccess' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /api/auth/verification/check:
+    get:
+      tags: [Auth]
+      operationId: checkVerification
+      summary: Consultar verificación de la cuenta autenticada
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Estado de verificación
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [isVerified]
+                properties:
+                  isVerified: { type: boolean }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /api/auth/2fa/setup:
+    post:
+      tags: [Auth]
+      operationId: setup2FA
+      summary: Crear secreto TOTP y recovery codes
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Material de configuración que debe mostrarse una sola vez
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TwoFactorSetup' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /api/auth/2fa/verify:
+    post:
+      tags: [Auth]
+      operationId: verify2FA
+      summary: Habilitar 2FA mediante TOTP
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string, minLength: 6, maxLength: 6 }
+      responses:
+        '200': { $ref: '#/components/responses/MessageSuccess' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /api/auth/2fa/disable:
+    post:
+      tags: [Auth]
+      operationId: disable2FA
+      summary: Desactivar 2FA
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CodeRequest' }
+      responses:
+        '200': { $ref: '#/components/responses/MessageSuccess' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /api/auth/2fa/status:
+    post:
+      tags: [Auth]
+      operationId: get2FAStatus
+      summary: Consultar estado 2FA por userId
+      x-current-issue: Ruta pública con posible enumeración.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UserIdRequest' }
+      responses:
+        '200':
+          description: Estado
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [enabled]
+                properties:
+                  enabled: { type: boolean }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /api/auth/2fa/loginVerifyLastStep:
+    post:
+      tags: [Auth]
+      operationId: verifyLogin2FA
+      summary: Verificar TOTP o recovery code por userId
+      x-current-issue: No está ligado a un challenge y no emite JWT.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - { $ref: '#/components/schemas/UserIdRequest' }
+                - { $ref: '#/components/schemas/CodeRequest' }
+      responses:
+        '200': { $ref: '#/components/responses/MessageSuccess' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /api/user:
+    get:
+      tags: [Users]
+      operationId: getOwnProfile
+      summary: Obtener perfil propio
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Perfil propio expandido
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Profile' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/ServerError' }
+    put:
+      tags: [Users]
+      operationId: updateOwnProfile
+      summary: Actualizar perfil, intereses y fotos
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema: { $ref: '#/components/schemas/ProfileUpdate' }
+      responses:
+        '200': { $ref: '#/components/responses/MessageSuccess' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/ServerError' }
+    delete:
+      tags: [Users]
+      operationId: deleteOwnAccount
+      summary: Aplicar soft delete a la cuenta
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/MessageSuccess' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /api/user/byToken:
+    get:
+      tags: [Users]
+      operationId: getUserIdByToken
+      summary: Verificar un segundo token enviado en body GET
+      security: [{ bearerAuth: [] }]
+      x-current-issue: Body en GET redundante respecto al Bearer token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string }
+      responses:
+        '200':
+          description: Id decodificado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserId' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /api/user/byEmailPassword:
+    post:
+      tags: [Users]
+      operationId: getUserIdByCredentials
+      summary: Obtener userId mediante email y password
+      deprecated: true
+      x-current-issue: Para un usuario existente suele responder 500 porque no selecciona password_hash.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        '200':
+          description: Respuesta prevista
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserId' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /api/user/byId:
+    post:
+      tags: [Users]
+      operationId: getProfileById
+      summary: Obtener perfil por id
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              properties:
+                id: { $ref: '#/components/schemas/Uuid' }
+      responses:
+        '200':
+          description: Perfil expandido o arrays vacíos si no existe
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Profile' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /api/user/public/delete-account:
+    post:
+      tags: [Users]
+      operationId: publicDeleteAccount
+      summary: Borrar cuenta mediante email y password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EmailPasswordRequest' }
+      responses:
+        '200': { $ref: '#/components/responses/MessageSuccess' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /api/user/fcm:
+    post:
+      tags: [Users]
+      operationId: saveFcmToken
+      summary: Guardar token push del usuario
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fcm]
+              properties:
+                fcm: { type: string }
+                platform:
+                  type: string
+                  enum: [android, ios, web]
+                  default: android
+      responses:
+        '200': { $ref: '#/components/responses/MessageSuccess' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /api/user/photo/{position}:
+    delete:
+      tags: [Photos]
+      operationId: deletePhotoByPosition
+      summary: Borrar foto propia por posición
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: position
+          in: path
+          required: true
+          schema: { type: integer, minimum: 1, maximum: 4 }
+      responses:
+        '200': { $ref: '#/components/responses/MessageSuccess' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /api/user/photos:
+    get:
+      tags: [Photos]
+      operationId: getUserPhotos
+      summary: Listar fotos por userId
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: userId
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/Uuid' }
+      responses:
+        '200':
+          description: Fotos ordenadas
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Photo' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/ServerError' }
+    post:
+      tags: [Photos]
+      operationId: uploadPhoto
+      summary: Subir o reemplazar una foto
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [photo]
+              properties:
+                photo: { type: string, format: binary }
+                position: { type: integer, minimum: 1, maximum: 4 }
+      responses:
+        '201':
+          description: Foto guardada
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [url]
+                properties:
+                  url: { type: string }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /api/user/photos/{photoId}:
+    delete:
+      tags: [Photos]
+      operationId: deletePhotoById
+      summary: Borrar foto propia por id
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: photoId
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/Uuid' }
+      responses:
+        '200': { $ref: '#/components/responses/MessageSuccess' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /api/users:
+    get:
+      tags: [Users]
+      operationId: getProfiles
+      summary: Listar otros perfiles
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Perfiles expandidos sin paginación
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Profile' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /api/catalog/animes:
+    get:
+      tags: [Catalog]
+      operationId: getAnimes
+      summary: Listar catálogo de anime
+      responses:
+        '200':
+          description: Catálogo ordenado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CatalogList' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /api/catalog/games:
+    get:
+      tags: [Catalog]
+      operationId: getGames
+      summary: Listar catálogo de juegos
+      responses:
+        '200':
+          description: Catálogo ordenado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CatalogList' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /api/swipe/feed:
+    get:
+      tags: [Swipe]
+      operationId: getSwipeFeed
+      summary: Obtener perfiles todavía no evaluados
+      security: [{ bearerAuth: [] }]
+      x-current-issue: SELECT all expone columnas internas de users.
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, default: 10 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        '200':
+          description: Perfiles actuales con propiedades adicionales inseguras
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ProfileCurrentUnsafe' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /api/swipe/like:
+    post:
+      tags: [Swipe]
+      operationId: likeUser
+      summary: Dar like y crear match si es recíproco
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ToUserRequest' }
+      responses:
+        '200':
+          description: Like registrado
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message, match]
+                properties:
+                  message: { type: string }
+                  match: { type: boolean }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /api/swipe/dislike:
+    post:
+      tags: [Swipe]
+      operationId: dislikeUser
+      summary: Descartar usuario
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ToUserRequest' }
+      responses:
+        '200': { $ref: '#/components/responses/MessageSuccess' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /api/match:
+    get:
+      tags: [Matches]
+      operationId: getMatches
+      summary: Listar perfiles con match
+      security: [{ bearerAuth: [] }]
+      x-current-issue: SELECT user all expone columnas internas.
+      responses:
+        '200':
+          description: Perfiles matched
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ProfileCurrentUnsafe' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /api/match/unseen:
+    get:
+      tags: [Matches]
+      operationId: getUnseenMatches
+      summary: Listar matches no vistos
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Matches pendientes
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/MatchIds' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /api/match/mark-seen:
+    post:
+      tags: [Matches]
+      operationId: markMatchesSeen
+      summary: Marcar matches como vistos
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [matchIds]
+              properties:
+                matchIds:
+                  type: array
+                  items: { $ref: '#/components/schemas/Uuid' }
+      responses:
+        '200': { $ref: '#/components/responses/MessageSuccess' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /api/chats:
+    get:
+      tags: [Chats]
+      operationId: getChats
+      summary: Listar chats del usuario
+      security: [{ bearerAuth: [] }]
+      x-current-issue: El filtro actual omite chats de grupo.
+      responses:
+        '200':
+          description: Resúmenes de chat
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ChatSummary' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /api/chats/{chatId}/messages:
+    get:
+      tags: [Chats]
+      operationId: getChatMessages
+      summary: Listar mensajes paginados
+      security: [{ bearerAuth: [] }]
+      x-current-issue: Sin before usa un placeholder incorrecto y no comprueba membresía.
+      parameters:
+        - { $ref: '#/components/parameters/ChatId' }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, default: 50 }
+        - name: before
+          in: query
+          schema: { type: string, format: date-time }
+      responses:
+        '200':
+          description: Mensajes de antiguo a nuevo
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/MessageRow' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /api/chats/{chatId}/members:
+    get:
+      tags: [Chats]
+      operationId: getChatMembers
+      summary: Listar miembros del chat
+      security: [{ bearerAuth: [] }]
+      x-current-issue: No comprueba membresía del solicitante.
+      parameters:
+        - { $ref: '#/components/parameters/ChatId' }
+      responses:
+        '200':
+          description: Miembros
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ChatMember' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /api/chats/{chatId}/read:
+    patch:
+      tags: [Chats]
+      operationId: markChatRead
+      summary: Actualizar última lectura
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/ChatId' }
+      responses:
+        '200':
+          description: Operación procesada
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success]
+                properties:
+                  success: { type: boolean }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /api/chats/private:
+    post:
+      tags: [Chats]
+      operationId: createPrivateChat
+      summary: Crear chat privado
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [otherUserId]
+              properties:
+                otherUserId: { $ref: '#/components/schemas/Uuid' }
+      responses:
+        '201':
+          description: Chat creado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChatCreated' }
+        '400':
+          description: Auto-chat o chat existente
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChatCreated' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /api/chats/group:
+    post:
+      tags: [Chats]
+      operationId: createGroupChat
+      summary: Crear o reutilizar chat de grupo
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/GroupChatRequest' }
+      responses:
+        '200':
+          description: Grupo existente
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChatCreated' }
+        '201':
+          description: Grupo creado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChatCreated' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /api/chats/send:
+    post:
+      tags: [Chats]
+      operationId: sendMessage
+      summary: Enviar mensaje privado
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SendMessageRequest' }
+      responses:
+        '201':
+          description: Mensaje guardado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChatCreated' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /api/chats/history/{userId}:
+    get:
+      tags: [Chats]
+      operationId: getChatHistory
+      summary: Obtener historial privado con otro usuario
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/Uuid' }
+      responses:
+        '200':
+          description: Historial o array vacío
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/HistoryMessage' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /api/report:
+    post:
+      tags: [Safety]
+      operationId: reportUser
+      summary: Reportar a otro usuario
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReportRequest' }
+      responses:
+        '201': { $ref: '#/components/responses/MessageSuccess' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /api/feedback:
+    post:
+      tags: [Safety]
+      operationId: sendFeedback
+      summary: Enviar feedback de producto
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FeedbackRequest' }
+      responses:
+        '201': { $ref: '#/components/responses/MessageSuccess' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    ChatId:
+      name: chatId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/Uuid' }
+
+  responses:
+    MessageSuccess:
+      description: Operación completada
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Message' }
+    BadRequest:
+      description: Input o estado inválido
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Unauthorized:
+      description: Credenciales ausentes o inválidas
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Forbidden:
+      description: Cuenta borrada o no verificada
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Recurso no encontrado
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    ServerError:
+      description: Error interno no normalizado
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+  schemas:
+    Uuid:
+      type: string
+      format: uuid
+    Message:
+      type: object
+      required: [message]
+      properties:
+        message: { type: string }
+    Error:
+      type: object
+      required: [message]
+      properties:
+        message: { type: string }
+        code: { type: string }
+        verified: { type: boolean }
+        shouldLogout: { type: boolean }
+        error: {}
+      additionalProperties: true
+    Token:
+      type: object
+      required: [token]
+      properties:
+        token: { type: string }
+    TokenWithMessage:
+      allOf:
+        - { $ref: '#/components/schemas/Token' }
+        - { $ref: '#/components/schemas/Message' }
+    UserId:
+      type: object
+      required: [userId]
+      properties:
+        userId: { $ref: '#/components/schemas/Uuid' }
+    UserIdWithMessage:
+      allOf:
+        - { $ref: '#/components/schemas/UserId' }
+        - { $ref: '#/components/schemas/Message' }
+    RegisterRequest:
+      type: object
+      required: [username, email, password]
+      properties:
+        username: { type: string, maxLength: 30 }
+        email: { type: string, format: email }
+        password: { type: string, format: password }
+    LoginRequest:
+      type: object
+      required: [password]
+      properties:
+        email: { type: string, format: email }
+        username: { type: string }
+        password: { type: string, format: password }
+      anyOf:
+        - required: [email]
+        - required: [username]
+    EmailRequest:
+      type: object
+      required: [email]
+      properties:
+        email: { type: string, format: email }
+    EmailPasswordRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, format: password }
+    PasswordResetConfirm:
+      type: object
+      required: [email, token, newPassword]
+      properties:
+        email: { type: string, format: email }
+        token: { type: string }
+        newPassword: { type: string, format: password }
+    UserIdRequest:
+      type: object
+      required: [userId]
+      properties:
+        userId: { $ref: '#/components/schemas/Uuid' }
+    CodeRequest:
+      type: object
+      required: [code]
+      properties:
+        code: { type: string }
+    VerificationRequest:
+      type: object
+      required: [userId, type]
+      properties:
+        userId: { $ref: '#/components/schemas/Uuid' }
+        type: { type: string, enum: [email, sms] }
+    VerificationConfirm:
+      allOf:
+        - { $ref: '#/components/schemas/VerificationRequest' }
+        - type: object
+          required: [token]
+          properties:
+            token: { type: string }
+    TwoFactorSetup:
+      type: object
+      required: [otpauth_url, recovery_codes, base32]
+      properties:
+        otpauth_url: { type: string }
+        recovery_codes:
+          type: array
+          minItems: 5
+          maxItems: 5
+          items: { type: string }
+        base32: { type: string }
+    AppVersion:
+      type: object
+      required: [platform, minVersionCode, latestVersionCode, playStoreUrl]
+      properties:
+        platform: { type: string, const: android }
+        minVersionCode: { type: integer }
+        latestVersionCode: { type: integer }
+        message: { type: [string, 'null'] }
+        playStoreUrl: { type: string, format: uri }
+    CatalogItem:
+      type: object
+      required: [id, name]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        name: { type: string }
+        image_url: { type: [string, 'null'] }
+    CatalogList:
+      type: array
+      items: { $ref: '#/components/schemas/CatalogItem' }
+    Photo:
+      type: object
+      required: [id, user_id, url, position]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        user_id: { $ref: '#/components/schemas/Uuid' }
+        url: { type: string }
+        position: { type: integer, minimum: 1, maximum: 4 }
+    Profile:
+      type: object
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        username: { type: string }
+        nickname: { type: [string, 'null'] }
+        bio: { type: [string, 'null'] }
+        gender: { type: [string, 'null'] }
+        birthdate: { type: [string, 'null'] }
+        is_verified: { type: boolean }
+        two_fa_enabled: { type: boolean }
+        created_at: { type: [string, 'null'], format: date-time }
+        updated_at: { type: [string, 'null'], format: date-time }
+        is_deleted: { type: boolean }
+        fcm_token: { type: string }
+        photos:
+          type: array
+          items: { $ref: '#/components/schemas/Photo' }
+        animes: { $ref: '#/components/schemas/CatalogList' }
+        games: { $ref: '#/components/schemas/CatalogList' }
+      additionalProperties: true
+    ProfileCurrentUnsafe:
+      allOf:
+        - { $ref: '#/components/schemas/Profile' }
+        - type: object
+          description: Propiedades internas expuestas actualmente por SELECT all. No consumir.
+          properties:
+            email: { type: [string, 'null'], format: email, deprecated: true }
+            phone_number: { type: [string, 'null'], deprecated: true }
+            password_hash: { type: [string, 'null'], deprecated: true }
+            two_fa_secret: { type: [string, 'null'], deprecated: true }
+    ProfileUpdate:
+      type: object
+      properties:
+        nickname: { type: string, maxLength: 30 }
+        bio: { type: string, maxLength: 500 }
+        gender:
+          type: string
+          enum: [male, female, non_binary, other, prefer_not_to_say, '']
+        birthdate: { type: string }
+        animes: { type: string, description: Array JSON de objetos con id. }
+        games: { type: string, description: Array JSON de objetos con id. }
+        reorderedPositions: { type: string, description: Array JSON con url y position. }
+        photo_0: { type: string, format: binary }
+        photo_1: { type: string, format: binary }
+        photo_2: { type: string, format: binary }
+        photo_3: { type: string, format: binary }
+    ToUserRequest:
+      type: object
+      required: [toUserId]
+      properties:
+        toUserId: { $ref: '#/components/schemas/Uuid' }
+    MatchIds:
+      type: object
+      required: [id, user1_id, user2_id]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        user1_id: { $ref: '#/components/schemas/Uuid' }
+        user2_id: { $ref: '#/components/schemas/Uuid' }
+    ChatSummary:
+      type: object
+      properties:
+        chat_id: { $ref: '#/components/schemas/Uuid' }
+        type: { type: string, enum: [private, group] }
+        name: { type: [string, 'null'] }
+        created_by: { type: [string, 'null'], format: uuid }
+        created_at: { type: string, format: date-time }
+        joined_at: { type: string, format: date-time }
+        role: { type: string, enum: [admin, member] }
+        last_message_id: { type: [string, 'null'], format: uuid }
+        last_message_text: { type: [string, 'null'] }
+        last_message_sender_id: { type: [string, 'null'], format: uuid }
+        last_message_sent_at: { type: [string, 'null'], format: date-time }
+        unread_count: { type: [string, integer] }
+        destinatary:
+          type: [object, 'null']
+          additionalProperties: true
+    MessageRow:
+      type: object
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        sender_id: { $ref: '#/components/schemas/Uuid' }
+        chat_id: { $ref: '#/components/schemas/Uuid' }
+        is_read: { type: boolean }
+        created_at: { type: string, format: date-time }
+        text: { type: string }
+        sent_at: { type: string, format: date-time }
+    ChatMember:
+      type: object
+      required: [id, username, role]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        username: { type: string }
+        nickname: { type: [string, 'null'] }
+        role: { type: string, enum: [admin, member] }
+    ChatCreated:
+      type: object
+      properties:
+        chatId: { $ref: '#/components/schemas/Uuid' }
+        message: { type: string }
+    GroupChatRequest:
+      type: object
+      required: [name, userIds]
+      properties:
+        name: { type: string }
+        userIds:
+          type: array
+          items: { $ref: '#/components/schemas/Uuid' }
+    SendMessageRequest:
+      type: object
+      required: [toUserId, text]
+      properties:
+        toUserId: { $ref: '#/components/schemas/Uuid' }
+        text: { type: string }
+    HistoryUser:
+      type: object
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        username: { type: string }
+        nickname: { type: [string, 'null'] }
+        email: { type: [string, 'null'], format: email }
+        gender: { type: [string, 'null'] }
+        birthdate: { type: [string, 'null'] }
+        profile_photo: { type: [string, 'null'] }
+    HistoryMessage:
+      type: object
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        content: { type: string }
+        timestamp: { type: number, description: Unix epoch en milisegundos. }
+        sender: { $ref: '#/components/schemas/HistoryUser' }
+        receiver: { $ref: '#/components/schemas/HistoryUser' }
+    ReportRequest:
+      type: object
+      required: [reportedUser, reason]
+      properties:
+        reportedUser: { $ref: '#/components/schemas/Uuid' }
+        reason: { type: string, minLength: 5 }
+    FeedbackRequest:
+      type: object
+      required: [feedback]
+      properties:
+        feedback: { type: string, minLength: 1, maxLength: 10000 }
