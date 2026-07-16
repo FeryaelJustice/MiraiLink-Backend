@@ -1,70 +1,66 @@
-import fs from 'node:fs';
 import db from '../models/db.js';
-import { join, basename, resolve } from 'path';
-import { UPLOAD_DIR_PROFILES_STRING } from '../consts/photosConsts.js';
-import { uploadOrReplacePhoto } from '../utils/photoUploader.js';
-
-const UPLOAD_DIR_PROFILES = resolve('src', UPLOAD_DIR_PROFILES_STRING);
+import { cleanupStagedPhoto, finalizePhoto, removePhotoFile, stagePhoto } from '../utils/photoStorage.js';
 
 export const uploadPhoto = async (req, res, next) => {
+    if (!req.file) return res.status(400).json({ code: 'FILE_REQUIRED', message: 'A photo is required' });
+    const client = await db.connect();
+    let staged;
     try {
-        const userId = req.user.id;
-        const file = req.file;
-        const position = parseInt(req.body.position) || null;
-
-        if (!file) return res.status(400).json({ message: 'No file uploaded' });
-
-        // Validación extra: máximo 4 fotos
-        const result = await db.query('SELECT COUNT(*) FROM user_photos WHERE user_id = $1', [userId]);
-        const count = parseInt(result.rows[0].count);
-        if (count >= 4 && position === null) {
-            return res.status(400).json({ message: 'Maximum 4 photos allowed' });
+        staged = await stagePhoto(req.user.id, req.file);
+        await client.query('BEGIN');
+        const locked = await client.query('SELECT position FROM user_photos WHERE user_id = $1 FOR UPDATE', [req.user.id]);
+        const position = req.body.position ? Number(req.body.position) : locked.rows.length + 1;
+        if (position < 1 || position > 4 || (locked.rows.length >= 4 && !req.body.position)) {
+            await client.query('ROLLBACK');
+            await cleanupStagedPhoto(staged);
+            return res.status(400).json({ code: 'PHOTO_LIMIT', message: 'Maximum four photos are allowed' });
         }
-
-        const finalPosition = position ?? count + 1;
-        const url = await uploadOrReplacePhoto(userId, file, finalPosition);
-
-        res.status(201).json({ url });
-    } catch (err) {
-        next(err);
+        const previous = await client.query('DELETE FROM user_photos WHERE user_id = $1 AND position = $2 RETURNING url', [req.user.id, position]);
+        await client.query('INSERT INTO user_photos (user_id, url, position) VALUES ($1, $2, $3)', [req.user.id, staged.url, position]);
+        await finalizePhoto(staged);
+        await client.query('COMMIT');
+        if (previous.rows[0]) await removePhotoFile(previous.rows[0].url);
+        return res.status(201).json({ url: staged.url, position });
+    } catch (error) {
+        await client.query('ROLLBACK').catch(() => {});
+        if (staged) await cleanupStagedPhoto(staged);
+        return next(error);
+    } finally {
+        client.release();
     }
 };
 
 export const getUserPhotos = async (req, res, next) => {
     try {
-        const userId = req.query.userId;
-        const result = await db.query(
-            'SELECT id, user_id, url, position FROM user_photos WHERE user_id = $1 ORDER BY position ASC',
-            [userId]
-        );
-        res.json(result.rows);
-    } catch (err) {
-        next(err);
+        const result = await db.query('SELECT id, user_id, url, position FROM user_photos WHERE user_id = $1 ORDER BY position', [req.query.userId ?? req.user.id]);
+        return res.json(result.rows);
+    } catch (error) {
+        return next(error);
     }
 };
 
 export const deletePhoto = async (req, res, next) => {
+    const client = await db.connect();
     try {
-        const userId = req.user.id;
-        const photoId = req.params.photoId;
-
-        const result = await db.query('SELECT * FROM user_photos WHERE id = $1 AND user_id = $2', [photoId, userId]);
-        const photo = result.rows[0];
-        if (!photo) return res.status(404).json({ message: 'Photo not found', shouldLogout: false });
-
-        const all = await db.query('SELECT COUNT(*) FROM user_photos WHERE user_id = $1', [userId]);
-        if (parseInt(all.rows[0].count) <= 1) {
-            return res.status(400).json({ message: 'At least one photo is required' });
+        await client.query('BEGIN');
+        const locked = await client.query('SELECT position FROM user_photos WHERE user_id = $1 FOR UPDATE', [req.user.id]);
+        if (locked.rows.length <= 1) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({ code: 'PHOTO_REQUIRED', message: 'At least one photo is required' });
         }
-
-        const filePath = join(UPLOAD_DIR_PROFILES, userId, basename(photo.url));
-        fs.unlinkSync(filePath);
-
-        await db.query('DELETE FROM user_photos WHERE id = $1', [photoId]);
-        await db.query('UPDATE user_photos SET position = position - 1 WHERE user_id = $1 AND position > $2', [userId, photo.position]);
-
-        res.status(200).json({ message: 'Photo deleted' });
-    } catch (err) {
-        next(err);
+        const deleted = await client.query('DELETE FROM user_photos WHERE id = $1 AND user_id = $2 RETURNING url, position', [req.params.photoId, req.user.id]);
+        if (!deleted.rows[0]) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ code: 'PHOTO_NOT_FOUND', message: 'Photo not found' });
+        }
+        await client.query('UPDATE user_photos SET position = position - 1 WHERE user_id = $1 AND position > $2', [req.user.id, deleted.rows[0].position]);
+        await client.query('COMMIT');
+        await removePhotoFile(deleted.rows[0].url);
+        return res.json({ message: 'Photo deleted' });
+    } catch (error) {
+        await client.query('ROLLBACK').catch(() => {});
+        return next(error);
+    } finally {
+        client.release();
     }
 };

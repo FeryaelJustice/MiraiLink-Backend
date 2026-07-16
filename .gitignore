@@ -1,9 +1,6 @@
-node_modules
-/node_modules
+node_modules/
 .env
-./src/assets
-/src/assets
-src/assets
-package-lock.json
-/src/serviceAccountKey.json
-./src/serviceAccountKey.json
+coverage/
+src/assets/
+src/serviceAccountKey.json
+*.log

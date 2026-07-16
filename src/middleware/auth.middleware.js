@@ -1,39 +1,47 @@
 import jwt from 'jsonwebtoken';
 import db from '../models/db.js';
 
-export const authenticateToken = (allowUnverified = false) => {
-    return async (req, res, next) => {
-        const authHeader = req.headers.authorization;
-        const token = authHeader?.split(' ')[1];
+function unauthorized(res, code, message) {
+    return res.status(401).json({ code, message });
+}
 
-        if (!token) return res.status(401).json({ message: 'No token provided' });
+export const authenticateToken = (allowUnverified = false) => async (req, res, next) => {
+    const [scheme, token] = (req.headers.authorization ?? '').split(' ');
+    if (scheme !== 'Bearer' || !token) {
+        return unauthorized(res, 'TOKEN_REQUIRED', 'A Bearer token is required');
+    }
 
-        try {
-            // Verifica que NO esté en blacklist
-            const check = await db.query('SELECT 1 FROM token_blacklist WHERE token = $1', [token]);
-            if (check.rows.length > 0) {
-                await db.query('DELETE FROM token_blacklist WHERE token = $1', [token]);
-                return res.status(401).json({ message: 'Token has been invalidated' });
-            }
-
-            // Decodifica el token
-            const decoded = jwt.verify(token, process.env.JWT_SECRET);
-            const user = await db.query('SELECT is_verified, is_deleted FROM users WHERE id = $1', [decoded.id]);
-
-            if (user.rowCount === 0 || user.rows[0].is_deleted) {
-                return res.status(404).json({ message: 'Usuario no encontrado' });
-            }
-
-            if (!user.rows[0].is_verified && !allowUnverified) {
-                return res.status(403).json({ message: 'Cuenta no verificada', verified: false });
-            }
-
-            // Si todo está bien, agrega el usuario decodificado al request
-            req.user = decoded;
-            req.token = token; // Guarda el token en el request para usarlo después
-            next();
-        } catch (err) {
-            res.status(401).json({ message: 'Invalid token', error: err });
+    try {
+        const revoked = await db.query(
+            'SELECT 1 FROM token_blacklist WHERE token = $1 LIMIT 1',
+            [token],
+        );
+        if (revoked.rowCount > 0 || revoked.rows.length > 0) {
+            return unauthorized(res, 'TOKEN_REVOKED', 'Token has been invalidated');
         }
+        const decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
+        if (decoded.purpose !== 'access') {
+            return unauthorized(res, 'INVALID_TOKEN', 'Invalid or expired token');
+        }
+        const userId = decoded.id ?? decoded.sub;
+        const user = await db.query(
+            'SELECT is_verified, is_deleted FROM users WHERE id = $1',
+            [userId],
+        );
+        if (user.rowCount === 0 || user.rows[0].is_deleted) {
+            return unauthorized(res, 'INVALID_TOKEN', 'Invalid or expired token');
+        }
+        if (!user.rows[0].is_verified && !allowUnverified) {
+            return res.status(403).json({
+                code: 'ACCOUNT_UNVERIFIED',
+                message: 'Account is not verified',
+                verified: false,
+            });
+        }
+        req.user = { ...decoded, id: userId };
+        req.token = token;
+        return next();
+    } catch (_error) {
+        return unauthorized(res, 'INVALID_TOKEN', 'Invalid or expired token');
     }
 };
