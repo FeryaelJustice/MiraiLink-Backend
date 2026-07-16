@@ -1,226 +1,135 @@
 # MiraiLink Backend
 
-[![Node.js](https://img.shields.io/badge/Node.js-20+-green.svg)](https://nodejs.org/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-blue.svg)](https://www.postgresql.org/)
-[![Express](https://img.shields.io/badge/Express-5.1+-lightgrey.svg)](https://expressjs.com/)
+Backend de MiraiLink, una aplicación social y de citas orientada a personas interesadas en videojuegos y anime. La API está implementada con Node.js, Express y PostgreSQL e incluye autenticación, perfiles, descubrimiento, matches, chats, catálogos, reportes, feedback y notificaciones push.
 
-MiraiLink es una aplicación de citas y red social diseñada específicamente para gamers y fanáticos del anime. Este repositorio contiene el backend de la aplicación, construido con Node.js, Express y PostgreSQL.
+## Estado real del proyecto
 
-## 🚀 Características Principales
+El repositorio contiene un prototipo funcional, pero todavía no debe considerarse listo para producción. La API expone 46 endpoints bajo `/api`, el chat REST está conectado y el esquema PostgreSQL cubre los dominios principales. No hay tests automatizados, el lint no está operativo, Socket.IO está desactivado y existen riesgos de seguridad y consistencia descritos en [docs/security-review.md](docs/security-review.md).
 
-- **Autenticación Completa**: Registro, login, verificación por email, reset de contraseña
-- **2FA (Autenticación de Dos Factores)**: Implementado con TOTP y códigos de recuperación
-- **Sistema de Matching**: Swipe para likes/dislikes con matches automáticos
-- **Chat en Tiempo Real**: Mensajería privada entre matches
-- **Perfiles Personalizados**: Fotos, biografía, intereses en anime y videojuegos
-- **Catálogos Extensos**: Base de datos de animes y videojuegos populares
-- **Sistema de Reportes**: Funcionalidad para reportar usuarios problemáticos
-- **API RESTful**: Endpoints bien estructurados con autenticación JWT
+La documentación distingue de forma explícita entre:
 
-## 🛠️ Tecnologías Utilizadas
+- Comportamiento observado en el código actual.
+- Contrato que un cliente puede consumir hoy.
+- Riesgos que deben corregirse antes de publicar la API.
+- Mejoras propuestas, que no están implementadas todavía.
 
-- **Backend**: Node.js con Express.js
-- **Base de Datos**: PostgreSQL con UUIDs
-- **Autenticación**: JWT + 2FA (Speakeasy)
-- **Subida de Archivos**: Multer para gestión de fotos
-- **Seguridad**: Helmet, CORS, Bcrypt
-- **Email**: Nodemailer para verificaciones
-- **Desarrollo**: Nodemon, ESLint
+## Documentación
 
-## 📦 Instalación y Configuración
+- [Indice general](docs/README.md)
+- [Arquitectura](docs/architecture.md)
+- [Mapa del código](docs/codebase-map.md)
+- [Referencia de módulos y funciones](docs/code-reference.md)
+- [Referencia de la API](docs/api-reference.md)
+- [Especificación OpenAPI 3.1](docs/openapi.yaml)
+- [Modelo de datos](docs/database.md)
+- [Runtime y configuración](docs/runtime-and-configuration.md)
+- [Estrategia de testing](docs/testing-strategy.md)
+- [Revisión de seguridad y riesgos](docs/security-review.md)
 
-### Prerrequisitos
+## Tecnologías observadas
 
-- Node.js 18+
-- PostgreSQL 15+
-- npm o yarn
+- Node.js con módulos ES.
+- Express 5.
+- PostgreSQL mediante `pg.Pool`.
+- JWT y bcrypt para autenticación.
+- Speakeasy para TOTP y 2FA.
+- Multer para subida de fotos.
+- Nodemailer para correo SMTP.
+- Firebase Admin para FCM.
+- Socket.IO presente en el código, pero no activado en el arranque.
 
-### 1. Clonar el Repositorio
+## Requisitos
 
-```bash
-git clone https://github.com/FeryaelJustice/MiraiLink-Backend.git
-cd MiraiLink-Backend
-```
+- Node.js 20 o superior. El import JSON con atributos usado por Firebase no es compatible con la promesa anterior de Node.js 18.
+- PostgreSQL 15 o superior.
+- npm.
+- Un archivo privado `src/serviceAccountKey.json` válido para Firebase Admin. El servidor lo importa durante el arranque aunque no se envíen notificaciones.
+- Credenciales SMTP si se utilizan verificación y recuperación de contraseña.
 
-### 2. Instalar Dependencias
+## Puesta en marcha
 
-```bash
+1. Instala las dependencias:
+
+```powershell
 npm install
 ```
 
-### 3. Configuración de Base de Datos
+2. Crea la base de datos y carga el esquema:
 
-Crea una base de datos PostgreSQL:
-
-```sql
-CREATE DATABASE mirailink;
-```
-
-Ejecuta el schema y datos de prueba:
-
-```bash
+```powershell
 psql -U postgres -d mirailink -f src/database/db.sql
 psql -U postgres -d mirailink -f src/database/db_inserts.sql
 ```
 
-### 4. Variables de Entorno
+`db_inserts.sql` contiene datos de desarrollo. No debe ejecutarse en producción. El SQL no es un sistema de migraciones y no es seguro repetirlo sobre una base ya inicializada.
 
-Copia el archivo de ejemplo y configura las variables:
+3. Copia `.env.example` a `.env` y sustituye todos los valores de ejemplo:
 
-```bash
-cp .env.example .env
+```powershell
+Copy-Item .env.example .env
 ```
 
-#### Para las variables de 2FA en el .env hay que generar
+Genera valores criptográficos para 2FA:
 
-##### Clave (32 bytes)
-
-```bash
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```powershell
+node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
+node -e "console.log(require('node:crypto').randomBytes(16).toString('hex'))"
 ```
 
-##### IV (16 bytes)
+4. Coloca la credencial de Firebase en `src/serviceAccountKey.json`.
 
-```bash
-node -e "console.log(require('crypto').randomBytes(16).toString('hex'))"
-```
+5. Inicia el servidor:
 
-Configura las siguientes variables en tu `.env`:
-
-```env
-PORT=3000
-JWT_SECRET=tu_jwt_secret_muy_seguro
-ORIGIN=http://localhost:5173
-DB_URL=postgres://usuario:contraseña@localhost:5432/mirailink
-BCRYPT_ROUNDS=12
-EMAIL_HOST=tu_smtp_host
-EMAIL_PORT=587
-EMAIL_USER=tu_email
-EMAIL_PASSWORD=tu_password_email
-SECRET_2FA_KEY=clave_32_bytes_generada
-SECRET_2FA_IV=iv_16_bytes_generado
-```
-
-### 5. Ejecutar la Aplicación
-
-```bash
-# Desarrollo (con auto-reload)
+```powershell
 npm run dev
-
-# Producción
-npm run start
 ```
 
-La API estará disponible en `http://localhost:3000`
+La URL predeterminada es `http://localhost:3000`. La API vive bajo `http://localhost:3000/api`.
 
-## 📚 Estructura del Proyecto
+## Comandos disponibles
+
+| Comando | Estado | Uso |
+| --- | --- | --- |
+| `npm run dev` | Configurado para Windows | Arranca Nodemon con `.env` y `NODE_ENV=development`. |
+| `npm start` | Configurado para Windows | Arranca Node con `.env` y `NODE_ENV=production`. |
+| `npm run build` | Marcador de posición | No compila ni genera artefactos. |
+| `npm test` | Marcador de posición | No ejecuta tests. |
+| `npm run lint` | No operativo | El proyecto no declara ESLint ni incluye configuración. |
+
+## Estructura principal
 
 ```text
 src/
-├── app.js              # Configuración principal del servidor
-├── controllers/        # Lógica de negocio
-│   ├── auth.controller.js
-│   ├── user.controller.js
-│   ├── chat.controller.js
-│   └── ...
-├── routes/            # Definición de rutas
-│   ├── auth.routes.js
-│   ├── user.routes.js
-│   └── ...
-├── middleware/        # Middlewares personalizados
-│   ├── auth.middleware.js
-│   └── error.middleware.js
-├── models/           # Modelos y conexión DB
-│   └── db.js
-├── utils/            # Utilidades
-│   ├── cryptoUtils.js
-│   ├── dateUtils.js
-│   └── mailer.js
-├── database/         # Esquemas y datos iniciales
-│   ├── db.sql
-│   └── db_inserts.sql
-└── assets/           # Archivos estáticos (ignorado por git)
+  app.js                 Arranque de Express y montaje de rutas
+  config/                Integraciones que se inicializan al arrancar
+  consts/                Constantes compartidas
+  controllers/           Handlers HTTP y lógica de negocio
+  database/              Esquema y datos de desarrollo PostgreSQL
+  middleware/            Autenticación y errores
+  models/                 Pool de PostgreSQL
+  public/                 Contenido estático no sensible
+  routes/                 Definición de rutas Express
+  services/               Notificaciones push
+  sockets/                Prototipo Socket.IO no conectado
+  utils/                  Cifrado, fechas, correo y fotos
 ```
 
-## 🔗 API Endpoints
+`src/assets` almacena archivos subidos y queda fuera del alcance de la documentación y de los cambios de mantenimiento. No debe tratarse como código fuente ni incluirse en Git.
 
-### Autenticación (`/api/auth`)
+## Autenticación básica
 
-- `POST /register` - Registro de usuario
-- `POST /login` - Inicio de sesión
-- `POST /logout` - Cerrar sesión
-- `POST /2fa/setup` - Configurar 2FA
-- `POST /password/request-reset` - Solicitar reset de contraseña
+Las rutas protegidas esperan un JWT en:
 
-### Usuario (`/api/user`)
-
-- `GET /` - Obtener perfil propio
-- `PUT /` - Actualizar perfil
-- `DELETE /` - Eliminar cuenta
-- `DELETE /photo/:position` - Eliminar foto específica
-
-### Matches (`/api/match`)
-
-- `GET /` - Obtener matches
-- `GET /unseen` - Matches no vistos
-- `POST /mark-seen` - Marcar matches como vistos
-
-### Chat (`/api/chats`)
-
-- `GET /` - Obtener chats del usuario
-- `GET /:chatId/messages` - Mensajes de un chat
-- `POST /send` - Enviar mensaje
-
-### Catálogos (`/api/catalog`)
-
-- `GET /animes` - Lista de animes disponibles
-- `GET /games` - Lista de videojuegos disponibles
-
-## 🔒 Seguridad
-
-- **JWT**: Tokens con expiración de 24 horas
-- **Token Blacklist**: Invalidación de tokens en logout
-- **2FA**: Autenticación de dos factores con TOTP
-- **Bcrypt**: Hash seguro de contraseñas (12 rounds por defecto)
-- **Helmet**: Headers de seguridad HTTP
-- **CORS**: Configurado para orígenes específicos
-- **Validación**: Parámetros validados en todas las rutas
-
-## 🧪 Desarrollo
-
-```bash
-# Ejecutar en modo desarrollo
-npm run dev
-
-# Linting
-npm run lint
-
-# Generar claves para 2FA
-npm run generate:2fa-keys
+```http
+Authorization: Bearer <token>
 ```
 
-## 📄 Base de Datos
+El token se obtiene en `POST /api/auth/register` o `POST /api/auth/login`. El flujo 2FA está implementado parcialmente y todavía no forma una barrera completa durante el login. Consulta [docs/api-reference.md](docs/api-reference.md) antes de integrar un cliente.
 
-La base de datos incluye:
+## Calidad y contribución
 
-- **Usuarios**: Perfiles, autenticación, verificación
-- **Contenido**: Fotos de perfil, intereses en anime/games
-- **Social**: Likes, matches, chats, mensajes
-- **Seguridad**: Tokens, 2FA, códigos de recuperación
-- **Catálogos**: +280 animes y +100+ videojuegos populares
+Antes de ampliar funcionalidades conviene ejecutar el plan de [docs/testing-strategy.md](docs/testing-strategy.md) y resolver primero los riesgos P0 y P1 de [docs/security-review.md](docs/security-review.md). Los commits siguen Conventional Commits con asuntos breves e imperativos.
 
-## 🤝 Contribuir
+## Licencia
 
-1. Fork del repositorio
-2. Crear rama feature (`git checkout -b feature/nueva-funcionalidad`)
-3. Commit cambios (`git commit -am 'Agregar nueva funcionalidad'`)
-4. Push a la rama (`git push origin feature/nueva-funcionalidad`)
-5. Crear Pull Request
-
-## 👨‍💻 Autor
-
-**FeryaelJustice** - [GitHub](https://github.com/FeryaelJustice)
-
-## 📜 Licencia
-
-Este proyecto está bajo la Licencia ISC.
+ISC, según `package.json`.

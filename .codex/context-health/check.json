@@ -1,0 +1,10 @@
+{
+  "checked_at": "2026-06-09T18:05:33.5780098+02:00",
+  "project_path": "C:\\Users\\nano9\\OneDrive\\Escritorio\\Stuff\\Professional\\Business\\FeryaelJustice\\Developer\\MiraiLink\\Backend",
+  "status": "healthy",
+  "files_reviewed": [
+    "AGENTS.md"
+  ],
+  "findings": [],
+  "stale_policy": "stale if older than 24h or older than latest AI instruction file"
+}

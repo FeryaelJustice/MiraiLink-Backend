@@ -1,27 +1,26 @@
 // Import required modules
-import express from 'express';
-import { fileURLToPath } from 'url';
-import { join, dirname } from 'path';
-import cors from 'cors';
-import compression from 'compression';
-import helmet from 'helmet';
-// import http from 'http';
-import appRoutes from './routes/app.routes.js';
-import authRoutes from './routes/auth.routes.js';
-import userRoutes from './routes/user.routes.js';
-import userPhotoRoutes from './routes/userphotos.routes.js';
-import usersRoutes from './routes/users.routes.js';
-import swipeRoutes from './routes/swipe.routes.js';
-import matchRoutes from './routes/match.routes.js';
-import chatRoutes from './routes/chat.routes.js';
-import catalogRoutes from './routes/catalog.routes.js';
-import reportRoutes from './routes/report.routes.js';
-import feedbackRoutes from './routes/feedback.routes.js';
-import { errorHandler } from './middleware/error.middleware.js';
+import express from "express";
+import { fileURLToPath } from "url";
+import { join, dirname } from "path";
+import cors from "cors";
+import compression from "compression";
+import helmet from "helmet";
+import appRoutes from "./routes/app.routes.js";
+import authRoutes from "./routes/auth.routes.js";
+import userRoutes from "./routes/user.routes.js";
+import userPhotoRoutes from "./routes/userphotos.routes.js";
+import usersRoutes from "./routes/users.routes.js";
+import swipeRoutes from "./routes/swipe.routes.js";
+import matchRoutes from "./routes/match.routes.js";
+import chatRoutes from "./routes/chat.routes.js";
+import catalogRoutes from "./routes/catalog.routes.js";
+import reportRoutes from "./routes/report.routes.js";
+import feedbackRoutes from "./routes/feedback.routes.js";
+import { errorHandler } from "./middleware/error.middleware.js";
 // import { setupSocketIO } from './sockets/socketHandler.js';
-import { fcm } from './config/firebaseAdmin.js';
+import { fcm } from "./config/firebaseAdmin.js";
 
-const API_PREFIX = '/api';
+const API_PREFIX = "/api";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -30,11 +29,13 @@ const __dirname = dirname(__filename);
 const app = express();
 
 // Enable CORS for cross-origin requests
-app.use(cors({
-    origin: [process.env.ORIGIN],
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-    credentials: true,
-}));
+app.use(
+    cors({
+        origin: [process.env.ORIGIN],
+        methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+        credentials: true,
+    }),
+);
 
 // Body parser middleware for JSON payloads
 app.use(express.json());
@@ -46,27 +47,27 @@ app.use(compression());
 app.use(helmet());
 
 // Upload directories for media
-app.use("/static", express.static(join(__dirname + '/public')));
-app.use("/assets", express.static(join(__dirname, '/assets')));
+app.use("/static", express.static(join(__dirname + "/public")));
+app.use("/assets", express.static(join(__dirname, "/assets")));
 
 // Routes
-app.get('/', (req, res) => res.send('Hello, World!'));
-app.use(API_PREFIX + '/app', appRoutes);
-app.use(API_PREFIX + '/auth', authRoutes);
-app.use(API_PREFIX + '/user', userRoutes);
-app.use(API_PREFIX + '/user/photos', userPhotoRoutes);
-app.use(API_PREFIX + '/users', usersRoutes);
-app.use(API_PREFIX + '/swipe', swipeRoutes);
-app.use(API_PREFIX + '/match', matchRoutes);
-app.use(API_PREFIX + '/chats', chatRoutes);
-app.use(API_PREFIX + '/catalog', catalogRoutes);
-app.use(API_PREFIX + '/report', reportRoutes);
-app.use(API_PREFIX + '/feedback', feedbackRoutes);
+app.get("/", (req, res) => res.send("Hello, World!"));
+app.use(API_PREFIX + "/app", appRoutes);
+app.use(API_PREFIX + "/auth", authRoutes);
+app.use(API_PREFIX + "/user", userRoutes);
+app.use(API_PREFIX + "/user/photos", userPhotoRoutes);
+app.use(API_PREFIX + "/users", usersRoutes);
+app.use(API_PREFIX + "/swipe", swipeRoutes);
+app.use(API_PREFIX + "/match", matchRoutes);
+app.use(API_PREFIX + "/chats", chatRoutes);
+app.use(API_PREFIX + "/catalog", catalogRoutes);
+app.use(API_PREFIX + "/report", reportRoutes);
+app.use(API_PREFIX + "/feedback", feedbackRoutes);
 
 // Custom 404
 app.use((req, res, next) => {
-    res.status(404).send("Sorry can't find that!")
-})
+    res.status(404).send("Sorry can't find that!");
+});
 
 // Error middleware al final
 app.use(errorHandler);
@@ -76,7 +77,7 @@ app.use(errorHandler);
 // setupSocketIO(server); // ⬅️ conectar sockets aquí
 
 // Security
-app.disable('x-powered-by'); // Disable 'X-Powered-By' header for security
+app.disable("x-powered-by"); // Disable 'X-Powered-By' header for security
 
 // Start the server
 const PORT = process.env.PORT || 3000;
