@@ -1,93 +1,71 @@
-# Modelo de datos
+# Base de datos
 
-## Fuente y estado
+## Fuentes
 
-El esquema está definido en `src/database/db.sql` como un script de creación completo. No existe una herramienta de migraciones ni un historial versionado. El script crea 21 tablas y un enum. `src/database/db_inserts.sql` añade datos de desarrollo y no debe utilizarse como seed de producción.
+- `src/database/db.sql`: esquema base histórico.
+- `src/database/migrations/002_security_hardening.sql`: cambios requeridos por el runtime actual.
+- `src/database/db_inserts.sql`: datos de desarrollo.
 
-## Relaciones principales
+No hay un framework ni una tabla de historial de migraciones. La operación debe registrar externamente qué scripts se aplicaron.
 
-```text
-users
-  -> user_photos
-  -> user_anime_interests -> animes
-  -> user_game_interests -> games
-  -> likes y dislikes
-  -> matches
-  -> chat_members -> chats -> messages
-  -> push_tokens
-  -> reports y feedback
-  -> verification_tokens y password_reset_tokens
-  -> user_2fa -> recovery_codes
+## Modelo
+
+| Tabla | Responsabilidad |
+| --- | --- |
+| `users` | Identidad, credenciales, perfil y soft delete |
+| `token_blacklist` | JWT revocados con expiración |
+| `verification_tokens` | Hashes de códigos de verificación |
+| `password_reset_tokens` | Hashes de códigos de reset |
+| `user_2fa` | Secreto cifrado y estado 2FA |
+| `recovery_codes` | Hash bcrypt y marca de consumo |
+| `user_photos` | URL y posición 1-4 por usuario |
+| `animes`, `games` | Catálogos |
+| `user_anime_interests`, `user_game_interests` | Relaciones de intereses |
+| `likes`, `dislikes` | Decisiones dirigidas |
+| `matches` | Relación recíproca y estado seen |
+| `chats` | Chat privado o grupo |
+| `chat_members` | Membresía, rol y last read |
+| `messages` | Mensajes por chat |
+| `push_tokens` | Token FCM por usuario |
+| `reports`, `feedback` | Moderación y comentarios |
+| `app_versions` | Política de versión Android |
+
+`auth_provider` admite `email`, `phone` y `google`.
+
+## Migración 002
+
+La migración:
+
+- añade `token_blacklist.expires_at` e índice de limpieza;
+- renombra tokens a `token_hash`;
+- invalida recovery codes previos y adopta `code_hash`;
+- elimina las columnas 2FA duplicadas de `users`;
+- impone una foto por posición y usuario;
+- impide like, dislike, match o report a uno mismo;
+- añade índices para mensajes, members y códigos.
+
+Los usuarios con recovery codes anteriores deben regenerarlos. Antes de aplicar en producción, usa un clon, crea backup y prueba restauración.
+
+## Transacciones del runtime
+
+- Auth reemplaza códigos y actualiza contraseña o verificación en transacción.
+- Recovery codes usan `FOR UPDATE` y consumo condicional.
+- Chat privado usa advisory lock y transacción para evitar duplicados concurrentes.
+- Fotos bloquean filas por usuario, coordinan staging y compensan archivos ante rollback.
+
+## Inicialización
+
+```powershell
+createdb mirailink
+psql -d mirailink -f src/database/db.sql
+psql -d mirailink -f src/database/migrations/002_security_hardening.sql
 ```
 
-## Tablas
+El esquema base todavía representa el punto histórico anterior a la migración, por lo que ambos scripts son necesarios para una base nueva hasta que se consolide un baseline nuevo.
 
-| Tabla | Clave | Función | Relaciones o restricciones destacadas |
-| --- | --- | --- | --- |
-| `users` | UUID | Identidad, credenciales y perfil | `username` único, email y teléfono únicos, soft delete. |
-| `token_blacklist` | Token JWT | Invalidación anticipada | Token como clave primaria. |
-| `verification_tokens` | UUID | Códigos de verificación | Tipo `email` o `sms`, expiración, cascade por usuario. |
-| `password_reset_tokens` | UUID | Códigos de recuperación | Expiración y cascade por usuario. |
-| `user_photos` | UUID | Fotos del perfil | Posición entre 1 y 4. No hay unique por usuario y posición. |
-| `animes` | UUID | Catálogo de anime | Nombre único. |
-| `games` | UUID | Catálogo de juegos | Nombre único. |
-| `user_anime_interests` | Usuario y anime | Relación de intereses | Clave primaria compuesta. |
-| `user_game_interests` | Usuario y juego | Relación de intereses | Clave primaria compuesta. |
-| `likes` | UUID | Like dirigido | Par origen y destino único. |
-| `dislikes` | UUID | Descarte dirigido | Par origen y destino único. |
-| `matches` | UUID | Compatibilidad mutua | Par de usuarios único, flags de visto. |
-| `chats` | UUID | Chat privado o grupo | Tipo restringido, creador nullable al borrarse. |
-| `chat_members` | Chat y usuario | Miembros, rol y lectura | Clave primaria compuesta, rol admin o member. |
-| `messages` | UUID | Mensajes de chat | Texto obligatorio, `created_at` y `sent_at` duplican concepto temporal. |
-| `push_tokens` | UUID | Un token FCM por usuario | Plataforma android, ios o web. |
-| `reports` | UUID | Reporte entre usuarios | Referencias pasan a null al borrar usuario. |
-| `feedback` | UUID | Feedback de producto | Máximo 10000 caracteres, usuario nullable. |
-| `user_2fa` | Usuario UUID | Secreto cifrado y estado 2FA | Una fila por usuario. |
-| `recovery_codes` | Serial | Códigos alternativos 2FA | Se guardan en texto plano y tienen flag `used`. |
-| `app_versions` | Plataforma | Política de versión móvil | Códigos mínimos y últimos, URL de tienda. |
+## Integridad pendiente
 
-## Enum
-
-`auth_provider` admite `email`, `phone` y `google`. El código de registro actual solo crea usuarios con `email`.
-
-## Integridad que sí existe
-
-- Claves foráneas en los dominios principales.
-- Cascade para datos dependientes de usuario, chat o catálogo cuando corresponde.
-- Unicidad de username, email, teléfono, likes, dislikes y matches.
-- Límites de posición de fotos, tipo de chat, rol, plataforma y longitud de feedback.
-- Índices explícitos para lados de likes y matches.
-
-## Brechas del esquema
-
-- Falta `UNIQUE (user_id, position)` en `user_photos`, aunque el código asume una foto por posición.
-- Falta `CHECK (from_user_id <> to_user_id)` en likes y dislikes.
-- Falta `CHECK (user1_id <> user2_id)` y una normalización impuesta por la base para matches.
-- No hay índices explícitos para historial de mensajes por `chat_id` y fecha, miembros por usuario, feed o expiración de tokens.
-- `users.two_fa_enabled` y `users.two_fa_secret` duplican conceptos de `user_2fa`, pero el flujo activo usa la segunda tabla.
-- `messages.created_at` y `messages.sent_at` pueden divergir.
-- Los tokens de verificación y reset no tienen flag de uso ni unicidad y pueden acumularse.
-- Los recovery codes se almacenan sin hash.
-- Los reportes permiten razón nula en SQL, aunque el controlador la exige.
-- `push_tokens.user_id` ya se declara único y luego recibe otra restricción única redundante.
-
-## Limitaciones operativas del SQL
-
-- `CREATE TYPE` y la mayoría de `CREATE TABLE` no usan guardas de idempotencia.
-- El bloque de `ALTER TABLE` presupone nombres de constraints generados por PostgreSQL.
-- No hay transacciones alrededor de la creación completa del esquema.
-- No hay versión de esquema ni rollback.
-- Los datos de desarrollo contienen identificadores y relaciones fijas.
-
-## Consultas y exposición de datos
-
-La mayoría de consultas usa parámetros `$1`, `$2` y similares, lo que reduce riesgo de inyección SQL. Sin embargo, `getFeed` y `getMatches` seleccionan filas completas de `users` y las devuelven. Esto incluye columnas internas. La corrección debe hacerse con proyecciones explícitas o DTO antes de tratar la API como pública.
-
-## Estrategia recomendada
-
-1. Adoptar una herramienta de migraciones compatible con PostgreSQL y ES modules.
-2. Convertir `db.sql` en una migración base inmutable.
-3. Añadir las restricciones e índices pendientes mediante migraciones posteriores.
-4. Separar seeds mínimos, datos de demo y datos de test.
-5. Probar migración hacia delante, rollback cuando exista y arranque desde base vacía en CI.
-6. Evitar cambios manuales de esquema que no queden representados en el repositorio.
+- Falta una tabla de migraciones y ejecución automatizada.
+- La unicidad de chat privado depende del advisory lock de aplicación.
+- No hay política incorporada de limpieza de blacklist o tokens expirados.
+- No hay índices ni análisis de carga documentados para todas las consultas N+1 de perfiles y matches.

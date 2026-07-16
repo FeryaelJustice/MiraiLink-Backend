@@ -1,162 +1,82 @@
 # Arquitectura
 
-## Resumen ejecutivo
+## Resumen
 
-MiraiLink Backend es una aplicación Node.js monolítica organizada por carpetas técnicas. Express recibe las peticiones, las rutas aplican middleware y delegan en controladores, y los controladores ejecutan directamente consultas SQL mediante un pool PostgreSQL compartido. No existe una capa de dominio o repositorios independiente. Las integraciones SMTP, Firebase y almacenamiento local se invocan desde utilidades o servicios.
-
-Flujo HTTP actual:
-
-```text
-Cliente
-  -> Express y middleware global
-  -> Router de la funcionalidad
-  -> authenticateToken cuando corresponde
-  -> Controlador
-  -> PostgreSQL, filesystem, SMTP o Firebase
-  -> Respuesta HTTP
-  -> errorHandler solo si el error llega mediante next(error)
-```
+MiraiLink Backend es un monolito modular Node.js. Se organiza por responsabilidades técnicas, conserva PostgreSQL como fuente de verdad y expone REST mediante Express 5. No implementa repositorios ni una capa de dominio separada: los controladores orquestan reglas, transacciones y SQL parametrizado.
 
 ## Arranque
 
-`src/app.js` realiza todo el arranque como efecto lateral:
+`src/server.js` llama a `parseEnv()`, construye la aplicación con `createApp()` y abre el puerto. Configura timeouts HTTP y cierre ante `SIGTERM` o `SIGINT`.
 
-1. Importa Express, middleware y todos los routers.
-2. Importa la configuración de Firebase, que carga `src/serviceAccountKey.json` e inicializa Firebase Admin.
-3. Configura CORS con `process.env.ORIGIN`.
-4. Habilita JSON, compresión y Helmet.
-5. Expone `src/public` en `/static` y `src/assets` en `/assets`.
-6. Monta las rutas bajo `/api`.
-7. Instala respuestas 404 y el middleware global de errores.
-8. Desactiva `x-powered-by`.
-9. Invoca `app.listen` directamente.
+`src/app.js` no escucha puertos. Esto permite importarlo desde Supertest sin arrancar Firebase, SMTP ni un proceso externo.
 
-Consecuencia: importar la aplicación también intenta inicializar Firebase y abrir un puerto. Para tests y despliegues más controlables conviene separar `createApp()` de `startServer()`.
+## Pipeline HTTP
 
-## Capas reales
+```text
+request
+  -> requestId
+  -> CORS allowlist
+  -> JSON 100 KiB
+  -> compression
+  -> Helmet
+  -> router de dominio
+  -> rate limit, Bearer, Zod y guardas de recurso
+  -> controller
+  -> PostgreSQL o integración lazy
+  -> response
+  -> errorHandler si falla
+```
 
-### Entrada HTTP
+`/static` sirve `src/public`. `/assets` usa la raíz inyectada, deniega dotfiles, desactiva índices y añade CSP y `nosniff`. El contenido real de `src/assets` está expresamente fuera del alcance documental.
 
-- `src/app.js`: composición del servidor.
-- `src/routes`: paths, verbos HTTP, autenticación y Multer.
-- `src/middleware/auth.middleware.js`: JWT, blacklist, existencia y verificación de cuenta.
-- `src/middleware/error.middleware.js`: fallback de error 500.
+## Dominios
 
-### Aplicación y negocio
-
-- `src/controllers`: contiene a la vez parsing de input, validaciones parciales, reglas de negocio, consultas SQL, transacciones y construcción de respuestas.
-- `src/services/notificationService.js`: acceso a tokens FCM y envío de push.
-
-### Infraestructura
-
-- `src/models/db.js`: único pool PostgreSQL global.
-- `src/config/firebaseAdmin.js`: inicialización global de Firebase Admin.
-- `src/utils/mailer.js`: transporte SMTP global.
-- `src/utils/photoUploader.js`: coordinación de base de datos y filesystem.
-- `src/utils/cryptoUtils.js`: AES para secretos 2FA.
-- `src/assets`: almacenamiento local de uploads, fuera del alcance de cambios y documentación interna.
-
-### Tiempo real
-
-`src/sockets/socketHandler.js` contiene un prototipo Socket.IO, pero `src/app.js` no crea un servidor HTTP explícito ni llama a `setupSocketIO`. Además, el prototipo usa `messages.match_id`, mientras que el esquema vigente usa `messages.chat_id`. Por tanto, el tiempo real no forma parte del runtime actual.
-
-## Dominios funcionales
-
-| Dominio | Entrada | Responsabilidad | Persistencia o integración |
+| Dominio | Router | Controlador | Persistencia principal |
 | --- | --- | --- | --- |
-| Versión de app | `/api/app` | Versión mínima y última de Android | `app_versions` |
-| Autenticación | `/api/auth` | Registro, login, logout, verificación, reset y 2FA | `users`, tokens, JWT, SMTP |
-| Perfil | `/api/user`, `/api/users` | Perfil propio, perfiles ajenos, edición, borrado y FCM | `users`, intereses, fotos, `push_tokens` |
-| Fotos | `/api/user/photos` | Listar, subir, reemplazar y borrar | `user_photos`, filesystem |
-| Descubrimiento | `/api/swipe` | Feed, like y dislike | `users`, intereses, `likes`, `dislikes` |
-| Matches | `/api/match` | Listado y estado visto | `matches` y perfiles |
-| Chat | `/api/chats` | Chats, miembros, mensajes y lectura | `chats`, `chat_members`, `messages`, FCM |
-| Catálogo | `/api/catalog` | Anime y videojuegos | `animes`, `games` |
-| Moderación | `/api/report` | Reportes entre usuarios | `reports` |
-| Producto | `/api/feedback` | Feedback textual | `feedback` |
+| Versión Android | `app.routes.js` | `app.controller.js` | `app_versions` |
+| Auth, reset, verificación y 2FA | `auth.routes.js` | `auth.controller.js` | `users`, tokens, `user_2fa`, recovery codes, blacklist |
+| Perfil y fotos | `user.routes.js`, `userphotos.routes.js`, `users.routes.js` | `user.controller.js`, `photo.controller.js` | users, interests, photos, push tokens |
+| Descubrimiento | `swipe.routes.js` | `swipe.controller.js` | users, likes, dislikes |
+| Matches | `match.routes.js` | `match.controller.js` | matches |
+| Chat | `chat.routes.js` | `chat.controller.js` | chats, members, messages |
+| Catálogos | `catalog.routes.js` | `catalog.controller.js` | animes, games |
+| Moderación | `report.routes.js`, `feedback.routes.js` | controladores homónimos | reports, feedback |
 
-## Flujos importantes
+## Autenticación y autorización
 
-### Autenticación JWT
+`authenticateToken()` exige Bearer, comprueba la blacklist sin consumirla, verifica HS256 y carga estado del usuario. Los access tokens tienen `purpose: access`.
 
-```text
-register o login
-  -> consulta de usuario
-  -> bcrypt
-  -> jwt.sign con expiración de 24 horas
-  -> cliente guarda token
-  -> Authorization Bearer en rutas protegidas
-  -> authenticateToken consulta blacklist y usuario
-  -> req.user y req.token
-```
+El login con 2FA genera un JWT de cinco minutos con `purpose: 2fa-login`. Solo `loginVerify2FALastStep` puede convertirlo en access token. Los recovery codes se comparan con bcrypt y se consumen de forma transaccional.
 
-El middleware exige cuenta verificada salvo cuando se llama como `authenticateToken(true)`, que hoy solo se usa en logout. El comportamiento de blacklist tiene un defecto grave documentado en [security-review.md](security-review.md).
+La autenticación no autoriza por sí sola. `requireChatMember()` comprueba pertenencia antes de mensajes, miembros y read state, y las consultas de historial vuelven a filtrar por el usuario actual.
 
-### Actualización de perfil
+## Validación y errores
 
-```text
-multipart/form-data
-  -> Multer escribe archivos en carpeta del usuario
-  -> updateProfile abre transacción PostgreSQL
-  -> actualiza datos e intereses
-  -> reemplaza registros y archivos de fotos
-  -> reordena posiciones
-  -> commit
-  -> limpia archivos sin registro
-```
+Los schemas de `src/validation` parsean body, params y query. `validate()` sustituye la sección original por el valor normalizado. `AppError` representa errores operativos y `errorHandler` evita filtrar stacks u objetos de proveedores.
 
-La base de datos y el filesystem no comparten una transacción atómica. Un fallo intermedio puede dejar diferencias entre ambos.
+## Privacidad
 
-### Like y match
+`src/dto/user.dto.js` define campos públicos y una proyección SQL compartida. Feed, matches y perfiles públicos no devuelven email, teléfono, password hash, secretos 2FA ni flags internos.
 
-```text
-POST /api/swipe/like
-  -> inserta like de A hacia B
-  -> busca like previo de B hacia A
-  -> si existe, inserta match ordenando ambos UUID
-  -> responde match true o false
-```
+## Archivos
 
-### Mensaje privado
+Multer usa memoria acotada. `validateImage()` inspecciona firmas JPEG, PNG y WebP. `photoStorage.js` genera nombres UUID, escribe en staging y permite finalizar o compensar. Los controladores coordinan filesystem y transacción SQL y borran el archivo anterior después del commit.
 
-```text
-POST /api/chats/send
-  -> busca chat privado entre emisor y receptor
-  -> crea chat y miembros si no existe
-  -> inserta mensaje
-  -> responde 201
-  -> intenta enviar FCM en segundo plano
-```
+## Integraciones
 
-No hay una transacción que agrupe creación de chat, miembros y mensaje.
+- PostgreSQL: pool único en `src/models/db.js`.
+- SMTP: transporter lazy en `src/utils/mailer.js`.
+- Firebase: app y messaging lazy en `src/config/firebaseAdmin.js`.
+- Notificaciones: `notificationService.js`; el fallo push no revierte un mensaje ya confirmado.
 
-## Estado de las fronteras
+## CI
 
-### Bien delimitado
+`.github/workflows/ci.yml` usa Node.js 22 y PostgreSQL 16. Ejecuta instalación reproducible, lint, cobertura, esquema, contrato y audit. No contiene despliegue ni permisos de escritura.
 
-- Las rutas están separadas por funcionalidad.
-- Todas las consultas usan parámetros posicionales para valores proporcionados por el cliente.
-- El pool PostgreSQL está centralizado.
-- Las constantes de paths de fotos se comparten.
+## Deuda técnica
 
-### Acoplamiento actual
-
-- Los controladores mezclan HTTP, reglas, SQL y serialización.
-- Firebase se inicializa aunque el flujo no lo necesite.
-- La configuración se lee directamente desde `process.env` en import time.
-- La subida de archivos mezcla Multer, SQL y borrado físico.
-- Los DTO no están definidos, por lo que varias respuestas reflejan columnas internas.
-- Hay código no conectado que usa un modelo de datos antiguo.
-
-## Evolución recomendada
-
-1. Corregir primero los riesgos P0 y P1.
-2. Separar creación de app y escucha del puerto.
-3. Introducir validación de schemas en el borde HTTP.
-4. Definir DTO de salida y evitar `SELECT *`.
-5. Extraer repositorios y servicios de negocio de los controladores más grandes.
-6. Sustituir el SQL inicial por migraciones versionadas.
-7. Abstraer correo, FCM y filesystem para poder probarlos.
-8. Decidir si Socket.IO se corrige y activa o se elimina.
-
-Esta evolución puede hacerse por dominios sin reescribir todo el backend.
+- Controladores con SQL y reglas siguen siendo amplios y difíciles de aislar.
+- Rate limiting en memoria no coordina réplicas.
+- El health check no comprueba PostgreSQL ni proveedores.
+- Falta observabilidad estructurada y un sistema formal de migraciones.
+- La entrega de media local requiere almacenamiento persistente compartido antes de escalar horizontalmente.
