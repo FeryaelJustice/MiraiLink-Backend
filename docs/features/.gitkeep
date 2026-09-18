@@ -1,0 +1,3 @@
+# docs/features
+
+Este directorio almacena de forma permanente y versionada las especificaciones (`spec.md`), planes tecnicos (`plan.md`) y listas de tareas (`tasks.md`) de cada funcionalidad desarrollada en MiraiLink Backend, conforme al modelo Spec-Anchor de la metodologia SDMD.
