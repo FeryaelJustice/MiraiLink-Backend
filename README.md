@@ -10,11 +10,15 @@
 </p>
 
 <p align="center">
+  <b>Español</b> · <a href="README.en.md">English</a>
+</p>
+
+<p align="center">
   <a href="https://github.com/FeryaelJustice/MiraiLink" target="_blank">
-    <img src="https://img.shields.io/badge/Client-Android_App_(Kotlin_Compose)-7F52FF?style=for-the-badge&logo=android&logoColor=white" alt="Repositorio Cliente Android" />
+    <img src="https://img.shields.io/badge/Client-Android_App_(Kotlin_Compose)-7F52FF?style=flat-square&logo=android&logoColor=white" alt="Repositorio Cliente Android" />
   </a>
   <a href="https://play.google.com/store/apps/details?id=com.feryaeljustice.mirailink" target="_blank">
-    <img src="https://img.shields.io/badge/Google_Play-App_en_Produccion-34A853?style=for-the-badge&logo=googleplay&logoColor=white" alt="Google Play Store" />
+    <img src="https://img.shields.io/badge/Google_Play-App_en_Produccion-34A853?style=flat-square&logo=googleplay&logoColor=white" alt="Google Play Store" />
   </a>
 </p>
 
@@ -364,6 +368,7 @@ El repositorio incluye documentacion tecnica profunda en la carpeta `docs/`. Se 
 8. [Estrategia de Testing](docs/testing-strategy.md): Suites de pruebas, cobertura y limites actuales.
 9. [Revision de Seguridad](docs/security-review.md): Analisis de controles implementados y mitigacion de riesgos.
 10. [Despliegue Futuro en VPS](docs/future-vps-deployment.md): Arquitectura de despliegue en Linux con PM2 y Nginx.
+11. [Metodologia SDMD](docs/SDMD.md): Estandar de desarrollo guiado por especificaciones con IA (Spec-Anchor).
 
 - - -
 
