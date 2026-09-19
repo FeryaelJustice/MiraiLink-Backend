@@ -205,6 +205,57 @@ paths:
         '200': { $ref: '#/components/responses/Ok' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/user/location/history:
+    get:
+      tags: [Users]
+      operationId: getUserLocationHistory
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/user/location/ping:
+    post:
+      tags: [Users]
+      operationId: pingUserLocation
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [latitude, longitude]
+              properties:
+                latitude: { type: number, minimum: -90, maximum: 90 }
+                longitude: { type: number, minimum: -180, maximum: 180 }
+                city: { type: string, nullable: true }
+                country_code: { type: string, nullable: true }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/user/settings/search:
+    put:
+      tags: [Users]
+      operationId: updateSearchSettings
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                search_radius_km: { type: integer, minimum: 10, maximum: 300 }
+                search_scope:
+                  type: string
+                  enum: [radius, country, world, specific_country]
+                search_target_country: { type: string, pattern: '^[A-Z]{2}$', nullable: true }
+                search_match_live_location: { type: boolean }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
   /api/user/photo/{position}:
     delete:
       tags: [Photos]
@@ -467,7 +518,7 @@ components:
       properties:
         username: { type: string, minLength: 3, maxLength: 30, pattern: '^[a-zA-Z0-9_.]+$' }
         email: { type: string, format: email, maxLength: 254 }
-        password: { type: string, minLength: 12, maxLength: 128 }
+        password: { type: string, minLength: 8, maxLength: 128 }
     Login:
       type: object
       required: [password]
@@ -501,7 +552,7 @@ components:
     Register: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/Register' } } } }
     Login: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/Login' } } } }
     Email: { required: true, content: { application/json: { schema: { type: object, required: [email], properties: { email: { type: string, format: email } } } } } }
-    PasswordReset: { required: true, content: { application/json: { schema: { type: object, required: [email, token, newPassword], properties: { email: { type: string, format: email }, token: { type: string, minLength: 6, maxLength: 64 }, newPassword: { type: string, minLength: 12, maxLength: 128 } } } } } }
+    PasswordReset: { required: true, content: { application/json: { schema: { type: object, required: [email, token, newPassword], properties: { email: { type: string, format: email }, token: { type: string, minLength: 6, maxLength: 64 }, newPassword: { type: string, minLength: 8, maxLength: 128 } } } } } }
     VerificationType: { required: true, content: { application/json: { schema: { type: object, required: [type], properties: { type: { type: string, enum: [email, sms] } } } } } }
     VerificationCode: { required: true, content: { application/json: { schema: { type: object, required: [type, token], properties: { type: { type: string, enum: [email, sms] }, token: { type: string, minLength: 6, maxLength: 64 } } } } } }
     Totp: { required: true, content: { application/json: { schema: { type: object, required: [token], properties: { token: { type: string, pattern: '^\d{6}$' } } } } } }

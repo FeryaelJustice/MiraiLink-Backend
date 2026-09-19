@@ -16,6 +16,16 @@ function getTransporter() {
 }
 
 export async function sendVerificationEmail(to, code) {
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
+        console.log(`\n========================================`);
+        console.log(`📧 [DEV EMAIL SIMULATOR]`);
+        console.log(`Para: ${to}`);
+        console.log(`Asunto: Código de verificación`);
+        console.log(`Código: >>> ${code} <<<`);
+        console.log(`========================================\n`);
+        return;
+    }
+
     await getTransporter().sendMail({
         from: `"MiraiLink" <${process.env.EMAIL_USER}>`,
         to,
