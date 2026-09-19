@@ -329,12 +329,13 @@ MiraiLink-Backend/
 
 4. **Inicializar la base de datos PostgreSQL**:
    ```bash
-   # Cargar el esquema inicial
-   psql -U postgres -d mirailink -f src/database/db.sql
+   # Preparar esquema y catalogos con el flujo existente
+   npm run db:reset
 
-   # Aplicar la migracion de seguridad
-   psql -U postgres -d mirailink -f src/database/migrations/002_security_hardening.sql
+   # Insertar o actualizar usuarios de prueba, ubicaciones e intereses
+   npm run db:seed
    ```
+   `npm run db:seed` es repetible y también sirve después de producción. Incluye perfiles de Palma y otras localidades de Baleares, Madrid, Barcelona, Valencia, Francia, Japón, India y Estados Unidos.
 
 5. **Iniciar el servidor en modo desarrollo**:
    ```bash
@@ -359,6 +360,7 @@ MiraiLink-Backend/
 | `npm run lint` | Analiza el codigo fuente mediante ESLint 10. |
 | `npm run lint:fix` | Corrige de forma automatica desviaciones de estilo con ESLint. |
 | `npm run check:routes` | Comprueba que todas las rutas coincidan con la especificacion OpenAPI 3.1. |
+| `npm run db:seed` | Inserta o actualiza los usuarios de prueba, sus ubicaciones y sus intereses. |
 | `npm run check` | Verificacion integral de calidad: lint, cobertura y contrato de rutas. |
 
 - - -

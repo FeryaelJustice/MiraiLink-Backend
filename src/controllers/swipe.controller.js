@@ -83,8 +83,22 @@ export const getFeed = async (req, res, next) => {
             scopeFilter = `AND u.residence_country_code = $${params.length}`;
         }
 
+        // A user is a traveler only when their live position is meaningfully
+        // away from their registered residence. The distance threshold avoids
+        // treating normal GPS noise within the same city as travel.
         const isTravelerSql = matchLiveLocation
-            ? `CASE WHEN u.current_latitude IS NOT NULL AND u.residence_city IS NOT NULL THEN TRUE ELSE FALSE END`
+            ? `(
+                u.current_latitude IS NOT NULL
+                AND u.current_longitude IS NOT NULL
+                AND u.residence_latitude IS NOT NULL
+                AND u.residence_longitude IS NOT NULL
+                AND (6371 * acos(
+                    LEAST(1.0, GREATEST(-1.0,
+                        cos(radians(u.residence_latitude)) * cos(radians(u.current_latitude)) * cos(radians(u.current_longitude) - radians(u.residence_longitude))
+                        + sin(radians(u.residence_latitude)) * sin(radians(u.current_latitude))
+                    ))
+                )) > 10
+            )`
             : `FALSE`;
 
         const queryText = `
