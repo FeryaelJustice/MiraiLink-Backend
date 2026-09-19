@@ -209,7 +209,7 @@ CREATE TABLE user_2fa (
 CREATE TABLE recovery_codes (
     id SERIAL PRIMARY KEY,
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    code TEXT NOT NULL,
+    code_hash TEXT NOT NULL,
     used BOOLEAN DEFAULT FALSE
 );
 

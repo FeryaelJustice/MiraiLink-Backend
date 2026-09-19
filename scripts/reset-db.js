@@ -64,7 +64,18 @@ async function resetDatabase() {
         await client.query(dbSql);
         console.log('✅ Esquema DDL aplicado con éxito (db.sql).');
 
-        // 3. Ejecutar db_inserts.sql (Catálogos: Games, Animes, Mangas, etc.)
+        // Aplicar migraciones incrementales para reproducir el esquema actual.
+        const migrationsDir = path.join(rootDir, 'src', 'database', 'migrations');
+        const migrations = fs.readdirSync(migrationsDir)
+            .filter((file) => file.endsWith('.sql'))
+            .sort();
+        for (const migration of migrations) {
+            const migrationSql = fs.readFileSync(path.join(migrationsDir, migration), 'utf8');
+            await client.query(migrationSql);
+            console.log(`✅ Migración aplicada: ${migration}`);
+        }
+
+        // Ejecutar db_inserts.sql (Catálogos: Games, Animes, Mangas, etc.)
         const dbInsertsPath = path.join(rootDir, 'src', 'database', 'db_inserts.sql');
         if (fs.existsSync(dbInsertsPath)) {
             const dbInsertsSql = fs.readFileSync(dbInsertsPath, 'utf8');

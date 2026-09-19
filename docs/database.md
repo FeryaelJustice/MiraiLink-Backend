@@ -4,6 +4,7 @@
 
 - `src/database/db.sql`: esquema base histórico.
 - `src/database/migrations/002_security_hardening.sql`: cambios requeridos por el runtime actual.
+- `src/database/migrations/004_recovery_codes_code_hash.sql`: compatibilidad para bases que todavía tienen `recovery_codes.code`.
 - `src/database/db_inserts.sql`: datos de desarrollo.
 
 No hay un framework ni una tabla de historial de migraciones. La operación debe registrar externamente qué scripts se aplicaron.
@@ -46,6 +47,10 @@ La migración:
 
 Los usuarios con recovery codes anteriores deben regenerarlos. Antes de aplicar en producción, usa un clon, crea backup y prueba restauración.
 
+## Migración 004
+
+La migración 004 corrige bases antiguas que todavía tienen `recovery_codes.code` y lo renombra a `code_hash`. Es idempotente y no elimina códigos existentes. `reset-db.js` aplica automáticamente todas las migraciones tras crear el esquema base. `seed.js` aplica únicamente esta comprobación de compatibilidad para no invalidar códigos durante un seed normal.
+
 ## Transacciones del runtime
 
 - Auth reemplaza códigos y actualiza contraseña o verificación en transacción.
@@ -59,9 +64,11 @@ Los usuarios con recovery codes anteriores deben regenerarlos. Antes de aplicar 
 createdb mirailink
 psql -d mirailink -f src/database/db.sql
 psql -d mirailink -f src/database/migrations/002_security_hardening.sql
+psql -d mirailink -f src/database/migrations/003_user_location_and_search_settings.sql
+psql -d mirailink -f src/database/migrations/004_recovery_codes_code_hash.sql
 ```
 
-El esquema base todavía representa el punto histórico anterior a la migración, por lo que ambos scripts son necesarios para una base nueva hasta que se consolide un baseline nuevo.
+Para una base nueva también puedes usar `npm run db:reset`, que aplica el baseline y todas las migraciones automáticamente.
 
 ## Integridad pendiente
 

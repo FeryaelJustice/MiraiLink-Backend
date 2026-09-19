@@ -32,6 +32,29 @@ async function runSeed() {
     try {
         console.log('🌱 Starting database seed with real bcrypt hashes...');
 
+        // Corrige bases existentes sin invalidar recovery codes durante el seed.
+        await client.query(`
+            DO $$
+            BEGIN
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name = 'recovery_codes' AND column_name = 'code'
+                ) AND NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name = 'recovery_codes' AND column_name = 'code_hash'
+                ) THEN
+                    ALTER TABLE recovery_codes RENAME COLUMN code TO code_hash;
+                END IF;
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name = 'recovery_codes' AND column_name = 'code_hash'
+                ) THEN
+                    ALTER TABLE recovery_codes ADD COLUMN code_hash TEXT;
+                END IF;
+            END $$;
+        `);
+        console.log('✅ Esquema de recovery codes verificado.');
+
         const testUsers = [
             {
                 id: '11111111-1111-1111-1111-111111111111',
@@ -51,6 +74,8 @@ async function runSeed() {
                 residenceLongitude: 2.6502,
                 currentLatitude: 39.5696,
                 currentLongitude: 2.6502,
+                animes: ['Sword Art Online', 'Frieren: Beyond Journey\'s End'],
+                games: ['The Legend of Zelda: Tears of the Kingdom', 'Elden Ring'],
             },
             {
                 id: '22222222-2222-2222-2222-222222222222',
@@ -70,6 +95,8 @@ async function runSeed() {
                 residenceLongitude: 2.9110,
                 currentLatitude: 39.7211,
                 currentLongitude: 2.9110,
+                animes: ['Kaguya-sama: Love is War', 'Haikyuu!!'],
+                games: ['Genshin Impact', 'Animal Crossing: New Horizons'],
             },
             {
                 id: '33333333-3333-3333-3333-333333333333',
@@ -89,6 +116,134 @@ async function runSeed() {
                 residenceLongitude: -3.7038,
                 currentLatitude: 40.4168,
                 currentLongitude: -3.7038,
+                animes: ['Jujutsu Kaisen', 'Chainsaw Man'],
+                games: ['VALORANT', 'Stardew Valley'],
+            },
+            {
+                id: '44444444-4444-4444-4444-444444444444',
+                username: 'nora_barcelona',
+                email: 'nora.barcelona@example.com',
+                password: 'PasswordSegura123!',
+                phoneNumber: '+34677778888',
+                authProvider: 'email',
+                isVerified: true,
+                bio: 'Cosplay, manga clásico y cafeterías frikis. Siempre buscando una buena charla sobre historias que dejan huella.',
+                gender: 'female',
+                birthdate: '2001-04-10',
+                residenceCity: 'Barcelona',
+                residenceRegion: 'Cataluña',
+                residenceCountryCode: 'ES',
+                residenceLatitude: 41.3874,
+                residenceLongitude: 2.1686,
+                currentLatitude: 41.3874,
+                currentLongitude: 2.1686,
+                animes: ['Frieren: Beyond Journey\'s End', 'Steins;Gate'],
+                games: ['Persona 5 Royal'],
+            },
+            {
+                id: '55555555-5555-5555-5555-555555555555',
+                username: 'marc_valencia',
+                email: 'marc.valencia@example.com',
+                password: 'PasswordSegura123!',
+                phoneNumber: '+34688889999',
+                authProvider: 'email',
+                isVerified: true,
+                bio: 'Desarrollo juegos indie, dibujo pixel art y me pierdo con gusto en un buen RPG cooperativo.',
+                gender: 'male',
+                birthdate: '1998-09-21',
+                residenceCity: 'Valencia',
+                residenceRegion: 'Comunidad Valenciana',
+                residenceCountryCode: 'ES',
+                residenceLatitude: 39.4699,
+                residenceLongitude: -0.3763,
+                currentLatitude: 39.4699,
+                currentLongitude: -0.3763,
+                animes: ['Psycho-Pass', 'Fullmetal Alchemist: Brotherhood'],
+                games: ['Monster Hunter: World', 'The Legend of Zelda: Tears of the Kingdom'],
+            },
+            {
+                id: '66666666-6666-6666-6666-666666666666',
+                username: 'claire_paris',
+                email: 'claire.paris@example.com',
+                password: 'PasswordSegura123!',
+                phoneNumber: '+33611112222',
+                authProvider: 'email',
+                isVerified: true,
+                bio: 'Estudio japonés, colecciono figuras y disfruto los RPG narrativos y las películas de animación.',
+                gender: 'female',
+                birthdate: '2002-07-09',
+                residenceCity: 'París',
+                residenceRegion: 'Île-de-France',
+                residenceCountryCode: 'FR',
+                residenceLatitude: 48.8566,
+                residenceLongitude: 2.3522,
+                currentLatitude: 48.8566,
+                currentLongitude: 2.3522,
+                animes: ['Violet Evergarden', 'Samurai Champloo'],
+                games: ['Final Fantasy XIV Online'],
+            },
+            {
+                id: '77777777-7777-7777-7777-777777777777',
+                username: 'yuki_tokyo',
+                email: 'yuki.tokyo@example.com',
+                password: 'PasswordSegura123!',
+                phoneNumber: '+819011112222',
+                authProvider: 'email',
+                isVerified: true,
+                bio: 'Ilustración digital, Studio Ghibli y ramen. Me encantan las conversaciones tranquilas sobre mundos imaginarios.',
+                gender: 'female',
+                birthdate: '2000-01-18',
+                residenceCity: 'Tokio',
+                residenceRegion: 'Kanto',
+                residenceCountryCode: 'JP',
+                residenceLatitude: 35.6762,
+                residenceLongitude: 139.6503,
+                currentLatitude: 35.6762,
+                currentLongitude: 139.6503,
+                animes: ['One Piece', 'Haikyuu!!'],
+                games: ['Pokémon GO', 'Animal Crossing: New Horizons'],
+            },
+            {
+                id: '88888888-8888-8888-8888-888888888888',
+                username: 'isha_mumbai',
+                email: 'isha.mumbai@example.com',
+                password: 'PasswordSegura123!',
+                phoneNumber: '+919811112222',
+                authProvider: 'email',
+                isVerified: true,
+                bio: 'Product designer, fan de One Piece y Stardew Valley. Me encantan las conversaciones que empiezan hablando de anime y terminan hablando de todo.',
+                gender: 'female',
+                birthdate: '1999-04-22',
+                residenceCity: 'Mumbai',
+                residenceRegion: 'Maharashtra',
+                residenceCountryCode: 'IN',
+                residenceLatitude: 19.0760,
+                residenceLongitude: 72.8777,
+                currentLatitude: 19.0760,
+                currentLongitude: 72.8777,
+                animes: ['One Piece', 'Haikyuu!!'],
+                games: ['Stardew Valley', 'The Sims 4'],
+            },
+            {
+                id: '99999999-9999-9999-9999-999999999999',
+                username: 'leo_newyork',
+                email: 'leo.newyork@example.com',
+                password: 'PasswordSegura123!',
+                phoneNumber: '+12125551234',
+                authProvider: 'email',
+                isVerified: true,
+                bio: 'Fotografía, cómics y speedruns de indies. Busco recomendaciones de roguelikes y bandas sonoras épicas.',
+                gender: 'other',
+                birthdate: '2001-12-03',
+                residenceCity: 'Nueva York',
+                residenceRegion: 'New York',
+                residenceCountryCode: 'US',
+                residenceLatitude: 40.7128,
+                residenceLongitude: -74.0060,
+                currentLatitude: 40.7128,
+                currentLongitude: -74.0060,
+                animes: ['Mob Psycho 100', 'Cowboy Bebop'],
+                games: ['Stardew Valley', 'Genshin Impact'],
             },
         ];
 
@@ -114,9 +269,16 @@ async function runSeed() {
                     email = EXCLUDED.email,
                     username = EXCLUDED.username,
                     is_verified = EXCLUDED.is_verified,
+                    bio = EXCLUDED.bio,
+                    gender = EXCLUDED.gender,
+                    birthdate = EXCLUDED.birthdate,
                     residence_city = EXCLUDED.residence_city,
+                    residence_region = EXCLUDED.residence_region,
+                    residence_country_code = EXCLUDED.residence_country_code,
                     residence_latitude = EXCLUDED.residence_latitude,
-                    residence_longitude = EXCLUDED.residence_longitude`,
+                    residence_longitude = EXCLUDED.residence_longitude,
+                    current_latitude = EXCLUDED.current_latitude,
+                    current_longitude = EXCLUDED.current_longitude`,
                 [
                     user.id,
                     user.username,
@@ -138,7 +300,27 @@ async function runSeed() {
                 ],
             );
 
-            console.log(`✅ Seeded user: ${user.username} (password: "${user.password}")`);
+            console.log(`✅ Seeded user: ${user.username}`);
+
+            for (const animeName of user.animes ?? []) {
+                const anime = await client.query('SELECT id FROM animes WHERE name = $1 LIMIT 1', [animeName]);
+                if (anime.rowCount > 0) {
+                    await client.query(
+                        'INSERT INTO user_anime_interests (user_id, anime_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+                        [user.id, anime.rows[0].id],
+                    );
+                }
+            }
+
+            for (const gameName of user.games ?? []) {
+                const game = await client.query('SELECT id FROM games WHERE name = $1 LIMIT 1', [gameName]);
+                if (game.rowCount > 0) {
+                    await client.query(
+                        'INSERT INTO user_game_interests (user_id, game_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+                        [user.id, game.rows[0].id],
+                    );
+                }
+            }
         }
 
         // Ensure app version is seeded
