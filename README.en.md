@@ -37,14 +37,23 @@
 
 ## Table of Contents
 
+- [Table of Contents](#table-of-contents)
 - [Overview](#overview)
 - [Architecture and Request Pipeline](#architecture-and-request-pipeline)
+  - [Data Architecture](#data-architecture)
 - [API Domain Matrix and Modules](#api-domain-matrix-and-modules)
 - [Security and Cryptography](#security-and-cryptography)
+  - [Two-Phase Authentication Protocol (2FA)](#two-phase-authentication-protocol-2fa)
+  - [Binary Image Signature Validation](#binary-image-signature-validation)
 - [Response Format and Normalized Errors](#response-format-and-normalized-errors)
+  - [Standardized Error Responses](#standardized-error-responses)
+  - [Common HTTP Status Codes](#common-http-status-codes)
 - [Testing Strategy and Suite](#testing-strategy-and-suite)
+  - [Continuous Integration (CI)](#continuous-integration-ci)
 - [Repository Structure](#repository-structure)
 - [Prerequisites and Getting Started](#prerequisites-and-getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Step-by-Step Installation](#step-by-step-installation)
 - [Development and Operational Commands](#development-and-operational-commands)
 - [Detailed Documentation Guide](#detailed-documentation-guide)
 - [Known Limitations](#known-limitations)
@@ -190,7 +199,7 @@ All requests include an `x-request-id` header for end-to-end tracing.
     {
       "field": "body.password",
       "code": "too_small",
-      "message": "String must contain at least 12 character(s)"
+      "message": "String must contain at least 8 character(s)"
     }
   ]
 }

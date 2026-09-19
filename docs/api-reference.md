@@ -51,7 +51,7 @@ Formato:
 
 ### `POST /api/auth/register`
 
-Público, rate limit 10/15 min. Body: `username` 3-30 con letras, números, `_` o `.`, email válido y password 12-128. Responde 201 con `message`, `userId`, `token`. Puede devolver 409 si email o username existe.
+Público, rate limit 10/15 min. Body: `username` 3-30 con letras, números, `_` o `.`, email válido y password 8-128 sin secuencias o patrones triviales. Responde 201 con `message`, `userId`, `token`. Puede devolver 409 si email o username existe.
 
 ```json
 { "username": "mirai", "email": "mirai@example.com", "password": "a-secure-password" }
@@ -90,7 +90,7 @@ Bearer, permite cuenta no verificada. Inserta el JWT y su expiración en blackli
 | Operación | Auth | Request | Success |
 | --- | --- | --- | --- |
 | `POST /api/auth/password/request-reset` | Público, 5/h | `{email}` | 200 neutro, exista o no la cuenta |
-| `POST /api/auth/password/confirm-reset` | Público, 10/15 min | `{email, token, newPassword}` | 200; token hash válido, no expirado y password 12-128 |
+| `POST /api/auth/password/confirm-reset` | Público, 10/15 min | `{email, token, newPassword}` | 200; token hash válido, no expirado y password 8-128 |
 
 El request reemplaza códigos anteriores, expira a los 5 minutos y espera al proveedor SMTP antes de responder. Confirmar elimina todos los tokens del usuario. Código inválido o expirado devuelve 400 `INVALID_CODE`.
 
@@ -152,6 +152,22 @@ Bearer. Soft delete de la cuenta y revocación del token actual. Responde mensaj
 ### `POST /api/user/fcm`
 
 Bearer. Body `fcm` string 20-4096 y `platform` `android`, `ios` o `web`, default android. Hace upsert por usuario.
+
+### `PUT /api/user/settings/search`
+
+Bearer. Body opcional:
+- `search_radius_km`: entero 10 a 300, default 40.
+- `search_scope`: `radius`, `country`, `world`, `specific_country`, default `radius`.
+- `search_target_country`: código ISO 3166-1 alpha-2 (2 letras mayúsculas, ej. `ES`, `JP`, `US`) o `null`.
+- `search_match_live_location`: booleano, default `false`.
+
+### `POST /api/user/location/ping`
+
+Bearer. Body:
+- `latitude`: número -90 a 90.
+- `longitude`: número -180 a 180.
+- `city`: string <= 100 opcional o `null`.
+- `country_code`: string <= 10 opcional o `null`.
 
 ### Fotos
 

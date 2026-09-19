@@ -16,9 +16,32 @@ CREATE TABLE users (
     bio TEXT,
     gender VARCHAR(20),
     birthdate DATE,
+    residence_city VARCHAR(100),
+    residence_region VARCHAR(100),
+    residence_country_code VARCHAR(10),
+    residence_latitude DOUBLE PRECISION,
+    residence_longitude DOUBLE PRECISION,
+    current_latitude DOUBLE PRECISION,
+    current_longitude DOUBLE PRECISION,
+    last_location_updated_at TIMESTAMP,
+    search_radius_km INT DEFAULT 40,
+    search_scope VARCHAR(20) DEFAULT 'radius',
+    search_target_country VARCHAR(10),
+    search_match_live_location BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP,
     is_deleted BOOLEAN DEFAULT FALSE
+);
+
+-- USER LOCATION HISTORY (MAX 50 POINTS PER USER)
+CREATE TABLE user_location_history (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    latitude DOUBLE PRECISION NOT NULL,
+    longitude DOUBLE PRECISION NOT NULL,
+    city VARCHAR(100),
+    country_code VARCHAR(10),
+    recorded_at TIMESTAMP DEFAULT NOW()
 );
 
 -- STATELESS JWT FOR INVALIDATING BEFORE TIME
@@ -122,7 +145,7 @@ CREATE TABLE chats (
     type TEXT CHECK (type IN ('private', 'group')) NOT NULL,
     name TEXT,
     -- solo si es grupo
-    created_by UUID REFERENCES users(id),
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -152,7 +175,7 @@ CREATE TABLE messages (
 -- PUSH NOTIFICATIONS
 CREATE TABLE push_tokens (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES users(id) UNIQUE ON DELETE CASCADE,
+    user_id UUID UNIQUE REFERENCES users(id) ON DELETE CASCADE,
     token TEXT NOT NULL,
     platform TEXT CHECK (platform IN ('android', 'ios', 'web')),
     created_at TIMESTAMP DEFAULT NOW()
@@ -161,8 +184,8 @@ CREATE TABLE push_tokens (
 -- REPORTS
 CREATE TABLE reports (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    reported_by UUID REFERENCES users(id),
-    reported_user UUID REFERENCES users(id),
+    reported_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    reported_user UUID REFERENCES users(id) ON DELETE SET NULL,
     reason TEXT,
     created_at TIMESTAMP DEFAULT NOW()
 );
@@ -208,29 +231,3 @@ CREATE INDEX idx_likes_to_user ON likes(to_user_id);
 CREATE INDEX idx_matches_user1 ON matches(user1_id);
 
 CREATE INDEX idx_matches_user2 ON matches(user2_id);
-
--- ALTER TABLES
-ALTER TABLE
-    chats DROP CONSTRAINT chats_created_by_fkey,
-ADD
-    CONSTRAINT chats_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE
-SET
-    NULL;
-
-ALTER TABLE
-    reports DROP CONSTRAINT reports_reported_by_fkey,
-ADD
-    CONSTRAINT reports_reported_by_fkey FOREIGN KEY (reported_by) REFERENCES users(id) ON DELETE
-SET
-    NULL;
-
-ALTER TABLE
-    reports DROP CONSTRAINT reports_reported_user_fkey,
-ADD
-    CONSTRAINT reports_reported_user_fkey FOREIGN KEY (reported_user) REFERENCES users(id) ON DELETE
-SET
-    NULL;
-
--- SI NO TIENE EL UNIQUE, HACERLO
-ALTER TABLE push_tokens
-ADD CONSTRAINT unique_user_token UNIQUE (user_id);

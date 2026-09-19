@@ -37,7 +37,8 @@ function createCorsOptions() {
     };
 }
 
-export function createApp({ uploadRoot = join(__dirname, 'assets'), enableRateLimits = true } = {}) {
+export function createApp({ uploadRoot, enableRateLimits = true } = {}) {
+    const resolvedUploadRoot = (uploadRoot && uploadRoot.trim().length > 0) ? uploadRoot : join(__dirname, 'assets');
     const app = express();
     app.disable('x-powered-by');
     app.locals.enableRateLimits = enableRateLimits;
@@ -51,7 +52,7 @@ export function createApp({ uploadRoot = join(__dirname, 'assets'), enableRateLi
         res.set('Content-Security-Policy', "default-src 'none'; img-src 'self'");
         res.set('X-Content-Type-Options', 'nosniff');
         next();
-    }, express.static(uploadRoot, { dotfiles: 'deny', index: false, fallthrough: false }));
+    }, express.static(resolvedUploadRoot, { dotfiles: 'deny', index: false, fallthrough: false }));
 
     app.get('/', (_req, res) => res.json({ service: 'mirailink-backend' }));
     app.get('/healthz', (_req, res) => res.json({ status: 'ok' }));

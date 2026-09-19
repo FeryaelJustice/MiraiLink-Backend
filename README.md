@@ -37,14 +37,23 @@
 
 ## Indice
 
+- [Indice](#indice)
 - [Vision General](#vision-general)
 - [Arquitectura y Pipeline de Peticiones](#arquitectura-y-pipeline-de-peticiones)
+  - [Arquitectura de Datos](#arquitectura-de-datos)
 - [Matriz de Dominios y Modulos de la API](#matriz-de-dominios-y-modulos-de-la-api)
 - [Seguridad y Criptografia](#seguridad-y-criptografia)
+  - [Protocolo de Autenticacion en Dos Fases (2FA)](#protocolo-de-autenticacion-en-dos-fases-2fa)
+  - [Validacion Binaria de Imagenes](#validacion-binaria-de-imagenes)
 - [Formato de Respuestas y Errores Normalizados](#formato-de-respuestas-y-errores-normalizados)
+  - [Respuestas de Error Estandarizadas](#respuestas-de-error-estandarizadas)
+  - [Codigos de Estado HTTP Habituales](#codigos-de-estado-http-habituales)
 - [Estrategia y Suite de Testing](#estrategia-y-suite-de-testing)
+  - [Integracion Continua (CI)](#integracion-continua-ci)
 - [Estructura del Repositorio](#estructura-del-repositorio)
 - [Requisitos y Puesta en Marcha](#requisitos-y-puesta-en-marcha)
+  - [Prerrequisitos](#prerrequisitos)
+  - [Instalacion Paso a Paso](#instalacion-paso-a-paso)
 - [Comandos de Desarrollo y Operacion](#comandos-de-desarrollo-y-operacion)
 - [Guia de Documentacion Detallada](#guia-de-documentacion-detallada)
 - [Limitaciones Conocidas](#limitaciones-conocidas)
@@ -190,7 +199,7 @@ Todas las peticiones incluyen la cabecera de trazabilidad `x-request-id`.
     {
       "field": "body.password",
       "code": "too_small",
-      "message": "String must contain at least 12 character(s)"
+      "message": "String must contain at least 8 character(s)"
     }
   ]
 }

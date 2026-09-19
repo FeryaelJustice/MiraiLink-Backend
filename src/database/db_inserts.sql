@@ -1,34 +1,3 @@
--- USERS
-INSERT INTO users (
-    id, username, email, phone_number, password_hash, auth_provider,
-    is_verified, bio, gender, birthdate
-)
-VALUES
-  (
-    '11111111-1111-1111-1111-111111111111',
-    'kirito',
-    'kirito@example.com',
-    '+34611111222',
-    '$2b$12$NrC2mdYFz0cygzpaylM0C.7k7bJLsOQ5Xqb2OPcHijrTZ8RRnenFG',
-    'email',
-    TRUE,
-    'Fan del mundo SAO.',
-    'male',
-    '1997-07-10'
-  ),
-  (
-    '22222222-2222-2222-2222-222222222222',
-    'asuna',
-    'asuna@example.com',
-    '+34633334444',
-    '$2b$12$L3xPu/DlbRupIUWfZwhKFOWWDiCDp.9Ud0AI7HLtCJ0vu4GLvkn92',
-    'google',
-    TRUE,
-    'Me encantan los MMOs.',
-    'female',
-    '1998-03-15'
-  );
-
 -- GAMES
 INSERT INTO games (name, description, image_url) VALUES
   ('Genshin Impact','Open world RPG','https://img.com/genshin.jpg'),
@@ -135,45 +104,6 @@ INSERT INTO games (name, description, image_url) VALUES
   ('Kingdom Hearts HD 2.5 Remix', 'Colección con KH2 Final Mix, Birth by Sleep y Re:coded (vídeos).', 'https://img.com/kh25.jpg'),
   ('Kingdom Hearts HD 2.8 Final Chapter Prologue', 'Incluye Dream Drop Distance HD, 0.2 Fragmentary Passage y Back Cover χ.', 'https://img.com/kh28.jpg'),
   ('Kingdom Hearts All-in-One Package', 'Compilación definitiva con casi todos los juegos hasta KH3.', 'https://img.com/khallinone.jpg');
-
--- LIKES
-INSERT INTO likes (id, from_user_id, to_user_id) VALUES
-  ('77777777-7777-7777-7777-777777777777', '11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222');
-
--- MATCHES
-INSERT INTO matches (id, user1_id, user2_id) VALUES
-  ('88888888-8888-8888-8888-888888888888', '11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222');
-
--- CHATS (uno privado por el match)
-INSERT INTO chats (id, type, created_by) VALUES
-  ('cccccccc-cccc-cccc-cccc-cccccccccccc', 'private', '11111111-1111-1111-1111-111111111111');
-
--- CHAT MEMBERS
-INSERT INTO chat_members (chat_id, user_id, role) VALUES
-  ('cccccccc-cccc-cccc-cccc-cccccccccccc', '11111111-1111-1111-1111-111111111111', 'member'),
-  ('cccccccc-cccc-cccc-cccc-cccccccccccc', '22222222-2222-2222-2222-222222222222', 'member');
-
--- MESSAGES
-INSERT INTO messages (id, chat_id, sender_id, text, sent_at) VALUES
-  (
-    '99999999-9999-9999-9999-999999999999',
-    'cccccccc-cccc-cccc-cccc-cccccccccccc',
-    '11111111-1111-1111-1111-111111111111',
-    'Hola Asuna, ¿jugamos juntos?',
-    NOW()
-  ),
-  (
-    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-    'cccccccc-cccc-cccc-cccc-cccccccccccc',
-    '22222222-2222-2222-2222-222222222222',
-    '¡Claro Kirito!',
-    NOW() + INTERVAL '1 minute'
-  );
-
--- USER PHOTOS
-INSERT INTO user_photos (user_id, url, position) VALUES
-  ('11111111-1111-1111-1111-111111111111', 'https://loremflickr.com/320/240/dog', 1),
-  ('11111111-1111-1111-1111-111111111111', 'https://loremflickr.com/320/240/paris', 2);
 
 -- ANIMES
 INSERT INTO animes (name, description, image_url) VALUES
