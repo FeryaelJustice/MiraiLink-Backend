@@ -465,12 +465,24 @@ paths:
     get:
       tags: [Catalog]
       operationId: listAnimes
+      parameters:
+        - name: Accept-Language
+          in: header
+          required: false
+          schema: { type: string, example: es-ES }
+          description: Locale requested by the application. Spanish is used as fallback.
       responses:
         '200': { $ref: '#/components/responses/Ok' }
   /api/catalog/games:
     get:
       tags: [Catalog]
       operationId: listGames
+      parameters:
+        - name: Accept-Language
+          in: header
+          required: false
+          schema: { type: string, example: en-US }
+          description: Locale requested by the application. Spanish is used as fallback.
       responses:
         '200': { $ref: '#/components/responses/Ok' }
   /api/report:

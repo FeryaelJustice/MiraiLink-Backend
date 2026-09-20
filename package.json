@@ -16,6 +16,7 @@
         "lint:fix": "eslint . --fix",
         "check:routes": "node scripts/check-openapi-routes.js",
         "db:reset": "node scripts/reset-db.js",
+        "db:migrate": "node scripts/migrate-db.js",
         "db:seed": "node scripts/seed.js",
         "check": "npm run lint && npm run test:coverage && npm run check:routes"
     },

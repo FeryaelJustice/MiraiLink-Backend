@@ -1,5 +1,6 @@
 import db from '../models/db.js';
 import { PUBLIC_USER_SQL_COLUMNS, toPublicUsers } from '../dto/user.dto.js';
+import { localizedInterestSql, resolveCatalogLanguage, toLocalizedCatalogItem } from '../utils/catalogLocalization.js';
 
 async function targetExists(userId) {
     const result = await db.query(
@@ -137,14 +138,15 @@ export const getFeed = async (req, res, next) => {
 
         const usersResult = await db.query(queryText, params);
         const users = toPublicUsers(usersResult.rows);
+        const locale = resolveCatalogLanguage(req.get('accept-language'));
         const userIds = users.map(user => user.id);
         if (userIds.length === 0) {
             return res.json([]);
         }
         const [photos, animes, games] = await Promise.all([
             db.query('SELECT id, user_id, url, position FROM user_photos WHERE user_id = ANY($1::uuid[]) ORDER BY position', [userIds]),
-            db.query('SELECT i.user_id, a.id, a.name, a.image_url FROM user_anime_interests i JOIN animes a ON a.id = i.anime_id WHERE i.user_id = ANY($1::uuid[])', [userIds]),
-            db.query('SELECT i.user_id, g.id, g.name, g.image_url FROM user_game_interests i JOIN games g ON g.id = i.game_id WHERE i.user_id = ANY($1::uuid[])', [userIds]),
+            db.query(localizedInterestSql('anime', 'i.user_id = ANY($1::uuid[])', 2, true), [userIds, locale]),
+            db.query(localizedInterestSql('game', 'i.user_id = ANY($1::uuid[])', 2, true), [userIds, locale]),
         ]);
         const group = rows => Object.groupBy(rows, row => row.user_id);
         const photoMap = group(photos.rows);
@@ -153,8 +155,8 @@ export const getFeed = async (req, res, next) => {
         return res.json(users.map(user => ({
             ...user,
             photos: photoMap[user.id] ?? [],
-            animes: animeMap[user.id] ?? [],
-            games: gameMap[user.id] ?? [],
+            animes: (animeMap[user.id] ?? []).map(row => toLocalizedCatalogItem(row, req)),
+            games: (gameMap[user.id] ?? []).map(row => toLocalizedCatalogItem(row, req)),
         })));
     } catch (error) {
         return next(error);

@@ -303,7 +303,12 @@ async function runSeed() {
             console.log(`✅ Seeded user: ${user.username}`);
 
             for (const animeName of user.animes ?? []) {
-                const anime = await client.query('SELECT id FROM animes WHERE name = $1 LIMIT 1', [animeName]);
+                const anime = await client.query(
+                    `SELECT t.anime_id AS id FROM anime_name_translations t
+                     JOIN supported_languages l ON l.id = t.language_id
+                     WHERE l.code = 'es' AND t.name = $1 LIMIT 1`,
+                    [animeName],
+                );
                 if (anime.rowCount > 0) {
                     await client.query(
                         'INSERT INTO user_anime_interests (user_id, anime_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
@@ -313,7 +318,12 @@ async function runSeed() {
             }
 
             for (const gameName of user.games ?? []) {
-                const game = await client.query('SELECT id FROM games WHERE name = $1 LIMIT 1', [gameName]);
+                const game = await client.query(
+                    `SELECT t.game_id AS id FROM game_name_translations t
+                     JOIN supported_languages l ON l.id = t.language_id
+                     WHERE l.code = 'es' AND t.name = $1 LIMIT 1`,
+                    [gameName],
+                );
                 if (game.rowCount > 0) {
                     await client.query(
                         'INSERT INTO user_game_interests (user_id, game_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
