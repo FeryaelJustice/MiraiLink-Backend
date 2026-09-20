@@ -26,6 +26,7 @@ const pool = new pg.Pool({
 });
 
 const rounds = Number(process.env.SALT_ROUNDS ?? 12);
+const DEFAULT_PROFILE_PHOTO_URL = 'img/profiles/Goku.webp';
 
 async function runSeed() {
     const client = await pool.connect();
@@ -301,6 +302,13 @@ async function runSeed() {
             );
 
             console.log(`✅ Seeded user: ${user.username}`);
+
+            await client.query(
+                `INSERT INTO user_photos (user_id, url, position)
+                 VALUES ($1, $2, 1)
+                 ON CONFLICT (user_id, position) DO UPDATE SET url = EXCLUDED.url`,
+                [user.id, DEFAULT_PROFILE_PHOTO_URL],
+            );
 
             for (const animeName of user.animes ?? []) {
                 const anime = await client.query(
