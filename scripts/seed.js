@@ -57,7 +57,7 @@ async function runSeed() {
 
         const testUsers = [
             {
-                id: '11111111-1111-1111-1111-111111111111',
+                id: '11111111-1111-4111-8111-111111111111',
                 username: 'kirito',
                 email: 'kirito@example.com',
                 password: 'PasswordSegura123!',
@@ -78,7 +78,7 @@ async function runSeed() {
                 games: ['The Legend of Zelda: Tears of the Kingdom', 'Elden Ring'],
             },
             {
-                id: '22222222-2222-2222-2222-222222222222',
+                id: '22222222-2222-4222-8222-222222222222',
                 username: 'asuna',
                 email: 'asuna@example.com',
                 password: 'PasswordSegura123!',
@@ -99,7 +99,7 @@ async function runSeed() {
                 games: ['Genshin Impact', 'Animal Crossing: New Horizons'],
             },
             {
-                id: '33333333-3333-3333-3333-333333333333',
+                id: '33333333-3333-4333-8333-333333333333',
                 username: 'feryael',
                 email: 'test@mirailink.xyz',
                 password: 'PasswordSegura123!',
@@ -120,7 +120,7 @@ async function runSeed() {
                 games: ['VALORANT', 'Stardew Valley'],
             },
             {
-                id: '44444444-4444-4444-4444-444444444444',
+                id: '44444444-4444-4444-8444-444444444444',
                 username: 'nora_barcelona',
                 email: 'nora.barcelona@example.com',
                 password: 'PasswordSegura123!',
@@ -141,7 +141,7 @@ async function runSeed() {
                 games: ['Persona 5 Royal'],
             },
             {
-                id: '55555555-5555-5555-5555-555555555555',
+                id: '55555555-5555-4555-8555-555555555555',
                 username: 'marc_valencia',
                 email: 'marc.valencia@example.com',
                 password: 'PasswordSegura123!',
@@ -162,7 +162,7 @@ async function runSeed() {
                 games: ['Monster Hunter: World', 'The Legend of Zelda: Tears of the Kingdom'],
             },
             {
-                id: '66666666-6666-6666-6666-666666666666',
+                id: '66666666-6666-4666-8666-666666666666',
                 username: 'claire_paris',
                 email: 'claire.paris@example.com',
                 password: 'PasswordSegura123!',
@@ -183,7 +183,7 @@ async function runSeed() {
                 games: ['Final Fantasy XIV Online'],
             },
             {
-                id: '77777777-7777-7777-7777-777777777777',
+                id: '77777777-7777-4777-8777-777777777777',
                 username: 'yuki_tokyo',
                 email: 'yuki.tokyo@example.com',
                 password: 'PasswordSegura123!',
@@ -204,7 +204,7 @@ async function runSeed() {
                 games: ['Pokémon GO', 'Animal Crossing: New Horizons'],
             },
             {
-                id: '88888888-8888-8888-8888-888888888888',
+                id: '88888888-8888-4888-8888-888888888888',
                 username: 'isha_mumbai',
                 email: 'isha.mumbai@example.com',
                 password: 'PasswordSegura123!',
@@ -225,7 +225,7 @@ async function runSeed() {
                 games: ['Stardew Valley', 'The Sims 4'],
             },
             {
-                id: '99999999-9999-9999-9999-999999999999',
+                id: '99999999-9999-4999-8999-999999999999',
                 username: 'leo_newyork',
                 email: 'leo.newyork@example.com',
                 password: 'PasswordSegura123!',
