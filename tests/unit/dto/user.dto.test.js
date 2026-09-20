@@ -11,9 +11,9 @@ describe('toPublicUser', () => {
             is_deleted: false, auth_provider: 'email',
         });
         expect(result).toEqual({
-            id: 'user-1', username: 'mirai', nickname: 'Mirai', bio: 'Hello',
+            id: 'user-1', nickname: 'Mirai', bio: 'Hello',
             gender: 'non-binary', birthdate: '2000-01-01',
         });
-        expect(JSON.stringify(result)).not.toMatch(/password|email|phone|secret|deleted|provider/);
+        expect(JSON.stringify(result)).not.toMatch(/password|email|phone|secret|deleted|provider|username/);
     });
 });

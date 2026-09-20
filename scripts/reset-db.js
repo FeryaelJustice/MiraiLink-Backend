@@ -64,6 +64,13 @@ async function resetDatabase() {
         await client.query(dbSql);
         console.log('✅ Esquema DDL aplicado con éxito (db.sql).');
 
+        // Insertar el catálogo heredado antes de transformarlo al esquema localizado.
+        const dbInsertsPath = path.join(rootDir, 'src', 'database', 'db_inserts.sql');
+        if (fs.existsSync(dbInsertsPath)) {
+            await client.query(fs.readFileSync(dbInsertsPath, 'utf8'));
+            console.log('✅ Catálogos iniciales insertados (db_inserts.sql).');
+        }
+
         // Aplicar migraciones incrementales para reproducir el esquema actual.
         const migrationsDir = path.join(rootDir, 'src', 'database', 'migrations');
         const migrations = fs.readdirSync(migrationsDir)
@@ -73,14 +80,6 @@ async function resetDatabase() {
             const migrationSql = fs.readFileSync(path.join(migrationsDir, migration), 'utf8');
             await client.query(migrationSql);
             console.log(`✅ Migración aplicada: ${migration}`);
-        }
-
-        // Ejecutar db_inserts.sql (Catálogos: Games, Animes, Mangas, etc.)
-        const dbInsertsPath = path.join(rootDir, 'src', 'database', 'db_inserts.sql');
-        if (fs.existsSync(dbInsertsPath)) {
-            const dbInsertsSql = fs.readFileSync(dbInsertsPath, 'utf8');
-            await client.query(dbInsertsSql);
-            console.log('✅ Catálogos iniciales insertados (db_inserts.sql).');
         }
 
         console.log('✨ Base de datos restablecida correctamente.');

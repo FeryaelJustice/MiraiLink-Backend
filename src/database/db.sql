@@ -81,11 +81,19 @@ CREATE TABLE user_photos (
 );
 
 -- MASTER TABLE OF ANIMES
+CREATE TABLE supported_languages (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    code VARCHAR(35) UNIQUE NOT NULL,
+    english_name VARCHAR(100) NOT NULL
+);
+
 CREATE TABLE animes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(100) UNIQUE NOT NULL,
     description TEXT,
-    image_url TEXT
+    image_url TEXT,
+    catalog_key VARCHAR(160) UNIQUE,
+    image_path TEXT
 );
 
 -- MASTER TABLE OF GAMES
@@ -93,7 +101,37 @@ CREATE TABLE games (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(100) UNIQUE NOT NULL,
     description TEXT,
-    image_url TEXT
+    image_url TEXT,
+    catalog_key VARCHAR(160) UNIQUE,
+    image_path TEXT
+);
+
+CREATE TABLE anime_name_translations (
+    anime_id UUID NOT NULL REFERENCES animes(id) ON DELETE CASCADE,
+    language_id UUID NOT NULL REFERENCES supported_languages(id) ON DELETE CASCADE,
+    name VARCHAR(100) NOT NULL,
+    PRIMARY KEY (anime_id, language_id)
+);
+
+CREATE TABLE anime_biography_translations (
+    anime_id UUID NOT NULL REFERENCES animes(id) ON DELETE CASCADE,
+    language_id UUID NOT NULL REFERENCES supported_languages(id) ON DELETE CASCADE,
+    biography TEXT NOT NULL DEFAULT '',
+    PRIMARY KEY (anime_id, language_id)
+);
+
+CREATE TABLE game_name_translations (
+    game_id UUID NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+    language_id UUID NOT NULL REFERENCES supported_languages(id) ON DELETE CASCADE,
+    name VARCHAR(100) NOT NULL,
+    PRIMARY KEY (game_id, language_id)
+);
+
+CREATE TABLE game_biography_translations (
+    game_id UUID NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+    language_id UUID NOT NULL REFERENCES supported_languages(id) ON DELETE CASCADE,
+    biography TEXT NOT NULL DEFAULT '',
+    PRIMARY KEY (game_id, language_id)
 );
 
 -- USER SELECTED ANIME INTERESTS

@@ -1,5 +1,7 @@
 import db from '../models/db.js';
 import { decodeTokenExpiry } from '../services/tokenService.js';
+import { localizedInterestSql, resolveCatalogLanguage, toLocalizedCatalogItem } from '../utils/catalogLocalization.js';
+import { toPublicUser } from '../dto/user.dto.js';
 import {
     cleanupStagedPhoto,
     finalizePhoto,
@@ -10,39 +12,38 @@ import {
 function parseInterestIds(value) {
     if (value === undefined) return null;
     const parsed = JSON.parse(value);
-    if (!Array.isArray(parsed) || parsed.length > 100) throw new Error('Invalid interests');
-    return parsed.map(item => item.id);
+    if (!Array.isArray(parsed) || parsed.length > 100 || parsed.some(item => typeof item?.id !== 'string')) throw new Error('Invalid interests');
+    const ids = parsed.map(item => item.id);
+    if (new Set(ids).size !== ids.length) throw new Error('Duplicate interests');
+    return ids;
 }
 
-async function profileExtras(userId) {
+async function profileExtras(userId, req) {
+    const locale = resolveCatalogLanguage(req.get('accept-language'));
     const [animes, games, photos] = await Promise.all([
-        db.query('SELECT a.id, a.name, a.image_url FROM animes a JOIN user_anime_interests i ON i.anime_id = a.id WHERE i.user_id = $1', [userId]),
-        db.query('SELECT g.id, g.name, g.image_url FROM games g JOIN user_game_interests i ON i.game_id = g.id WHERE i.user_id = $1', [userId]),
+        db.query(localizedInterestSql('anime', 'i.user_id = $1', 2), [userId, locale]),
+        db.query(localizedInterestSql('game', 'i.user_id = $1', 2), [userId, locale]),
         db.query('SELECT id, user_id, url, position FROM user_photos WHERE user_id = $1 ORDER BY position', [userId]),
     ]);
-    return { animes: animes.rows, games: games.rows, photos: photos.rows };
+    return { animes: animes.rows.map(row => toLocalizedCatalogItem(row, req)), games: games.rows.map(row => toLocalizedCatalogItem(row, req)), photos: photos.rows };
 }
 
 export const getProfile = async (req, res, next) => {
     try {
         const result = await db.query(
-            `SELECT u.id, u.username, u.nickname, u.email, u.phone_number, u.bio,
+            `SELECT u.id, u.username, u.nickname, u.bio,
                     u.gender, TO_CHAR(u.birthdate, 'YYYY-MM-DD') AS birthdate,
                     u.residence_city, u.residence_region, u.residence_country_code,
-                    u.residence_latitude, u.residence_longitude,
-                    u.current_latitude, u.current_longitude, u.last_location_updated_at,
                     COALESCE(u.search_radius_km, 40) AS search_radius_km,
                     COALESCE(u.search_scope, 'radius') AS search_scope,
                     u.search_target_country,
-                    COALESCE(u.search_match_live_location, FALSE) AS search_match_live_location,
-                    u.is_verified, COALESCE(f.enabled, FALSE) AS two_fa_enabled,
-                    u.created_at, u.updated_at
-             FROM users u LEFT JOIN user_2fa f ON f.user_id = u.id
+                    COALESCE(u.search_match_live_location, FALSE) AS search_match_live_location
+             FROM users u
              WHERE u.id = $1 AND u.is_deleted = FALSE`,
             [req.user.id],
         );
         if (!result.rows[0]) return res.status(404).json({ code: 'USER_NOT_FOUND', message: 'User not found' });
-        return res.json({ ...result.rows[0], ...await profileExtras(req.user.id) });
+        return res.json({ ...result.rows[0], ...await profileExtras(req.user.id, req) });
     } catch (error) {
         return next(error);
     }
@@ -51,14 +52,14 @@ export const getProfile = async (req, res, next) => {
 export const getProfileFromId = async (req, res, next) => {
     try {
         const result = await db.query(
-            `SELECT id, username, nickname, bio, gender,
+            `SELECT id, nickname, bio, gender,
                     TO_CHAR(birthdate, 'YYYY-MM-DD') AS birthdate,
                     residence_city, residence_region, residence_country_code
              FROM users WHERE id = $1 AND is_deleted = FALSE`,
             [req.body.id],
         );
         if (!result.rows[0]) return res.status(404).json({ code: 'USER_NOT_FOUND', message: 'User not found' });
-        return res.json({ ...result.rows[0], ...await profileExtras(req.body.id) });
+        return res.json({ ...toPublicUser(result.rows[0]), ...await profileExtras(req.body.id, req) });
     } catch (error) {
         return next(error);
     }
@@ -67,16 +68,16 @@ export const getProfileFromId = async (req, res, next) => {
 export const getProfiles = async (req, res, next) => {
     try {
         const result = await db.query(
-            `SELECT id, username, nickname, bio, gender,
+            `SELECT id, nickname, bio, gender,
                     TO_CHAR(birthdate, 'YYYY-MM-DD') AS birthdate,
-                    latitude, longitude, location_name
+                    residence_city, residence_region, residence_country_code
              FROM users WHERE is_deleted = FALSE AND id != $1
              ORDER BY created_at DESC LIMIT $2 OFFSET $3`,
             [req.user.id, req.query.limit, req.query.offset],
         );
         const profiles = await Promise.all(result.rows.map(async user => ({
-            ...user,
-            ...await profileExtras(user.id),
+            ...toPublicUser(user),
+            ...await profileExtras(user.id, req),
         })));
         return res.json(profiles);
     } catch (error) {
@@ -113,6 +114,13 @@ export const updateProfile = async (req, res, next) => {
             staged.push({ position, photo: await stagePhoto(req.user.id, list[0]) });
         }
         await client.query('BEGIN');
+        const validateInterestIds = async (ids, table) => {
+            if (!ids) return;
+            const result = await client.query(`SELECT id FROM ${table} WHERE id = ANY($1::uuid[])`, [ids]);
+            if (result.rowCount !== ids.length) throw new Error('Unknown interests');
+        };
+        await validateInterestIds(animeIds, 'animes');
+        await validateInterestIds(gameIds, 'games');
         await client.query(
             `UPDATE users SET
                 nickname = COALESCE($1, nickname), bio = COALESCE($2, bio),

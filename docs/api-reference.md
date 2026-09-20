@@ -213,8 +213,10 @@ Mensajes, members y read exigen membresía mediante guard. Un no miembro recibe 
 | Operación | Auth | Success |
 | --- | --- | --- |
 | `GET /api/app/version/android` | Público | Plataforma, min/latest version code, mensaje y Play Store URL; cache 300 s |
-| `GET /api/catalog/animes` | Público | `{id, name, image_url}[]` ordenado |
-| `GET /api/catalog/games` | Público | `{id, name, image_url}[]` ordenado |
+| `GET /api/catalog/animes` | Público | Cabecera opcional `Accept-Language`; `{id, catalog_key, name, biography, image_url}[]` ordenado |
+| `GET /api/catalog/games` | Público | Cabecera opcional `Accept-Language`; `{id, catalog_key, name, biography, image_url}[]` ordenado |
+
+El catálogo admite inicialmente `es` y `en`. La API reduce locales como `es-ES` a su idioma base y usa siempre `es` si no soporta el locale solicitado o falta una traducción. `image_url` es una URL absoluta lista para cargar; internamente puede partir de una URL absoluta o una ruta relativa. Las biografías se devuelven preparadas, inicialmente vacías, y no se editan desde la aplicación.
 
 Versión devuelve 404 si Android no está configurado.
 

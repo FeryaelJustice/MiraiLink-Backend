@@ -1,5 +1,6 @@
 import db from '../models/db.js';
 import { PUBLIC_USER_SQL_COLUMNS, toPublicUsers } from '../dto/user.dto.js';
+import { localizedInterestSql, resolveCatalogLanguage, toLocalizedCatalogItem } from '../utils/catalogLocalization.js';
 
 export const getMatches = async (req, res, next) => {
     try {
@@ -12,13 +13,14 @@ export const getMatches = async (req, res, next) => {
             [req.user.id],
         );
         const users = toPublicUsers(base.rows);
+        const locale = resolveCatalogLanguage(req.get('accept-language'));
         const enriched = await Promise.all(users.map(async user => {
             const [photos, animes, games] = await Promise.all([
                 db.query('SELECT id, user_id, url, position FROM user_photos WHERE user_id = $1 ORDER BY position', [user.id]),
-                db.query('SELECT a.id, a.name, a.image_url FROM user_anime_interests i JOIN animes a ON a.id = i.anime_id WHERE i.user_id = $1', [user.id]),
-                db.query('SELECT g.id, g.name, g.image_url FROM user_game_interests i JOIN games g ON g.id = i.game_id WHERE i.user_id = $1', [user.id]),
+                db.query(localizedInterestSql('anime', 'i.user_id = $1', 2), [user.id, locale]),
+                db.query(localizedInterestSql('game', 'i.user_id = $1', 2), [user.id, locale]),
             ]);
-            return { ...user, photos: photos.rows, animes: animes.rows, games: games.rows };
+            return { ...user, photos: photos.rows, animes: animes.rows.map(row => toLocalizedCatalogItem(row, req)), games: games.rows.map(row => toLocalizedCatalogItem(row, req)) };
         }));
         return res.json(enriched);
     } catch (error) {

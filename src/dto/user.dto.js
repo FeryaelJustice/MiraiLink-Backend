@@ -1,6 +1,5 @@
 const publicUserFields = [
     ['id', 'id'],
-    ['username', 'username'],
     ['nickname', 'nickname'],
     ['bio', 'bio'],
     ['gender', 'gender'],
@@ -24,7 +23,6 @@ export function toPublicUsers(rows) {
 
 export const PUBLIC_USER_SQL_COLUMNS = [
     'u.id',
-    'u.username',
     'u.nickname',
     'u.bio',
     'u.gender',

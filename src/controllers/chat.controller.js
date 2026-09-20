@@ -109,7 +109,7 @@ export const createGroupChat = async (req, res, next) => {
 export const getChatMembers = async (req, res, next) => {
     try {
         const result = await db.query(
-            `SELECT u.id, u.username, u.nickname, cm.role
+            `SELECT u.id, u.nickname, cm.role
              FROM chat_members cm JOIN users u ON u.id = cm.user_id
              WHERE cm.chat_id = $1 AND u.is_deleted = FALSE`,
             [req.params.chatId],
@@ -168,10 +168,10 @@ export const getChatHistory = async (req, res, next) => {
     try {
         const result = await db.query(
             `SELECT m.id, m.text AS content, m.sent_at AS timestamp,
-                    s.id AS sender_id, s.username AS sender_username,
+                    s.id AS sender_id,
                     s.nickname AS sender_nickname, s.gender AS sender_gender,
                     s.birthdate AS sender_birthdate,
-                    r.id AS receiver_id, r.username AS receiver_username,
+                    r.id AS receiver_id,
                     r.nickname AS receiver_nickname, r.gender AS receiver_gender,
                     r.birthdate AS receiver_birthdate
              FROM chats c
@@ -187,8 +187,8 @@ export const getChatHistory = async (req, res, next) => {
             id: row.id,
             content: row.content,
             timestamp: new Date(row.timestamp).getTime(),
-            sender: { id: row.sender_id, username: row.sender_username, nickname: row.sender_nickname, gender: row.sender_gender, birthdate: row.sender_birthdate },
-            receiver: { id: row.receiver_id, username: row.receiver_username, nickname: row.receiver_nickname, gender: row.receiver_gender, birthdate: row.receiver_birthdate },
+            sender: { id: row.sender_id, nickname: row.sender_nickname, gender: row.sender_gender, birthdate: row.sender_birthdate },
+            receiver: { id: row.receiver_id, nickname: row.receiver_nickname, gender: row.receiver_gender, birthdate: row.receiver_birthdate },
         })));
     } catch (error) {
         return next(error);
