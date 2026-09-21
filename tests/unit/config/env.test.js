@@ -15,6 +15,7 @@ describe('parseEnv', () => {
         const config = parseEnv(validEnv);
 
         expect(config.port).toBe(3000);
+        expect(config.trustProxy).toBe('loopback');
         expect(config.corsOrigins).toEqual([
             'https://app.mirailink.example',
             'http://localhost:5173',

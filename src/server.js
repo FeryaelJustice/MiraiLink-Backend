@@ -2,7 +2,7 @@ import { createApp } from './app.js';
 import { parseEnv } from './config/env.js';
 
 const env = parseEnv();
-const app = createApp({ uploadRoot: env.uploadRoot });
+const app = createApp({ uploadRoot: env.uploadRoot, trustProxy: env.trustProxy });
 const server = app.listen(env.port, () => console.log(`Server running on port ${env.port}`));
 server.requestTimeout = 30_000;
 server.headersTimeout = 35_000;

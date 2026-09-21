@@ -27,6 +27,7 @@ const environmentSchema = z.object({
         .enum(["development", "test", "production"])
         .default("development"),
     PORT: z.coerce.number().int().min(1).max(65_535).default(3000),
+    TRUST_PROXY: z.enum(['loopback', 'linklocal', 'uniquelocal']).default('loopback'),
     DB_URL: z.url().startsWith("postgres"),
     JWT_SECRET: z.string().min(32),
     ORIGIN: z.string().min(1),
@@ -67,6 +68,7 @@ export function parseEnv(input = process.env) {
     return {
         nodeEnv: result.data.NODE_ENV,
         port: result.data.PORT,
+        trustProxy: result.data.TRUST_PROXY,
         databaseUrl: result.data.DB_URL,
         jwtSecret: result.data.JWT_SECRET,
         corsOrigins,
