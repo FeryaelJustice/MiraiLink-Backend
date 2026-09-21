@@ -6,10 +6,10 @@ Esta referencia cubre los archivos activos, la única clase propia y las funcion
 
 | Archivo | Export | Contrato |
 | --- | --- | --- |
-| `src/app.js` | `createApp(options)` | Crea Express sin escuchar. `options.uploadRoot` inyecta media y `enableRateLimits=false` estabiliza tests. |
+| `src/app.js` | `createApp(options)` | Crea Express sin escuchar. `options.uploadRoot` inyecta media, `enableRateLimits=false` estabiliza tests y `trustProxy` limita las IPs proxy en las que se confia. |
 | `src/app.js` | default `createApp` | Alias del factory. |
 | `src/server.js` | sin exports | Valida env, crea app, escucha, configura timeouts y señales. |
-| `src/config/env.js` | `parseEnv(input=process.env)` | Valida y normaliza variables; lanza `Error` con campos inválidos. |
+| `src/config/env.js` | `parseEnv(input=process.env)` | Valida y normaliza variables, incluido `TRUST_PROXY`; lanza `Error` con campos inválidos. |
 | `src/config/firebaseAdmin.js` | `getFcm()` | Inicializa Firebase Admin y devuelve Messaging solo al primer uso. |
 | `src/config/firebaseAdmin.js` | `resetFirebaseForTests()` | Limpia la referencia lazy usada por tests. |
 | `src/models/db.js` | default `pool` | Instancia compartida de `pg.Pool` construida con `DB_URL`. |

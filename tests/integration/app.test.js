@@ -20,4 +20,12 @@ describe('createApp', () => {
             message: 'Resource not found',
         });
     });
+
+    it('trusts only a local reverse proxy by default', async () => {
+        const { createApp } = await import('../../src/app.js');
+
+        const app = createApp();
+
+        expect(app.get('trust proxy')).toBe('loopback');
+    });
 });
