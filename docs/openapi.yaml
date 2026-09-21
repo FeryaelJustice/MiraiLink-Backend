@@ -250,7 +250,7 @@ paths:
                 search_scope:
                   type: string
                   enum: [radius_residence, radius_active, country, world, specific_country]
-                search_target_country: { type: string, pattern: '^[A-Z]{2}$', nullable: true }
+                search_target_country_id: { type: string, format: uuid, nullable: true }
                 search_match_live_location: { type: boolean }
       responses:
         '200': { $ref: '#/components/responses/Ok' }
@@ -498,6 +498,38 @@ paths:
           required: false
           schema: { type: string, example: en-US }
           description: Locale requested by the application. Spanish is used as fallback.
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+  /api/catalog/geography/countries:
+    get:
+      tags: [Catalog]
+      operationId: getGeographyCountries
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+  /api/catalog/geography/countries/{countryId}/regions:
+    get:
+      tags: [Catalog]
+      operationId: getGeographyRegions
+      parameters:
+        - name: countryId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+  /api/catalog/geography/regions/{regionId}/cities:
+    get:
+      tags: [Catalog]
+      operationId: getGeographyCities
+      parameters:
+        - name: regionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: query
+          in: query
+          required: false
+          schema: { type: string }
       responses:
         '200': { $ref: '#/components/responses/Ok' }
   /api/report:

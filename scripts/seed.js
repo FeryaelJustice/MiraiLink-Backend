@@ -252,12 +252,30 @@ async function runSeed() {
 
         for (const user of testUsers) {
             const passwordHash = await bcrypt.hash(user.password, rounds);
+            // Reuse an existing row when the seed username already exists.
+            // This keeps the seed idempotent across databases created by older seeds.
+            const existingUser = await client.query(
+                'SELECT id FROM users WHERE username = $1 LIMIT 1',
+                [user.username],
+            );
+            const seedUserId = existingUser.rows[0]?.id ?? user.id;
+            const residence = await client.query(
+                `SELECT city.id AS city_id, city.region_id, city.country_id
+                 FROM cities city
+                 JOIN countries country ON country.id = city.country_id
+                 WHERE country.iso_code = $1
+                 ORDER BY (city.latitude - $2) * (city.latitude - $2) +
+                          (city.longitude - $3) * (city.longitude - $3)
+                 LIMIT 1`,
+                [user.residenceCountryCode, user.residenceLatitude, user.residenceLongitude],
+            );
+            if (!residence.rows[0]) throw new Error(`Seed city not found for ${user.username}`);
 
             await client.query(
                 `INSERT INTO users (
                     id, username, nickname, email, phone_number, password_hash, auth_provider,
-                    is_verified, bio, gender, birthdate, residence_city, residence_region,
-                    residence_country_code, residence_latitude, residence_longitude,
+                    is_verified, bio, gender, birthdate, residence_country_id, residence_region_id,
+                    residence_city_id, residence_latitude, residence_longitude,
                     current_latitude, current_longitude
                 ) VALUES (
                     $1, $2, $2, $3, $4, $5, $6,
@@ -273,15 +291,15 @@ async function runSeed() {
                     bio = EXCLUDED.bio,
                     gender = EXCLUDED.gender,
                     birthdate = EXCLUDED.birthdate,
-                    residence_city = EXCLUDED.residence_city,
-                    residence_region = EXCLUDED.residence_region,
-                    residence_country_code = EXCLUDED.residence_country_code,
+                    residence_country_id = EXCLUDED.residence_country_id,
+                    residence_region_id = EXCLUDED.residence_region_id,
+                    residence_city_id = EXCLUDED.residence_city_id,
                     residence_latitude = EXCLUDED.residence_latitude,
                     residence_longitude = EXCLUDED.residence_longitude,
                     current_latitude = EXCLUDED.current_latitude,
                     current_longitude = EXCLUDED.current_longitude`,
                 [
-                    user.id,
+                    seedUserId,
                     user.username,
                     user.email,
                     user.phoneNumber,
@@ -291,9 +309,9 @@ async function runSeed() {
                     user.bio,
                     user.gender,
                     user.birthdate,
-                    user.residenceCity,
-                    user.residenceRegion,
-                    user.residenceCountryCode,
+                    residence.rows[0].country_id,
+                    residence.rows[0].region_id,
+                    residence.rows[0].city_id,
                     user.residenceLatitude,
                     user.residenceLongitude,
                     user.currentLatitude,
@@ -307,7 +325,7 @@ async function runSeed() {
                 `INSERT INTO user_photos (user_id, url, position)
                  VALUES ($1, $2, 1)
                  ON CONFLICT (user_id, position) DO UPDATE SET url = EXCLUDED.url`,
-                [user.id, DEFAULT_PROFILE_PHOTO_URL],
+                [seedUserId, DEFAULT_PROFILE_PHOTO_URL],
             );
 
             for (const animeName of user.animes ?? []) {
@@ -320,7 +338,7 @@ async function runSeed() {
                 if (anime.rowCount > 0) {
                     await client.query(
                         'INSERT INTO user_anime_interests (user_id, anime_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-                        [user.id, anime.rows[0].id],
+                        [seedUserId, anime.rows[0].id],
                     );
                 }
             }
@@ -335,7 +353,7 @@ async function runSeed() {
                 if (game.rowCount > 0) {
                     await client.query(
                         'INSERT INTO user_game_interests (user_id, game_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-                        [user.id, game.rows[0].id],
+                        [seedUserId, game.rows[0].id],
                     );
                 }
             }

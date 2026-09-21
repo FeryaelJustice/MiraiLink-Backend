@@ -19,7 +19,7 @@ function response() {
 }
 
 const baseUser = {
-    residence_country_code: 'FR',
+    residence_country_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     residence_latitude: 43.6047,
     residence_longitude: 1.4442,
     current_latitude: 39.5696,
@@ -27,7 +27,7 @@ const baseUser = {
     last_location_updated_at: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
     search_radius_km: 100,
     search_scope: 'radius',
-    search_target_country: null,
+    search_target_country_id: null,
     search_match_live_location: false,
 };
 
@@ -47,7 +47,7 @@ describe('getFeed geographic contract', () => {
         expect(sql).toContain('u.residence_latitude AS candidate_latitude');
         expect(sql).toContain('distance_km <= $6');
         expect(sql).not.toContain('43.6047');
-        expect(params).toEqual([userId, 10, 0, 43.6047, 1.4442, 100]);
+        expect(params).toEqual([userId, 10, 0, 43.6047, 1.4442, 100, 'es']);
     });
 
     it('uses a fresh active location symmetrically when requested', async () => {
@@ -76,13 +76,13 @@ describe('getFeed geographic contract', () => {
         await getFeed(request(), response(), vi.fn());
 
         const [sql, params] = query.mock.calls[1];
-        expect(sql).toContain('residence_country_code IS NULL OR residence_country_code = $6');
+        expect(sql).toContain('residence_country_id IS NULL OR residence_country_id = $6');
         expect(sql).not.toContain('distance_km <=');
-        expect(params.at(-1)).toBe('FR');
+        expect(params.at(-2)).toBe(baseUser.residence_country_id);
     });
 
     it('returns RESIDENCE_COUNTRY_REQUIRED when country search has no residence country', async () => {
-        query.mockResolvedValueOnce({ rows: [{ ...baseUser, residence_country_code: null, search_scope: 'country' }] });
+        query.mockResolvedValueOnce({ rows: [{ ...baseUser, residence_country_id: null, search_scope: 'country' }] });
         const next = vi.fn();
 
         await getFeed(request(), response(), next);
@@ -91,13 +91,13 @@ describe('getFeed geographic contract', () => {
     });
 
     it('filters passport by target residence country and ignores radius', async () => {
-        query.mockResolvedValueOnce({ rows: [{ ...baseUser, search_scope: 'specific_country', search_target_country: 'FR' }] }).mockResolvedValueOnce({ rows: [] });
+        query.mockResolvedValueOnce({ rows: [{ ...baseUser, search_scope: 'specific_country', search_target_country_id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' }] }).mockResolvedValueOnce({ rows: [] });
 
         await getFeed(request(), response(), vi.fn());
 
         const [sql, params] = query.mock.calls[1];
-        expect(sql).toContain('residence_country_code IS NULL OR residence_country_code = $6');
-        expect(params.at(-1)).toBe('FR');
+        expect(sql).toContain('residence_country_id IS NULL OR residence_country_id = $6');
+        expect(params.at(-2)).toBe('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
         expect(params).not.toContain(100);
     });
 });
