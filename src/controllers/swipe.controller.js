@@ -1,6 +1,8 @@
 import db from '../models/db.js';
 import { PUBLIC_USER_SQL_COLUMNS, toPublicUsers } from '../dto/user.dto.js';
+import { AppError } from '../errors/AppError.js';
 import { localizedInterestSql, resolveCatalogLanguage, toLocalizedCatalogItem } from '../utils/catalogLocalization.js';
+import { candidateCoordinateSql, resolveUserCoordinates } from '../utils/geoSearch.js';
 
 async function targetExists(userId) {
     const result = await db.query(
@@ -16,97 +18,106 @@ export const getFeed = async (req, res, next) => {
 
         const currentUserResult = await db.query(
             `SELECT residence_country_code, residence_latitude, residence_longitude,
-                    current_latitude, current_longitude,
+                    current_latitude, current_longitude, last_location_updated_at,
                     search_radius_km, search_scope, search_target_country, search_match_live_location
              FROM users WHERE id = $1`,
             [req.user.id],
         );
         const currentUser = currentUserResult.rows[0];
 
-        const originLat = currentUser?.current_latitude ?? currentUser?.residence_latitude;
-        const originLng = currentUser?.current_longitude ?? currentUser?.residence_longitude;
-        const userCountry = currentUser?.residence_country_code ?? 'ES';
-
-        const scope = req.query.scope ?? currentUser?.search_scope ?? 'radius';
+        const storedScope = currentUser?.search_scope ?? 'radius';
+        const scope = req.query.scope ?? storedScope;
         const radiusKm = req.query.radius_km !== undefined
             ? Number(req.query.radius_km)
             : (currentUser?.search_radius_km ?? 40);
-        const matchLiveLocation = req.query.match_live_location !== undefined
-            ? (req.query.match_live_location === 'true' || req.query.match_live_location === true)
-            : (currentUser?.search_match_live_location ?? false);
+        const legacyMatchLiveLocation = currentUser?.search_match_live_location ?? false;
+        const normalizedScope = scope === 'radius'
+            ? (legacyMatchLiveLocation ? 'radius_active' : 'radius_residence')
+            : scope;
+        const useActiveLocation = normalizedScope === 'radius_active';
         const targetCountry = req.query.target_country ?? currentUser?.search_target_country;
-
-        let distanceSql;
-        let candidateLatSql;
-        let candidateLngSql;
-
-        if (matchLiveLocation) {
-            candidateLatSql = 'COALESCE(u.current_latitude, u.residence_latitude)';
-            candidateLngSql = 'COALESCE(u.current_longitude, u.residence_longitude)';
-        } else {
-            candidateLatSql = 'u.residence_latitude';
-            candidateLngSql = 'u.residence_longitude';
-        }
-
-        if (originLat != null && originLng != null) {
-            distanceSql = `
-                ROUND((6371 * acos(
-                    LEAST(1.0, GREATEST(-1.0,
-                        cos(radians(${originLat})) * cos(radians(${candidateLatSql})) * cos(radians(${candidateLngSql}) - radians(${originLng}))
-                        + sin(radians(${originLat})) * sin(radians(${candidateLatSql}))
-                    ))
-                ))::numeric, 1)
-            `;
-        } else {
-            distanceSql = 'NULL::numeric';
-        }
-
-        let scopeFilter = '';
         const params = [req.user.id, limit, offset];
+        const origin = resolveUserCoordinates(currentUser, useActiveLocation);
+        const candidateCoordinates = candidateCoordinateSql(useActiveLocation);
 
-        if (scope === 'radius' && originLat != null && originLng != null) {
+        let distanceSql = 'NULL::numeric';
+        if (origin) {
+            params.push(origin.latitude, origin.longitude);
+            const originLatParam = `$${params.length - 1}`;
+            const originLngParam = `$${params.length}`;
+            distanceSql = `ROUND((6371 * acos(
+                LEAST(1.0, GREATEST(-1.0,
+                    cos(radians(${originLatParam})) * cos(radians(candidate_latitude))
+                    * cos(radians(candidate_longitude) - radians(${originLngParam}))
+                    + sin(radians(${originLatParam})) * sin(radians(candidate_latitude))
+                ))
+            ))::numeric, 1)`;
+        }
+
+        let scopeFilter = 'TRUE';
+        let geographyKnownSql = 'TRUE';
+        if (normalizedScope === 'radius_residence' || normalizedScope === 'radius_active') {
+            if (!origin) {
+                throw new AppError({
+                    status: 422,
+                    code: 'LOCATION_REQUIRED',
+                    message: useActiveLocation
+                        ? 'A fresh active location is required for active radius search'
+                        : 'A residence location is required for residence radius search',
+                });
+            }
             params.push(radiusKm);
-            scopeFilter = `
-                AND ${candidateLatSql} IS NOT NULL
-                AND ${candidateLngSql} IS NOT NULL
-                AND (6371 * acos(
-                    LEAST(1.0, GREATEST(-1.0,
-                        cos(radians(${originLat})) * cos(radians(${candidateLatSql})) * cos(radians(${candidateLngSql}) - radians(${originLng}))
-                        + sin(radians(${originLat})) * sin(radians(${candidateLatSql}))
-                    ))
-                )) <= $${params.length}
-            `;
-        } else if (scope === 'country') {
-            params.push(userCountry);
-            scopeFilter = `AND u.residence_country_code = $${params.length}`;
-        } else if (scope === 'specific_country' && targetCountry) {
+            scopeFilter = `(distance_km IS NULL OR distance_km <= $${params.length})`;
+            geographyKnownSql = 'distance_km IS NOT NULL';
+        } else if (normalizedScope === 'country') {
+            if (!currentUser?.residence_country_code) {
+                throw new AppError({
+                    status: 422,
+                    code: 'RESIDENCE_COUNTRY_REQUIRED',
+                    message: 'A residence country is required for country search',
+                });
+            }
+            params.push(currentUser.residence_country_code);
+            scopeFilter = `(residence_country_code IS NULL OR residence_country_code = $${params.length})`;
+            geographyKnownSql = 'residence_country_code IS NOT NULL';
+        } else if (normalizedScope === 'specific_country') {
+            if (!targetCountry) {
+                throw new AppError({
+                    status: 422,
+                    code: 'TARGET_COUNTRY_REQUIRED',
+                    message: 'A target country is required for passport search',
+                });
+            }
             params.push(targetCountry);
-            scopeFilter = `AND u.residence_country_code = $${params.length}`;
+            scopeFilter = `(residence_country_code IS NULL OR residence_country_code = $${params.length})`;
+            geographyKnownSql = 'residence_country_code IS NOT NULL';
+        } else if (origin) {
+            geographyKnownSql = 'distance_km IS NOT NULL';
         }
 
         // A user is a traveler only when their live position is meaningfully
         // away from their registered residence. The distance threshold avoids
         // treating normal GPS noise within the same city as travel.
-        const isTravelerSql = matchLiveLocation
-            ? `(
+        const isTravelerSql = `(
                 u.current_latitude IS NOT NULL
                 AND u.current_longitude IS NOT NULL
                 AND u.residence_latitude IS NOT NULL
                 AND u.residence_longitude IS NOT NULL
+                AND u.last_location_updated_at >= NOW() - INTERVAL '24 hours'
                 AND (6371 * acos(
                     LEAST(1.0, GREATEST(-1.0,
                         cos(radians(u.residence_latitude)) * cos(radians(u.current_latitude)) * cos(radians(u.current_longitude) - radians(u.residence_longitude))
                         + sin(radians(u.residence_latitude)) * sin(radians(u.current_latitude))
                     ))
                 )) > 10
-            )`
-            : `FALSE`;
+            )`;
 
         const queryText = `
-            WITH ranked_candidates AS (
+            WITH candidate_geo AS (
             SELECT ${PUBLIC_USER_SQL_COLUMNS},
                    u.created_at,
-                   ${distanceSql} AS distance_km,
+                   ${candidateCoordinates.latitude} AS candidate_latitude,
+                   ${candidateCoordinates.longitude} AS candidate_longitude,
                    ${isTravelerSql} AS is_traveler,
                    COALESCE((
                        SELECT COUNT(*) FROM user_anime_interests ai
@@ -122,14 +133,24 @@ export const getFeed = async (req, res, next) => {
                    ), 0) AS common_interests
             FROM users u
             WHERE u.id != $1 AND u.is_deleted = FALSE
-              ${scopeFilter}
               AND u.id NOT IN (
                   SELECT to_user_id FROM likes WHERE from_user_id = $1
                   UNION SELECT to_user_id FROM dislikes WHERE from_user_id = $1
               )
+            ), scored_candidates AS (
+                SELECT *, ${distanceSql} AS distance_km
+                FROM candidate_geo
+            ), ranked_candidates AS (
+                SELECT *, ${geographyKnownSql} AS geography_known
+                FROM scored_candidates
+                WHERE ${scopeFilter}
             )
-            SELECT * FROM ranked_candidates
+            SELECT id, nickname, bio, gender, birthdate,
+                   residence_city, residence_region, residence_country_code,
+                   distance_km, is_traveler, common_interests, created_at
+            FROM ranked_candidates
             ORDER BY
+                geography_known DESC,
                 (common_interests * 15.0 +
                  CASE WHEN distance_km IS NOT NULL THEN 40.0 / (1.0 + distance_km / 10.0) ELSE 10.0 END +
                  random() * 10.0) DESC,

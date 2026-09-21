@@ -25,7 +25,7 @@ CREATE TABLE users (
     current_longitude DOUBLE PRECISION,
     last_location_updated_at TIMESTAMP,
     search_radius_km INT DEFAULT 40,
-    search_scope VARCHAR(20) DEFAULT 'radius',
+    search_scope VARCHAR(20) DEFAULT 'radius_residence',
     search_target_country VARCHAR(10),
     search_match_live_location BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT NOW(),

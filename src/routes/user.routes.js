@@ -33,13 +33,13 @@ const profileUpdateSchema = z.object({
     residence_city: z.string().trim().max(100).nullable().optional(),
     residence_region: z.string().trim().max(100).nullable().optional(),
     residence_country_code: z.string().trim().max(10).nullable().optional(),
-    residence_latitude: z.coerce.number().min(-90).max(90).nullable().optional(),
-    residence_longitude: z.coerce.number().min(-180).max(180).nullable().optional(),
+    residence_latitude: z.preprocess(value => value === '' ? null : value, z.coerce.number().min(-90).max(90).nullable()).optional(),
+    residence_longitude: z.preprocess(value => value === '' ? null : value, z.coerce.number().min(-180).max(180).nullable()).optional(),
 });
 
 const searchSettingsSchema = z.object({
     search_radius_km: z.coerce.number().int().min(10).max(300).default(40),
-    search_scope: z.enum(['radius', 'country', 'world', 'specific_country']).default('radius'),
+    search_scope: z.enum(['radius_residence', 'radius_active', 'country', 'world', 'specific_country']).default('radius_residence'),
     search_target_country: z.string().trim().toUpperCase().regex(/^[A-Z]{2}$/, 'Invalid ISO country code').nullable().optional(),
     search_match_live_location: z.boolean().default(false),
 });

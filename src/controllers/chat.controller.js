@@ -23,10 +23,29 @@ export const getChatsFromUser = async (req, res, next) => {
                     cm.joined_at, cm.role, m.id AS last_message_id,
                     m.text AS last_message_text, m.sender_id AS last_message_sender_id,
                     m.sent_at AS last_message_sent_at,
+                    CASE WHEN c.type = 'private' THEN json_build_object(
+                        'id', other_user.id,
+                        'username', other_user.username,
+                        'nickname', other_user.nickname,
+                        'avatarUrl', other_user.avatar_url
+                    ) ELSE NULL END AS destinatary,
                     (SELECT COUNT(*) FROM messages unread
                      WHERE unread.chat_id = c.id AND unread.sender_id != $1
                        AND unread.sent_at > cm.last_read_at) AS unread_count
              FROM chat_members cm JOIN chats c ON c.id = cm.chat_id
+             LEFT JOIN LATERAL (
+                SELECT u.id, u.username, u.nickname, photo.url AS avatar_url
+                FROM chat_members other_member
+                JOIN users u ON u.id = other_member.user_id AND u.is_deleted = FALSE
+                LEFT JOIN LATERAL (
+                    SELECT url FROM user_photos
+                    WHERE user_id = u.id
+                    ORDER BY position ASC
+                    LIMIT 1
+                ) photo ON TRUE
+                WHERE other_member.chat_id = c.id AND other_member.user_id != $1
+                LIMIT 1
+             ) other_user ON c.type = 'private'
              LEFT JOIN LATERAL (
                  SELECT id, text, sender_id, sent_at FROM messages
                  WHERE chat_id = c.id ORDER BY sent_at DESC LIMIT 1

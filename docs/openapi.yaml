@@ -249,7 +249,7 @@ paths:
                 search_radius_km: { type: integer, minimum: 10, maximum: 300 }
                 search_scope:
                   type: string
-                  enum: [radius, country, world, specific_country]
+                  enum: [radius_residence, radius_active, country, world, specific_country]
                 search_target_country: { type: string, pattern: '^[A-Z]{2}$', nullable: true }
                 search_match_live_location: { type: boolean }
       responses:
@@ -325,10 +325,25 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Offset'
+        - name: scope
+          in: query
+          schema: { type: string, enum: [radius_residence, radius_active, country, world, specific_country] }
+        - name: radius_km
+          in: query
+          schema: { type: integer, minimum: 10, maximum: 300 }
+        - name: target_country
+          in: query
+          schema: { type: string, pattern: '^[A-Z]{2}$' }
+        - name: match_live_location
+          in: query
+          schema: { type: boolean }
       responses:
         '200': { $ref: '#/components/responses/Ok' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '422':
+          description: Falta la ubicacion, el pais de residencia o el pais objetivo requerido por el alcance
+          content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
   /api/swipe/like:
     post:
       tags: [Discovery]
