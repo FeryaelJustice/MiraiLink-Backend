@@ -38,7 +38,7 @@ const profileUpdateSchema = z.object({
 });
 
 const searchSettingsSchema = z.object({
-    search_radius_km: z.coerce.number().int().min(10).max(300).default(40),
+    search_radius_km: z.coerce.number().int().min(10).max(800).default(40),
     search_scope: z.enum(['radius_residence', 'radius_active', 'country', 'world', 'specific_country']).default('radius_residence'),
     search_target_country: z.string().trim().toUpperCase().regex(/^[A-Z]{2}$/, 'Invalid ISO country code').nullable().optional(),
     search_match_live_location: z.boolean().default(false),

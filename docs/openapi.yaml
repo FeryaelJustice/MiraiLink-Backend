@@ -246,7 +246,7 @@ paths:
             schema:
               type: object
               properties:
-                search_radius_km: { type: integer, minimum: 10, maximum: 300 }
+                search_radius_km: { type: integer, minimum: 10, maximum: 800 }
                 search_scope:
                   type: string
                   enum: [radius_residence, radius_active, country, world, specific_country]
@@ -330,7 +330,7 @@ paths:
           schema: { type: string, enum: [radius_residence, radius_active, country, world, specific_country] }
         - name: radius_km
           in: query
-          schema: { type: integer, minimum: 10, maximum: 300 }
+          schema: { type: integer, minimum: 10, maximum: 800 }
         - name: target_country
           in: query
           schema: { type: string, pattern: '^[A-Z]{2}$' }
