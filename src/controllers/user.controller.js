@@ -34,8 +34,10 @@ export const getProfile = async (req, res, next) => {
             `SELECT u.id, u.username, u.nickname, u.bio,
                     u.gender, TO_CHAR(u.birthdate, 'YYYY-MM-DD') AS birthdate,
                     u.residence_city, u.residence_region, u.residence_country_code,
+                    u.residence_latitude, u.residence_longitude,
+                    u.current_latitude, u.current_longitude, u.last_location_updated_at,
                     COALESCE(u.search_radius_km, 40) AS search_radius_km,
-                    COALESCE(u.search_scope, 'radius') AS search_scope,
+                    COALESCE(u.search_scope, 'radius_residence') AS search_scope,
                     u.search_target_country,
                     COALESCE(u.search_match_live_location, FALSE) AS search_match_live_location
              FROM users u
@@ -129,9 +131,9 @@ export const updateProfile = async (req, res, next) => {
                 residence_city = CASE WHEN $5::text IS NULL THEN residence_city ELSE $5::varchar END,
                 residence_region = CASE WHEN $6::text IS NULL THEN residence_region ELSE $6::varchar END,
                 residence_country_code = CASE WHEN $7::text IS NULL THEN residence_country_code ELSE $7::varchar END,
-                residence_latitude = CASE WHEN $8::text IS NULL THEN residence_latitude ELSE $8::double precision END,
-                residence_longitude = CASE WHEN $9::text IS NULL THEN residence_longitude ELSE $9::double precision END,
-                updated_at = NOW() WHERE id = $10`,
+                residence_latitude = CASE WHEN $8::boolean THEN $9::double precision ELSE residence_latitude END,
+                residence_longitude = CASE WHEN $10::boolean THEN $11::double precision ELSE residence_longitude END,
+                updated_at = NOW() WHERE id = $12`,
             [
                 req.body.nickname ?? null,
                 req.body.bio ?? null,
@@ -140,8 +142,10 @@ export const updateProfile = async (req, res, next) => {
                 req.body.residence_city !== undefined ? req.body.residence_city : null,
                 req.body.residence_region !== undefined ? req.body.residence_region : null,
                 req.body.residence_country_code !== undefined ? req.body.residence_country_code : null,
-                req.body.residence_latitude !== undefined ? req.body.residence_latitude : null,
-                req.body.residence_longitude !== undefined ? req.body.residence_longitude : null,
+                Object.hasOwn(req.body, 'residence_latitude'),
+                req.body.residence_latitude ?? null,
+                Object.hasOwn(req.body, 'residence_longitude'),
+                req.body.residence_longitude ?? null,
                 req.user.id,
             ],
         );
@@ -220,7 +224,7 @@ export const updateSearchSettings = async (req, res, next) => {
     try {
         const {
             search_radius_km = 40,
-            search_scope = 'radius',
+            search_scope = 'radius_residence',
             search_target_country = null,
             search_match_live_location = false,
         } = req.body;
