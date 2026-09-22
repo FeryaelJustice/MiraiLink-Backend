@@ -17,7 +17,7 @@
         "check:routes": "node scripts/check-openapi-routes.js",
         "db:reset": "node scripts/reset-db.js",
         "db:migrate": "node scripts/migrate-db.js",
-        "db:seed": "node scripts/seed.js",
+        "db:seed": "node scripts/import-geography.js && node scripts/seed.js",
         "check": "npm run lint && npm run test:coverage && npm run check:routes"
     },
     "keywords": [
@@ -31,6 +31,7 @@
     "license": "ISC",
     "type": "module",
     "dependencies": {
+        "adm-zip": "^0.6.1",
         "bcrypt": "^6.0.0",
         "compression": "^1.8.2",
         "cors": "^2.8.6",
@@ -61,5 +62,10 @@
     },
     "overrides": {
         "uuid": "^14.0.2"
+    },
+    "allowScripts": {
+        "@firebase/util@1.15.1": true,
+        "bcrypt@6.0.0": true,
+        "protobufjs@7.6.6": true
     }
 }

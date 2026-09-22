@@ -156,7 +156,7 @@ Bearer. Body `fcm` string 20-4096 y `platform` `android`, `ios` o `web`, default
 ### `PUT /api/user/settings/search`
 
 Bearer. Body opcional:
-- `search_radius_km`: entero 10 a 300, default 40.
+- `search_radius_km`: entero 10 a 800, default 40.
 - `search_scope`: `radius`, `country`, `world`, `specific_country`, default `radius`.
 - `search_target_country`: código ISO 3166-1 alpha-2 (2 letras mayúsculas, ej. `ES`, `JP`, `US`) o `null`.
 - `search_match_live_location`: booleano, default `false`.

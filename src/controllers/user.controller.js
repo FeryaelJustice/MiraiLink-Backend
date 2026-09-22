@@ -2,6 +2,7 @@ import db from '../models/db.js';
 import { decodeTokenExpiry } from '../services/tokenService.js';
 import { localizedInterestSql, resolveCatalogLanguage, toLocalizedCatalogItem } from '../utils/catalogLocalization.js';
 import { toPublicUser } from '../dto/user.dto.js';
+import { localizedResidenceColumns, localizedResidenceJoins } from '../utils/geographyLocalization.js';
 import {
     cleanupStagedPhoto,
     finalizePhoto,
@@ -30,19 +31,22 @@ async function profileExtras(userId, req) {
 
 export const getProfile = async (req, res, next) => {
     try {
+        const locale = resolveCatalogLanguage(req.get('accept-language'));
         const result = await db.query(
             `SELECT u.id, u.username, u.nickname, u.bio,
                     u.gender, TO_CHAR(u.birthdate, 'YYYY-MM-DD') AS birthdate,
-                    u.residence_city, u.residence_region, u.residence_country_code,
+                    ${localizedResidenceColumns('u')},
                     u.residence_latitude, u.residence_longitude,
                     u.current_latitude, u.current_longitude, u.last_location_updated_at,
-                    COALESCE(u.search_radius_km, 40) AS search_radius_km,
-                    COALESCE(u.search_scope, 'radius_residence') AS search_scope,
-                    u.search_target_country,
-                    COALESCE(u.search_match_live_location, FALSE) AS search_match_live_location
+                    COALESCE(p.search_radius_km, 40) AS search_radius_km,
+                    COALESCE(p.search_scope, 'radius_residence') AS search_scope,
+                    p.search_target_country_id,
+                    COALESCE(p.search_match_live_location, FALSE) AS search_match_live_location
              FROM users u
+             LEFT JOIN user_search_preferences p ON p.user_id = u.id
+             ${localizedResidenceJoins('u', 2)}
              WHERE u.id = $1 AND u.is_deleted = FALSE`,
-            [req.user.id],
+            [req.user.id, locale],
         );
         if (!result.rows[0]) return res.status(404).json({ code: 'USER_NOT_FOUND', message: 'User not found' });
         return res.json({ ...result.rows[0], ...await profileExtras(req.user.id, req) });
@@ -53,12 +57,15 @@ export const getProfile = async (req, res, next) => {
 
 export const getProfileFromId = async (req, res, next) => {
     try {
+        const locale = resolveCatalogLanguage(req.get('accept-language'));
         const result = await db.query(
-            `SELECT id, nickname, bio, gender,
-                    TO_CHAR(birthdate, 'YYYY-MM-DD') AS birthdate,
-                    residence_city, residence_region, residence_country_code
-             FROM users WHERE id = $1 AND is_deleted = FALSE`,
-            [req.body.id],
+            `SELECT u.id, u.nickname, u.bio, u.gender,
+                    TO_CHAR(u.birthdate, 'YYYY-MM-DD') AS birthdate,
+                    ${localizedResidenceColumns('u')}
+             FROM users u
+             ${localizedResidenceJoins('u', 2)}
+             WHERE u.id = $1 AND u.is_deleted = FALSE`,
+            [req.body.id, locale],
         );
         if (!result.rows[0]) return res.status(404).json({ code: 'USER_NOT_FOUND', message: 'User not found' });
         return res.json({ ...toPublicUser(result.rows[0]), ...await profileExtras(req.body.id, req) });
@@ -69,13 +76,16 @@ export const getProfileFromId = async (req, res, next) => {
 
 export const getProfiles = async (req, res, next) => {
     try {
+        const locale = resolveCatalogLanguage(req.get('accept-language'));
         const result = await db.query(
-            `SELECT id, nickname, bio, gender,
-                    TO_CHAR(birthdate, 'YYYY-MM-DD') AS birthdate,
-                    residence_city, residence_region, residence_country_code
-             FROM users WHERE is_deleted = FALSE AND id != $1
-             ORDER BY created_at DESC LIMIT $2 OFFSET $3`,
-            [req.user.id, req.query.limit, req.query.offset],
+            `SELECT u.id, u.nickname, u.bio, u.gender,
+                    TO_CHAR(u.birthdate, 'YYYY-MM-DD') AS birthdate,
+                    ${localizedResidenceColumns('u')}
+             FROM users u
+             ${localizedResidenceJoins('u', 4)}
+             WHERE u.is_deleted = FALSE AND u.id != $1
+             ORDER BY u.created_at DESC LIMIT $2 OFFSET $3`,
+            [req.user.id, req.query.limit, req.query.offset, locale],
         );
         const profiles = await Promise.all(result.rows.map(async user => ({
             ...toPublicUser(user),
@@ -111,6 +121,40 @@ export const updateProfile = async (req, res, next) => {
     try {
         const animeIds = parseInterestIds(req.body.animes);
         const gameIds = parseInterestIds(req.body.games);
+        const hasResidenceCountry = Object.hasOwn(req.body, 'residence_country_id');
+        const hasResidenceRegion = Object.hasOwn(req.body, 'residence_region_id');
+        const hasResidenceCity = Object.hasOwn(req.body, 'residence_city_id');
+        const hasResidenceLatitude = Object.hasOwn(req.body, 'residence_latitude');
+        const hasResidenceLongitude = Object.hasOwn(req.body, 'residence_longitude');
+        if (hasResidenceLatitude !== hasResidenceLongitude) {
+            return res.status(422).json({ code: 'RESIDENCE_COORDINATES_REQUIRED', message: 'Residence latitude and longitude must be updated together' });
+        }
+        if (hasResidenceCountry || hasResidenceRegion || hasResidenceCity) {
+            const residenceIds = [req.body.residence_country_id, req.body.residence_region_id, req.body.residence_city_id];
+            const clearingResidence = residenceIds.every(value => value === null);
+            const settingResidence = residenceIds.every(value => typeof value === 'string');
+            if (!clearingResidence && !settingResidence) {
+                return res.status(422).json({ code: 'RESIDENCE_HIERARCHY_REQUIRED', message: 'Country, region and city must be updated together' });
+            }
+            if (settingResidence) {
+                const hierarchy = await client.query(
+                    `SELECT latitude, longitude FROM cities
+                     WHERE id = $1 AND region_id = $2 AND country_id = $3`,
+                    [req.body.residence_city_id, req.body.residence_region_id, req.body.residence_country_id],
+                );
+                if (!hierarchy.rows[0]) {
+                    return res.status(422).json({ code: 'INVALID_RESIDENCE_HIERARCHY', message: 'Residence references do not form a valid hierarchy' });
+                }
+                if (hasResidenceLatitude && req.body.residence_latitude !== null) {
+                    const { latitude, longitude } = hierarchy.rows[0];
+                    const latitudeDelta = Math.abs(Number(req.body.residence_latitude) - Number(latitude));
+                    const longitudeDelta = Math.abs(Number(req.body.residence_longitude) - Number(longitude));
+                    if (latitudeDelta > 0.5 || longitudeDelta > 0.5) {
+                        return res.status(422).json({ code: 'RESIDENCE_COORDINATES_MISMATCH', message: 'Residence coordinates do not match the selected city' });
+                    }
+                }
+            }
+        }
         for (const [field, list] of Object.entries(req.files ?? {})) {
             const position = Number(field.split('_')[1]) + 1;
             staged.push({ position, photo: await stagePhoto(req.user.id, list[0]) });
@@ -128,23 +172,25 @@ export const updateProfile = async (req, res, next) => {
                 nickname = COALESCE($1, nickname), bio = COALESCE($2, bio),
                 gender = COALESCE(NULLIF($3, ''), gender),
                 birthdate = CASE WHEN $4::text IS NULL THEN birthdate WHEN $4 = '' THEN NULL ELSE $4::date END,
-                residence_city = CASE WHEN $5::text IS NULL THEN residence_city ELSE $5::varchar END,
-                residence_region = CASE WHEN $6::text IS NULL THEN residence_region ELSE $6::varchar END,
-                residence_country_code = CASE WHEN $7::text IS NULL THEN residence_country_code ELSE $7::varchar END,
-                residence_latitude = CASE WHEN $8::boolean THEN $9::double precision ELSE residence_latitude END,
-                residence_longitude = CASE WHEN $10::boolean THEN $11::double precision ELSE residence_longitude END,
-                updated_at = NOW() WHERE id = $12`,
+                residence_country_id = CASE WHEN $5::boolean THEN $6::uuid ELSE residence_country_id END,
+                residence_region_id = CASE WHEN $7::boolean THEN $8::uuid ELSE residence_region_id END,
+                residence_city_id = CASE WHEN $9::boolean THEN $10::uuid ELSE residence_city_id END,
+                residence_latitude = CASE WHEN $11::boolean THEN $12::double precision ELSE residence_latitude END,
+                residence_longitude = CASE WHEN $11::boolean THEN $13::double precision ELSE residence_longitude END,
+                updated_at = NOW() WHERE id = $14`,
             [
                 req.body.nickname ?? null,
                 req.body.bio ?? null,
                 req.body.gender ?? null,
                 req.body.birthdate ?? null,
-                req.body.residence_city !== undefined ? req.body.residence_city : null,
-                req.body.residence_region !== undefined ? req.body.residence_region : null,
-                req.body.residence_country_code !== undefined ? req.body.residence_country_code : null,
-                Object.hasOwn(req.body, 'residence_latitude'),
+                hasResidenceCountry,
+                req.body.residence_country_id ?? null,
+                hasResidenceRegion,
+                req.body.residence_region_id ?? null,
+                hasResidenceCity,
+                req.body.residence_city_id ?? null,
+                hasResidenceLatitude,
                 req.body.residence_latitude ?? null,
-                Object.hasOwn(req.body, 'residence_longitude'),
                 req.body.residence_longitude ?? null,
                 req.user.id,
             ],
@@ -225,19 +271,21 @@ export const updateSearchSettings = async (req, res, next) => {
         const {
             search_radius_km = 40,
             search_scope = 'radius_residence',
-            search_target_country = null,
+            search_target_country_id = null,
             search_match_live_location = false,
         } = req.body;
 
         await db.query(
-            `UPDATE users SET
-                search_radius_km = $1,
-                search_scope = $2,
-                search_target_country = $3,
-                search_match_live_location = $4,
-                updated_at = NOW()
-             WHERE id = $5`,
-            [search_radius_km, search_scope, search_target_country, search_match_live_location, req.user.id],
+            `INSERT INTO user_search_preferences (
+                user_id, search_radius_km, search_scope, search_target_country_id, search_match_live_location, updated_at
+             ) VALUES ($1, $2, $3, $4, $5, NOW())
+             ON CONFLICT (user_id) DO UPDATE SET
+                search_radius_km = EXCLUDED.search_radius_km,
+                search_scope = EXCLUDED.search_scope,
+                search_target_country_id = EXCLUDED.search_target_country_id,
+                search_match_live_location = EXCLUDED.search_match_live_location,
+                updated_at = NOW()`,
+            [req.user.id, search_radius_km, search_scope, search_target_country_id, search_match_live_location],
         );
         return res.json({ message: 'Search settings updated' });
     } catch (error) {
