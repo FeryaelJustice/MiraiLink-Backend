@@ -1,4 +1,7 @@
 import request from 'supertest';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 describe('createApp', () => {
@@ -27,5 +30,21 @@ describe('createApp', () => {
         const app = createApp();
 
         expect(app.get('trust proxy')).toBe('loopback');
+    });
+
+    it('serves profile uploads from the configured profile root', async () => {
+        const { createApp } = await import('../../src/app.js');
+        const uploadRoot = await mkdtemp(join(tmpdir(), 'mirailink-profile-upload-'));
+        try {
+            await writeFile(join(uploadRoot, 'photo.jpg'), 'image');
+            const app = createApp({ uploadRoot, enableRateLimits: false });
+
+            const response = await request(app).get('/assets/img/profiles/photo.jpg');
+
+            expect(response.status).toBe(200);
+            expect(response.body.toString()).toBe('image');
+        } finally {
+            await rm(uploadRoot, { recursive: true, force: true });
+        }
     });
 });

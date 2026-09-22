@@ -38,7 +38,10 @@ function createCorsOptions() {
 }
 
 export function createApp({ uploadRoot, enableRateLimits = true, trustProxy = 'loopback' } = {}) {
-    const resolvedUploadRoot = (uploadRoot && uploadRoot.trim().length > 0) ? uploadRoot : join(__dirname, 'assets');
+    const resolvedProfileUploadRoot =
+        (uploadRoot && uploadRoot.trim().length > 0)
+            ? uploadRoot
+            : join(__dirname, 'assets', 'img', 'profiles');
     const app = express();
     app.disable('x-powered-by');
     app.set('trust proxy', trustProxy);
@@ -49,11 +52,11 @@ export function createApp({ uploadRoot, enableRateLimits = true, trustProxy = 'l
     app.use(compression());
     app.use(helmet());
     app.use('/static', express.static(join(__dirname, 'public'), { dotfiles: 'deny', index: false }));
-    app.use('/assets', (_req, res, next) => {
+    app.use('/assets/img/profiles', (_req, res, next) => {
         res.set('Content-Security-Policy', "default-src 'none'; img-src 'self'");
         res.set('X-Content-Type-Options', 'nosniff');
         next();
-    }, express.static(resolvedUploadRoot, { dotfiles: 'deny', index: false, fallthrough: false }));
+    }, express.static(resolvedProfileUploadRoot, { dotfiles: 'deny', index: false, fallthrough: false }));
 
     app.get('/', (_req, res) => res.json({ service: 'mirailink-backend' }));
     app.get('/healthz', (_req, res) => res.json({ status: 'ok' }));
