@@ -1,5 +1,9 @@
 -- ENUMS
-CREATE TYPE auth_provider AS ENUM ('email', 'phone', 'google');
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'auth_provider') THEN
+        CREATE TYPE auth_provider AS ENUM ('email', 'phone', 'google');
+    END IF;
+END $$;
 
 -- USERS
 CREATE TABLE users (
