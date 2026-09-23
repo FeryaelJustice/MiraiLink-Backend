@@ -1,3 +1,4 @@
+import { basename } from 'node:path';
 import db from '../models/db.js';
 import { decodeTokenExpiry } from '../services/tokenService.js';
 import { localizedInterestSql, resolveCatalogLanguage, toLocalizedCatalogItem } from '../utils/catalogLocalization.js';
@@ -203,15 +204,74 @@ export const updateProfile = async (req, res, next) => {
             await client.query('DELETE FROM user_game_interests WHERE user_id = $1', [req.user.id]);
             for (const id of gameIds) await client.query('INSERT INTO user_game_interests (user_id, game_id) VALUES ($1, $2)', [req.user.id, id]);
         }
-        for (let position = 1; position <= 4; position += 1) {
-            const field = `photo_${position - 1}`;
-            const replacement = staged.find(item => item.position === position);
-            if (replacement || (Object.hasOwn(req.body, field) && !req.files?.[field])) {
-                const previous = await client.query('DELETE FROM user_photos WHERE user_id = $1 AND position = $2 RETURNING url', [req.user.id, position]);
-                if (previous.rows[0]) oldUrls.push(previous.rows[0].url);
+        let reordered = null;
+        if (req.body.reorderedPositions) {
+            try {
+                reordered = typeof req.body.reorderedPositions === 'string'
+                    ? JSON.parse(req.body.reorderedPositions)
+                    : req.body.reorderedPositions;
+            } catch {
+                reordered = null;
             }
-            if (replacement) {
-                await client.query('INSERT INTO user_photos (user_id, url, position) VALUES ($1, $2, $3)', [req.user.id, replacement.photo.url, position]);
+        }
+
+        if (Array.isArray(reordered)) {
+            const existingPhotosResult = await client.query(
+                'SELECT id, url, position FROM user_photos WHERE user_id = $1',
+                [req.user.id],
+            );
+            const currentPhotos = existingPhotosResult.rows;
+
+            const targetPhotos = [];
+            for (let position = 1; position <= 4; position += 1) {
+                const stagedItem = staged.find(item => item.position === position);
+                if (stagedItem) {
+                    targetPhotos.push({ position, url: stagedItem.photo.url, isNew: true });
+                } else {
+                    const reorderedItem = reordered.find(item => Number(item?.position) === position);
+                    if (reorderedItem?.url) {
+                        const matched = currentPhotos.find(p =>
+                            p.url === reorderedItem.url ||
+                            reorderedItem.url.endsWith(p.url) ||
+                            p.url.endsWith(reorderedItem.url) ||
+                            basename(p.url) === basename(reorderedItem.url),
+                        );
+                        if (matched) {
+                            targetPhotos.push({ position, url: matched.url, isNew: false });
+                        }
+                    }
+                }
+            }
+
+            // Compact photos into contiguous positions 1..N based on assigned target positions
+            targetPhotos.sort((a, b) => a.position - b.position);
+            const keptUrls = new Set(targetPhotos.map(p => p.url));
+
+            for (const current of currentPhotos) {
+                if (!keptUrls.has(current.url)) {
+                    oldUrls.push(current.url);
+                }
+            }
+
+            await client.query('DELETE FROM user_photos WHERE user_id = $1', [req.user.id]);
+            for (let i = 0; i < targetPhotos.length; i += 1) {
+                const finalPosition = i + 1;
+                await client.query(
+                    'INSERT INTO user_photos (user_id, url, position) VALUES ($1, $2, $3)',
+                    [req.user.id, targetPhotos[i].url, finalPosition],
+                );
+            }
+        } else {
+            for (let position = 1; position <= 4; position += 1) {
+                const field = `photo_${position - 1}`;
+                const replacement = staged.find(item => item.position === position);
+                if (replacement || (Object.hasOwn(req.body, field) && !req.files?.[field])) {
+                    const previous = await client.query('DELETE FROM user_photos WHERE user_id = $1 AND position = $2 RETURNING url', [req.user.id, position]);
+                    if (previous.rows[0]) oldUrls.push(previous.rows[0].url);
+                }
+                if (replacement) {
+                    await client.query('INSERT INTO user_photos (user_id, url, position) VALUES ($1, $2, $3)', [req.user.id, replacement.photo.url, position]);
+                }
             }
         }
         for (const item of staged) await finalizePhoto(item.photo);
