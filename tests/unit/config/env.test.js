@@ -22,6 +22,25 @@ describe('parseEnv', () => {
         ]);
         expect(config.bcryptRounds).toBe(12);
         expect(config.uploadMaxBytes).toBe(5 * 1024 * 1024);
+        expect(config.globalRateLimit).toEqual({
+            max: 1000,
+            windowMs: 15 * 60 * 1000,
+        });
+    });
+
+    it('accepts ORIGIN_REGEX and custom rate limits', () => {
+        const config = parseEnv({
+            ...validEnv,
+            ORIGIN_REGEX: '^https:\\/\\/.*\\.mirailink\\.xyz$',
+            GLOBAL_RATE_LIMIT_MAX: '500',
+            GLOBAL_RATE_LIMIT_WINDOW_MS: '60000',
+        });
+
+        expect(config.originRegex).toBe('^https:\\/\\/.*\\.mirailink\\.xyz$');
+        expect(config.globalRateLimit).toEqual({
+            max: 500,
+            windowMs: 60000,
+        });
     });
 
     it('rejects a short JWT secret', () => {
