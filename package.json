@@ -18,6 +18,7 @@
         "db:reset": "node scripts/reset-db.js",
         "db:migrate": "node scripts/migrate-db.js",
         "db:seed": "node scripts/import-geography.js && node scripts/seed.js",
+        "sync:catalog": "node scripts/sync-catalog.js",
         "check": "npm run lint && npm run test:coverage && npm run check:routes"
     },
     "keywords": [
