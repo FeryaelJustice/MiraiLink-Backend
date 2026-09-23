@@ -47,6 +47,8 @@ const environmentSchema = z.object({
     EMAIL_USER: z.string().optional(),
     EMAIL_PASSWORD: z.string().optional(),
     FIREBASE_SERVICE_ACCOUNT_FILE_NAME: z.string().optional(),
+    RAWG_API_KEY: z.string().optional(),
+    CATALOG_SYNC_INTERVAL_HOURS: z.coerce.number().int().min(1).default(24),
 });
 
 export function parseEnv(input = process.env) {
@@ -86,5 +88,7 @@ export function parseEnv(input = process.env) {
         },
         firebaseServiceAccountFile:
             result.data.FIREBASE_SERVICE_ACCOUNT_FILE_NAME,
+        rawgApiKey: result.data.RAWG_API_KEY,
+        catalogSyncIntervalHours: result.data.CATALOG_SYNC_INTERVAL_HOURS,
     };
 }
