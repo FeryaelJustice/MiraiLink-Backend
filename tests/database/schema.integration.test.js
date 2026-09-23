@@ -11,6 +11,7 @@ suite('PostgreSQL security schema', () => {
     beforeAll(async () => {
         const baseline = await fs.readFile('src/database/db.sql', 'utf8');
         const migration = await fs.readFile('src/database/migrations/002_security_hardening.sql', 'utf8');
+        await pool.query('DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO public;');
         await pool.query(baseline);
         await pool.query(migration);
     }, 30_000);
