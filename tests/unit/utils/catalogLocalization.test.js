@@ -5,7 +5,8 @@ describe('catalogLocalization', () => {
     it('uses a supported primary language and falls back to Spanish', () => {
         expect(resolveCatalogLanguage('en-US,en;q=0.9')).toBe('en');
         expect(resolveCatalogLanguage('es-ES')).toBe('es');
-        expect(resolveCatalogLanguage('ja-JP')).toBe('es');
+        expect(resolveCatalogLanguage('ja-JP')).toBe('ja');
+        expect(resolveCatalogLanguage('fr-FR')).toBe('es');
     });
 
     it('keeps absolute media URLs and resolves relative paths', () => {

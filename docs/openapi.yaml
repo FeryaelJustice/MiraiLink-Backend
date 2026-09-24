@@ -195,6 +195,20 @@ paths:
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /api/user/by-username/{username}:
+    get:
+      tags: [Users]
+      operationId: getPublicProfileByUsername
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema: { type: string, minLength: 3, maxLength: 30, pattern: '^[a-zA-Z0-9_.]+$' }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /api/user/fcm:
     post:
       tags: [Users]
@@ -344,6 +358,17 @@ paths:
         '422':
           description: Falta la ubicacion, el pais de residencia o el pais objetivo requerido por el alcance
           content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+  /api/swipe/likes-received:
+    get:
+      tags: [Discovery]
+      operationId: getReceivedLikes
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
   /api/swipe/like:
     post:
       tags: [Discovery]
@@ -530,6 +555,18 @@ paths:
           in: query
           required: false
           schema: { type: string }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+  /api/catalog/profile-options:
+    get:
+      tags: [Catalog]
+      operationId: getProfileOptions
+      parameters:
+        - name: Accept-Language
+          in: header
+          required: false
+          schema: { type: string, example: es-ES }
+          description: Locale requested by the application. Spanish is used as fallback.
       responses:
         '200': { $ref: '#/components/responses/Ok' }
   /api/report:

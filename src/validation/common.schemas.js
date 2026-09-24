@@ -1,6 +1,14 @@
 import { z } from 'zod';
 
-export const uuid = z.string().uuid();
+export const uuid = z.string().regex(
+    /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/,
+    'Invalid UUID',
+);
+
+export const optionalUuid = z.preprocess(
+    value => (typeof value === 'string' && value.trim().length === 0 ? null : value),
+    uuid.nullable().optional(),
+);
 export const shortText = z.string().trim().min(1).max(500);
 export const pagination = z.object({
     limit: z.coerce.number().int().min(1).max(100).default(20),

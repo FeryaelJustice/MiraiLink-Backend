@@ -9,3 +9,6 @@ export const fcmSchema = z.object({
 export const photoPositionParams = z.object({ position: z.coerce.number().int().min(1).max(4) });
 export const photoIdParams = z.object({ photoId: uuid });
 export const photoQuerySchema = z.object({ userId: uuid.optional() });
+export const profileByUsernameParams = z.object({
+    username: z.string().trim().min(3).max(30).regex(/^[a-zA-Z0-9_.]+$/),
+});
