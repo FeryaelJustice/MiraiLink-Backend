@@ -8,6 +8,7 @@ const prefixes = {
     'catalog.routes.js': '/api/catalog', 'chat.routes.js': '/api/chats',
     'feedback.routes.js': '/api/feedback', 'match.routes.js': '/api/match',
     'report.routes.js': '/api/report', 'swipe.routes.js': '/api/swipe',
+    'explore.routes.js': '/api/explore',
     'user.routes.js': '/api/user', 'userphotos.routes.js': '/api/user/photos',
     'users.routes.js': '/api/users',
 };
