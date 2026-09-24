@@ -4,6 +4,7 @@ import { AppError } from '../errors/AppError.js';
 import { localizedInterestSql, resolveCatalogLanguage, toLocalizedCatalogItem } from '../utils/catalogLocalization.js';
 import { candidateCoordinateSql, resolveUserCoordinates } from '../utils/geoSearch.js';
 import { localizedResidenceColumns, localizedResidenceJoins } from '../utils/geographyLocalization.js';
+import { localizedAttributeColumns, localizedAttributeJoins } from './user.controller.js';
 
 async function targetExists(userId) {
     const result = await db.query(
@@ -122,6 +123,8 @@ export const getFeed = async (req, res, next) => {
             WITH candidate_geo AS (
             SELECT ${PUBLIC_USER_SQL_COLUMNS},
                    u.created_at,
+                   u.profession, u.religion_id, u.zodiac_sign_id, u.political_stance_id,
+                   u.smoking_habit_id, u.drinking_habit_id, u.sexual_orientation_id, u.education_level_id,
                    ${candidateCoordinates.latitude} AS candidate_latitude,
                    ${candidateCoordinates.longitude} AS candidate_longitude,
                    ${isTravelerSql} AS is_traveler,
@@ -151,13 +154,15 @@ export const getFeed = async (req, res, next) => {
                 FROM scored_candidates
                 WHERE ${scopeFilter}
             )
-            SELECT ranked_candidates.id, ranked_candidates.nickname, ranked_candidates.bio,
+            SELECT ranked_candidates.id, ranked_candidates.username, ranked_candidates.nickname, ranked_candidates.bio,
                    ranked_candidates.gender, ranked_candidates.birthdate,
                    ${localizedResidenceColumns('ranked_candidates')},
+                   ${localizedAttributeColumns('ranked_candidates')},
                    ranked_candidates.distance_km, ranked_candidates.is_traveler,
                    ranked_candidates.common_interests, ranked_candidates.created_at
             FROM ranked_candidates
             ${localizedResidenceJoins('ranked_candidates', residenceLocalePosition)}
+            ${localizedAttributeJoins('ranked_candidates', residenceLocalePosition)}
             ORDER BY
                 geography_known DESC,
                 (common_interests * 15.0 +
@@ -172,20 +177,70 @@ export const getFeed = async (req, res, next) => {
         if (userIds.length === 0) {
             return res.json([]);
         }
-        const [photos, animes, games] = await Promise.all([
+        const [photos, animes, games, goals, family, languages, prompts] = await Promise.all([
             db.query('SELECT id, user_id, url, position FROM user_photos WHERE user_id = ANY($1::uuid[]) ORDER BY position', [userIds]),
             db.query(localizedInterestSql('anime', 'i.user_id = ANY($1::uuid[])', 2, true), [userIds, locale]),
             db.query(localizedInterestSql('game', 'i.user_id = ANY($1::uuid[])', 2, true), [userIds, locale]),
+            db.query(`
+                SELECT urg.user_id, g.id, g.code, COALESCE(t_req.label, t_es.label) AS label
+                FROM user_relationship_goals urg
+                JOIN relationship_goals g ON g.id = urg.goal_id
+                JOIN supported_languages fallback_language ON fallback_language.code = 'es'
+                LEFT JOIN supported_languages requested_language ON requested_language.code = $2
+                LEFT JOIN relationship_goal_translations t_req ON t_req.goal_id = g.id AND t_req.language_id = requested_language.id
+                LEFT JOIN relationship_goal_translations t_es ON t_es.goal_id = g.id AND t_es.language_id = fallback_language.id
+                WHERE urg.user_id = ANY($1::uuid[])
+            `, [userIds, locale]),
+            db.query(`
+                SELECT ufo.user_id, f.id, f.code, COALESCE(t_req.label, t_es.label) AS label
+                FROM user_family_options ufo
+                JOIN family_options f ON f.id = ufo.option_id
+                JOIN supported_languages fallback_language ON fallback_language.code = 'es'
+                LEFT JOIN supported_languages requested_language ON requested_language.code = $2
+                LEFT JOIN family_option_translations t_req ON t_req.option_id = f.id AND t_req.language_id = requested_language.id
+                LEFT JOIN family_option_translations t_es ON t_es.option_id = f.id AND t_es.language_id = fallback_language.id
+                WHERE ufo.user_id = ANY($1::uuid[])
+            `, [userIds, locale]),
+            db.query(`
+                SELECT usl.user_id, sl.id, sl.code, COALESCE(t_req.label, t_es.label) AS label
+                FROM user_spoken_languages usl
+                JOIN spoken_languages sl ON sl.id = usl.language_id
+                JOIN supported_languages fallback_language ON fallback_language.code = 'es'
+                LEFT JOIN supported_languages requested_language ON requested_language.code = $2
+                LEFT JOIN spoken_language_translations t_req ON t_req.language_item_id = sl.id AND t_req.language_id = requested_language.id
+                LEFT JOIN spoken_language_translations t_es ON t_es.language_item_id = sl.id AND t_es.language_id = fallback_language.id
+                WHERE usl.user_id = ANY($1::uuid[])
+            `, [userIds, locale]),
+            db.query(`
+                SELECT upp.user_id, upp.id, upp.prompt_id, upp.answer, p.code, COALESCE(t_req.question, t_es.question) AS question
+                FROM user_profile_prompts upp
+                JOIN profile_prompts p ON p.id = upp.prompt_id
+                JOIN supported_languages fallback_language ON fallback_language.code = 'es'
+                LEFT JOIN supported_languages requested_language ON requested_language.code = $2
+                LEFT JOIN profile_prompt_translations t_req ON t_req.prompt_id = p.id AND t_req.language_id = requested_language.id
+                LEFT JOIN profile_prompt_translations t_es ON t_es.prompt_id = p.id AND t_es.language_id = fallback_language.id
+                WHERE upp.user_id = ANY($1::uuid[])
+                ORDER BY upp.created_at ASC
+            `, [userIds, locale]),
         ]);
         const group = rows => Object.groupBy(rows, row => row.user_id);
         const photoMap = group(photos.rows);
         const animeMap = group(animes.rows);
         const gameMap = group(games.rows);
+        const goalMap = group(goals.rows);
+        const familyMap = group(family.rows);
+        const languageMap = group(languages.rows);
+        const promptMap = group(prompts.rows);
+
         return res.json(users.map(user => ({
             ...user,
             photos: photoMap[user.id] ?? [],
             animes: (animeMap[user.id] ?? []).map(row => toLocalizedCatalogItem(row, req)),
             games: (gameMap[user.id] ?? []).map(row => toLocalizedCatalogItem(row, req)),
+            relationship_goals: goalMap[user.id] ?? [],
+            family_options: familyMap[user.id] ?? [],
+            spoken_languages: languageMap[user.id] ?? [],
+            prompts: promptMap[user.id] ?? [],
         })));
     } catch (error) {
         return next(error);
