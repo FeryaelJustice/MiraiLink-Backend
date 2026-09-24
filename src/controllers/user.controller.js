@@ -49,7 +49,7 @@ function parsePrompts(value) {
     return parsed.filter(item => typeof item?.prompt_id === 'string' && typeof item?.answer === 'string' && item.answer.trim().length > 0 && item.answer.trim().length <= 300);
 }
 
-function localizedAttributeColumns(alias = 'u') {
+export function localizedAttributeColumns(alias = 'u') {
     return `
         ${alias}.profession,
         ${alias}.religion_id, COALESCE(rel_req.label, rel_es.label) AS religion,
@@ -62,7 +62,7 @@ function localizedAttributeColumns(alias = 'u') {
     `;
 }
 
-function localizedAttributeJoins(alias = 'u', localePosition = 2) {
+export function localizedAttributeJoins(alias = 'u', localePosition = 2) {
     return `
         LEFT JOIN supported_languages fallback_lang ON fallback_lang.code = 'es'
         LEFT JOIN supported_languages req_lang ON req_lang.code = $${localePosition}
