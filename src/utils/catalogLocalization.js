@@ -6,7 +6,7 @@ export function resolveCatalogLanguage(header) {
         .map(value => value.trim().split(';')[0].toLowerCase())
         .flatMap(value => [value, value.split('-')[0]])
         .filter(Boolean);
-    return candidates.find(value => ['es', 'en'].includes(value)) ?? FALLBACK_LANGUAGE;
+    return candidates.find(value => ['es', 'en', 'ja'].includes(value)) ?? FALLBACK_LANGUAGE;
 }
 
 export function resolvePublicMediaUrl(value, req) {

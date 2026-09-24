@@ -2,10 +2,16 @@ import { describe, it, expect } from 'vitest';
 import { registerSchema, passwordResetSchema } from '../../../src/validation/auth.schemas.js';
 
 describe('auth.schemas password validation', () => {
+    const baseRegisterData = {
+        username: 'alice',
+        email: 'alice@example.com',
+        birthdate: '2000-01-01',
+        gender: 'male',
+    };
+
     it('accepts valid password with at least 8 characters and non-trivial pattern', () => {
         const validData = {
-            username: 'alice',
-            email: 'alice@example.com',
+            ...baseRegisterData,
             password: 'MySecretPassword1!',
         };
         const result = registerSchema.safeParse(validData);
@@ -14,8 +20,7 @@ describe('auth.schemas password validation', () => {
 
     it('rejects passwords shorter than 8 characters', () => {
         const shortData = {
-            username: 'alice',
-            email: 'alice@example.com',
+            ...baseRegisterData,
             password: 'Short1!',
         };
         const result = registerSchema.safeParse(shortData);
@@ -24,13 +29,11 @@ describe('auth.schemas password validation', () => {
 
     it('rejects trivial sequential patterns like 12345678 or repeated characters', () => {
         const sequentialData = {
-            username: 'alice',
-            email: 'alice@example.com',
+            ...baseRegisterData,
             password: '12345678',
         };
         const repeatedData = {
-            username: 'alice',
-            email: 'alice@example.com',
+            ...baseRegisterData,
             password: 'aaaaaaaa',
         };
         expect(registerSchema.safeParse(sequentialData).success).toBe(false);
@@ -55,16 +58,33 @@ describe('auth.schemas password validation', () => {
 
     it('rejects passwords containing suspicious SQL injection patterns', () => {
         const sqlInjectionData = {
-            username: 'alice',
-            email: 'alice@example.com',
+            ...baseRegisterData,
             password: 'MyPassword123;drop table users',
         };
         const semicolonData = {
-            username: 'alice',
-            email: 'alice@example.com',
+            ...baseRegisterData,
             password: 'MyPassword123;',
         };
         expect(registerSchema.safeParse(sqlInjectionData).success).toBe(false);
         expect(registerSchema.safeParse(semicolonData).success).toBe(false);
+    });
+
+    it('requires birthdate, gender and enforces minimum age of 16 years', () => {
+        const underAge = {
+            username: 'youngster',
+            email: 'young@example.com',
+            password: 'ValidPassword123!',
+            birthdate: '2020-01-01',
+            gender: 'female',
+        };
+        expect(registerSchema.safeParse(underAge).success).toBe(false);
+
+        const missingGender = {
+            username: 'youngster',
+            email: 'young@example.com',
+            password: 'ValidPassword123!',
+            birthdate: '2000-01-01',
+        };
+        expect(registerSchema.safeParse(missingGender).success).toBe(false);
     });
 });

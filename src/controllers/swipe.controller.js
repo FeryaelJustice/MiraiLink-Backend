@@ -1,5 +1,5 @@
 import db from '../models/db.js';
-import { PUBLIC_USER_SQL_COLUMNS, toPublicUsers } from '../dto/user.dto.js';
+import { PUBLIC_USER_SQL_COLUMNS, toPublicUser, toPublicUsers } from '../dto/user.dto.js';
 import { AppError } from '../errors/AppError.js';
 import { localizedInterestSql, resolveCatalogLanguage, toLocalizedCatalogItem } from '../utils/catalogLocalization.js';
 import { candidateCoordinateSql, resolveUserCoordinates } from '../utils/geoSearch.js';
@@ -226,6 +226,60 @@ export const dislikeUser = async (req, res, next) => {
         }
         await db.query('INSERT INTO dislikes (from_user_id, to_user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [fromUserId, toUserId]);
         return res.json({ message: 'Disliked' });
+    } catch (error) {
+        return next(error);
+    }
+};
+
+export const getReceivedLikes = async (req, res, next) => {
+    try {
+        const { limit = 20, offset = 0 } = req.query;
+        const locale = resolveCatalogLanguage(req.get('accept-language'));
+
+        const queryText = `
+            SELECT l.id AS like_id, l.created_at AS liked_at,
+                   u.id, u.username, u.nickname, u.bio, u.gender,
+                   TO_CHAR(u.birthdate, 'YYYY-MM-DD') AS birthdate,
+                   ${localizedResidenceColumns('u')}
+            FROM likes l
+            JOIN users u ON u.id = l.from_user_id
+            ${localizedResidenceJoins('u', 4)}
+            WHERE l.to_user_id = $1
+              AND u.is_deleted = FALSE
+              AND NOT EXISTS (
+                  SELECT 1 FROM likes reciprocal
+                  WHERE reciprocal.from_user_id = $1 AND reciprocal.to_user_id = l.from_user_id
+              )
+              AND NOT EXISTS (
+                  SELECT 1 FROM dislikes d
+                  WHERE d.from_user_id = $1 AND d.to_user_id = l.from_user_id
+              )
+            ORDER BY l.created_at DESC
+            LIMIT $2 OFFSET $3
+        `;
+
+        const result = await db.query(queryText, [req.user.id, limit, offset, locale]);
+        const userIds = result.rows.map(row => row.id);
+        if (userIds.length === 0) {
+            return res.json([]);
+        }
+
+        const photosResult = await db.query(
+            'SELECT id, user_id, url, position FROM user_photos WHERE user_id = ANY($1::uuid[]) ORDER BY position ASC',
+            [userIds],
+        );
+        const photoMap = Object.groupBy(photosResult.rows, p => p.user_id);
+
+        const likes = result.rows.map(row => ({
+            likeId: row.like_id,
+            likedAt: row.liked_at,
+            user: {
+                ...toPublicUser(row),
+                photos: photoMap[row.id] ?? [],
+            },
+        }));
+
+        return res.json(likes);
     } catch (error) {
         return next(error);
     }

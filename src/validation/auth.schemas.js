@@ -63,10 +63,35 @@ const password = z.string()
     });
 const code = z.string().trim().min(6).max(64);
 
+function isAtLeast16YearsOld(dateString) {
+    if (!dateString || typeof dateString !== 'string') return false;
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateString);
+    if (!match) return false;
+    const [, y, m, d] = match;
+    const year = Number(y);
+    const month = Number(m) - 1;
+    const day = Number(d);
+    const birthDate = new Date(Date.UTC(year, month, day));
+    if (birthDate.getUTCFullYear() !== year || birthDate.getUTCMonth() !== month || birthDate.getUTCDate() !== day) {
+        return false;
+    }
+    const today = new Date();
+    let age = today.getUTCFullYear() - year;
+    const monthDiff = today.getUTCMonth() - month;
+    if (monthDiff < 0 || (monthDiff === 0 && today.getUTCDate() < day)) {
+        age--;
+    }
+    return age >= 16;
+}
+
 export const registerSchema = z.object({
     username: z.string().trim().min(3).max(30).regex(/^[a-zA-Z0-9_.]+$/),
     email,
     password,
+    gender: z.enum(['male', 'female', 'non_binary', 'other', 'prefer_not_to_say']),
+    birthdate: z.iso.date().refine(isAtLeast16YearsOld, {
+        message: 'You must be at least 16 years old to register',
+    }),
 });
 
 export const loginSchema = z.object({

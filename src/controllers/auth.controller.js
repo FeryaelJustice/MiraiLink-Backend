@@ -33,7 +33,7 @@ async function withTransaction(work) {
 
 export const register = async (req, res, next) => {
     try {
-        const { username, email, password } = req.body;
+        const { username, email, password, gender, birthdate } = req.body;
         const existing = await db.query(
             'SELECT 1 FROM users WHERE username = $1 OR email = $2 LIMIT 1',
             [username, email],
@@ -44,10 +44,10 @@ export const register = async (req, res, next) => {
 
         const passwordHash = await bcrypt.hash(password, rounds());
         const result = await db.query(
-            `INSERT INTO users (username, email, password_hash, auth_provider, nickname)
-             VALUES ($1, $2, $3, 'email', $1)
+            `INSERT INTO users (username, email, password_hash, auth_provider, nickname, gender, birthdate)
+             VALUES ($1, $2, $3, 'email', $1, $4, $5)
              RETURNING id, username, email`,
-            [username, email, passwordHash],
+            [username, email, passwordHash, gender, birthdate],
         );
         const user = result.rows[0];
         return res.status(201).json({

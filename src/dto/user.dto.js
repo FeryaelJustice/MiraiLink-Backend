@@ -1,5 +1,6 @@
 const publicUserFields = [
     ['id', 'id'],
+    ['username', 'username'],
     ['nickname', 'nickname'],
     ['bio', 'bio'],
     ['gender', 'gender'],
@@ -12,6 +13,21 @@ const publicUserFields = [
     ['residence_country_code', 'residence_country_code'],
     ['distance_km', 'distance_km'],
     ['is_traveler', 'is_traveler'],
+    ['profession', 'profession'],
+    ['religion', 'religion'],
+    ['zodiac_sign', 'zodiac_sign'],
+    ['political_stance', 'political_stance'],
+    ['smoking_habit', 'smoking_habit'],
+    ['drinking_habit', 'drinking_habit'],
+    ['sexual_orientation', 'sexual_orientation'],
+    ['education_level', 'education_level'],
+    ['religion_id', 'religion_id'],
+    ['zodiac_sign_id', 'zodiac_sign_id'],
+    ['political_stance_id', 'political_stance_id'],
+    ['smoking_habit_id', 'smoking_habit_id'],
+    ['drinking_habit_id', 'drinking_habit_id'],
+    ['sexual_orientation_id', 'sexual_orientation_id'],
+    ['education_level_id', 'education_level_id'],
 ];
 
 export function toPublicUser(row) {
@@ -26,6 +42,7 @@ export function toPublicUsers(rows) {
 
 export const PUBLIC_USER_SQL_COLUMNS = [
     'u.id',
+    'u.username',
     'u.nickname',
     'u.bio',
     'u.gender',
