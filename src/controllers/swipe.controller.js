@@ -5,6 +5,7 @@ import { localizedInterestSql, resolveCatalogLanguage, toLocalizedCatalogItem } 
 import { candidateCoordinateSql, resolveUserCoordinates } from '../utils/geoSearch.js';
 import { localizedResidenceColumns, localizedResidenceJoins } from '../utils/geographyLocalization.js';
 import { localizedAttributeColumns, localizedAttributeJoins } from './user.controller.js';
+import { invalidateUserCountCache } from '../services/explore.service.js';
 
 async function targetExists(userId) {
     const result = await db.query(
@@ -258,6 +259,7 @@ export const likeUser = async (req, res, next) => {
             return res.status(404).json({ code: 'USER_NOT_FOUND', message: 'User not found' });
         }
         await db.query('INSERT INTO likes (from_user_id, to_user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [fromUserId, toUserId]);
+        invalidateUserCountCache(fromUserId);
         const reciprocal = await db.query('SELECT 1 FROM likes WHERE from_user_id = $1 AND to_user_id = $2', [toUserId, fromUserId]);
         if (reciprocal.rowCount > 0) {
             const [user1, user2] = [fromUserId, toUserId].sort();
@@ -280,6 +282,7 @@ export const dislikeUser = async (req, res, next) => {
             return res.status(404).json({ code: 'USER_NOT_FOUND', message: 'User not found' });
         }
         await db.query('INSERT INTO dislikes (from_user_id, to_user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [fromUserId, toUserId]);
+        invalidateUserCountCache(fromUserId);
         return res.json({ message: 'Disliked' });
     } catch (error) {
         return next(error);

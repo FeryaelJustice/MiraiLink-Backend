@@ -14,6 +14,14 @@ export function clearCountCache() {
     countsCache.clear();
 }
 
+export function invalidateUserCountCache(userId) {
+    for (const key of countsCache.keys()) {
+        if (key.startsWith(`${userId}:`)) {
+            countsCache.delete(key);
+        }
+    }
+}
+
 function getCachedCount(userId, categoryId, radiusKm) {
     const key = `${userId}:${categoryId}:${radiusKm}`;
     const entry = countsCache.get(key);
