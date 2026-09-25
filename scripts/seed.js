@@ -65,7 +65,7 @@ async function runSeed() {
                 phoneNumber: '+34611111222',
                 authProvider: 'email',
                 isVerified: true,
-                bio: 'Fan del mundo SAO.',
+                bio: 'Espadachin negro en busca de party para coop y aventuras.',
                 gender: 'male',
                 birthdate: '1997-07-10',
                 residenceCity: 'Palma',
@@ -77,6 +77,12 @@ async function runSeed() {
                 currentLongitude: 2.6502,
                 animes: ['Sword Art Online', 'Frieren: Beyond Journey\'s End'],
                 games: ['The Legend of Zelda: Tears of the Kingdom', 'Elden Ring'],
+                relationshipGoals: ['relationship', 'friends'],
+                spokenLanguages: ['es', 'en'],
+                prompts: [
+                    { code: 'party_role', answer: 'DPS solitario que aprende a confiar en su party.' },
+                    { code: 'favorite_videogame', answer: 'Sword Art Online (o cualquier MMORPG inmersivo).' }
+                ],
             },
             {
                 id: '22222222-2222-4222-8222-222222222222',
@@ -86,7 +92,7 @@ async function runSeed() {
                 phoneNumber: '+34633334444',
                 authProvider: 'google',
                 isVerified: true,
-                bio: 'Me encantan los MMOs.',
+                bio: 'Destello veloz y cocinera experta en juegos de rol.',
                 gender: 'female',
                 birthdate: '1998-03-15',
                 residenceCity: 'Inca',
@@ -98,6 +104,120 @@ async function runSeed() {
                 currentLongitude: 2.9110,
                 animes: ['Kaguya-sama: Love is War', 'Haikyuu!!'],
                 games: ['Genshin Impact', 'Animal Crossing: New Horizons'],
+                relationshipGoals: ['relationship', 'marriage'],
+                spokenLanguages: ['es', 'en', 'ja'],
+                prompts: [
+                    { code: 'party_role', answer: 'Sub-líder veloz y healer de apoyo cuando hace falta.' },
+                    { code: 'comfort_anime', answer: 'Kaguya-sama y Frieren.' }
+                ],
+            },
+            {
+                id: '12121212-1212-4212-8212-121212121212',
+                username: 'lina_palma',
+                email: 'lina.palma@example.com',
+                password: 'PasswordSegura123!',
+                phoneNumber: '+34611223344',
+                authProvider: 'email',
+                isVerified: true,
+                bio: 'Amante del cosplay y el café cerca de la bahía de Palma. ¿Hacemos maratón de anime o una sesión de fotos?',
+                gender: 'female',
+                birthdate: '2001-05-14',
+                residenceCity: 'Palma',
+                residenceRegion: 'Islas Baleares',
+                residenceCountryCode: 'ES',
+                residenceLatitude: 39.5710,
+                residenceLongitude: 2.6480,
+                currentLatitude: 39.5710,
+                currentLongitude: 2.6480,
+                animes: ['Jujutsu Kaisen', 'Chainsaw Man', 'Attack on Titan'],
+                games: ['Genshin Impact', 'VALORANT'],
+                relationshipGoals: ['friends', 'relationship', 'casual'],
+                spokenLanguages: ['es', 'en'],
+                prompts: [
+                    { code: 'comfort_anime', answer: 'Jujutsu Kaisen y Demon Slayer.' },
+                    { code: 'unpopular_opinion', answer: 'El manga siempre tiene un ritmo mejor que los rellenos de temporada.' }
+                ],
+            },
+            {
+                id: '13131313-1313-4313-8313-131313131313',
+                username: 'rafa_manacor',
+                email: 'rafa.manacor@example.com',
+                password: 'PasswordSegura123!',
+                phoneNumber: '+34622334455',
+                authProvider: 'email',
+                isVerified: true,
+                bio: 'Gamer en Mallorca. Buscando duo para rankeds en shooters o pasar tardes de coop chill.',
+                gender: 'male',
+                birthdate: '1999-11-20',
+                residenceCity: 'Marratxí',
+                residenceRegion: 'Islas Baleares',
+                residenceCountryCode: 'ES',
+                residenceLatitude: 39.6420,
+                residenceLongitude: 2.7210,
+                currentLatitude: 39.6420,
+                currentLongitude: 2.7210,
+                animes: ['One Punch Man', 'Mob Psycho 100', 'Vinland Saga', 'Sword Art Online'],
+                games: ['Counter-Strike 2', 'Elden Ring', 'League of Legends'],
+                relationshipGoals: ['casual', 'friends', 'relationship'],
+                spokenLanguages: ['es', 'en'],
+                prompts: [
+                    { code: 'favorite_videogame', answer: 'Elden Ring y la saga Dark Souls.' },
+                    { code: 'party_role', answer: 'Tank de primera linea aguantando los golpes.' }
+                ],
+            },
+            {
+                id: '24242424-2424-4424-8424-242424242424',
+                username: 'antoine_toulouse',
+                email: 'antoine.toulouse@example.com',
+                password: 'PasswordSegura123!',
+                phoneNumber: '+33655443322',
+                authProvider: 'email',
+                isVerified: true,
+                bio: 'De Toulouse, fan de RPGs fantastiques et marathons animés. Cherche des amis et du coop !',
+                gender: 'male',
+                birthdate: '1998-08-12',
+                residenceCity: 'Toulouse',
+                residenceRegion: 'Occitanie',
+                residenceCountryCode: 'FR',
+                residenceLatitude: 43.6047,
+                residenceLongitude: 1.4442,
+                currentLatitude: 43.6047,
+                currentLongitude: 1.4442,
+                animes: ['Fullmetal Alchemist: Brotherhood', 'Death Note', 'Steins;Gate'],
+                games: ['The Witcher 3: Wild Hunt', 'Baldur\'s Gate 3', 'Final Fantasy XIV Online'],
+                relationshipGoals: ['relationship', 'friends'],
+                spokenLanguages: ['fr', 'en', 'es'],
+                prompts: [
+                    { code: 'favorite_videogame', answer: 'Baldur\'s Gate 3 et The Witcher 3.' },
+                    { code: 'party_role', answer: 'Mage support ou soigneur tactique.' }
+                ],
+            },
+            {
+                id: '25252525-2525-4525-8525-252525252525',
+                username: 'lea_toulouse',
+                email: 'lea.toulouse@example.com',
+                password: 'PasswordSegura123!',
+                phoneNumber: '+33677889900',
+                authProvider: 'email',
+                isVerified: true,
+                bio: 'Cosplayeuse et fan de jeux chill à Toulouse. Partante pour des soirées jeux de société ou convention !',
+                gender: 'female',
+                birthdate: '2001-02-28',
+                residenceCity: 'Toulouse',
+                residenceRegion: 'Occitanie',
+                residenceCountryCode: 'FR',
+                residenceLatitude: 43.6047,
+                residenceLongitude: 1.4442,
+                currentLatitude: 43.6047,
+                currentLongitude: 1.4442,
+                animes: ['Violet Evergarden', 'Demon Slayer: Kimetsu no Yaiba', 'Spy x Family'],
+                games: ['Animal Crossing: New Horizons', 'Genshin Impact', 'Stardew Valley'],
+                relationshipGoals: ['friends', 'casual'],
+                spokenLanguages: ['fr', 'en'],
+                prompts: [
+                    { code: 'comfort_anime', answer: 'Violet Evergarden et Spy x Family.' },
+                    { code: 'dream_job', answer: 'Créatrice d\'accessoires cosplay et artiste 3D.' }
+                ],
             },
             {
                 id: '33333333-3333-4333-8333-333333333333',
@@ -119,6 +239,11 @@ async function runSeed() {
                 currentLongitude: -3.7038,
                 animes: ['Jujutsu Kaisen', 'Chainsaw Man'],
                 games: ['VALORANT', 'Stardew Valley'],
+                relationshipGoals: ['friends', 'relationship'],
+                spokenLanguages: ['es', 'en'],
+                prompts: [
+                    { code: 'favorite_videogame', answer: 'VALORANT y juegos cooperativos indie.' }
+                ],
             },
             {
                 id: '44444444-4444-4444-8444-444444444444',
@@ -140,6 +265,11 @@ async function runSeed() {
                 currentLongitude: 2.1686,
                 animes: ['Frieren: Beyond Journey\'s End', 'Steins;Gate'],
                 games: ['Persona 5 Royal'],
+                relationshipGoals: ['relationship', 'friends'],
+                spokenLanguages: ['es', 'en'],
+                prompts: [
+                    { code: 'comfort_anime', answer: 'Frieren: Beyond Journey\'s End.' }
+                ],
             },
             {
                 id: '55555555-5555-4555-8555-555555555555',
@@ -161,6 +291,11 @@ async function runSeed() {
                 currentLongitude: -0.3763,
                 animes: ['Psycho-Pass', 'Fullmetal Alchemist: Brotherhood'],
                 games: ['Monster Hunter: World', 'The Legend of Zelda: Tears of the Kingdom'],
+                relationshipGoals: ['friends', 'casual'],
+                spokenLanguages: ['es', 'en'],
+                prompts: [
+                    { code: 'party_role', answer: 'Creador de mapas y soporte técnico del equipo.' }
+                ],
             },
             {
                 id: '66666666-6666-4666-8666-666666666666',
@@ -182,6 +317,11 @@ async function runSeed() {
                 currentLongitude: 2.3522,
                 animes: ['Violet Evergarden', 'Samurai Champloo'],
                 games: ['Final Fantasy XIV Online'],
+                relationshipGoals: ['relationship', 'friends'],
+                spokenLanguages: ['fr', 'ja', 'en'],
+                prompts: [
+                    { code: 'comfort_anime', answer: 'Violet Evergarden.' }
+                ],
             },
             {
                 id: '77777777-7777-4777-8777-777777777777',
@@ -203,6 +343,11 @@ async function runSeed() {
                 currentLongitude: 139.6503,
                 animes: ['One Piece', 'Haikyuu!!'],
                 games: ['Pokémon GO', 'Animal Crossing: New Horizons'],
+                relationshipGoals: ['friends', 'relationship'],
+                spokenLanguages: ['ja', 'en'],
+                prompts: [
+                    { code: 'comfort_anime', answer: 'Películas de Studio Ghibli y Haikyuu!!.' }
+                ],
             },
             {
                 id: '88888888-8888-4888-8888-888888888888',
@@ -224,6 +369,11 @@ async function runSeed() {
                 currentLongitude: 72.8777,
                 animes: ['One Piece', 'Haikyuu!!'],
                 games: ['Stardew Valley', 'The Sims 4'],
+                relationshipGoals: ['friends'],
+                spokenLanguages: ['en'],
+                prompts: [
+                    { code: 'favorite_videogame', answer: 'Stardew Valley por su paz y comunidad.' }
+                ],
             },
             {
                 id: '99999999-9999-4999-8999-999999999999',
@@ -245,6 +395,11 @@ async function runSeed() {
                 currentLongitude: -74.0060,
                 animes: ['Mob Psycho 100', 'Cowboy Bebop'],
                 games: ['Stardew Valley', 'Genshin Impact'],
+                relationshipGoals: ['casual', 'friends'],
+                spokenLanguages: ['en', 'es'],
+                prompts: [
+                    { code: 'favorite_videogame', answer: 'Hades y Celeste.' }
+                ],
             },
         ];
 
@@ -354,6 +509,47 @@ async function runSeed() {
                     await client.query(
                         'INSERT INTO user_game_interests (user_id, game_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
                         [seedUserId, game.rows[0].id],
+                    );
+                }
+            }
+
+            for (const goalCode of user.relationshipGoals ?? []) {
+                const goal = await client.query(
+                    'SELECT id FROM relationship_goals WHERE code = $1 LIMIT 1',
+                    [goalCode],
+                );
+                if (goal.rowCount > 0) {
+                    await client.query(
+                        'INSERT INTO user_relationship_goals (user_id, goal_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+                        [seedUserId, goal.rows[0].id],
+                    );
+                }
+            }
+
+            for (const langCode of user.spokenLanguages ?? []) {
+                const lang = await client.query(
+                    'SELECT id FROM spoken_languages WHERE code = $1 LIMIT 1',
+                    [langCode],
+                );
+                if (lang.rowCount > 0) {
+                    await client.query(
+                        'INSERT INTO user_spoken_languages (user_id, language_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+                        [seedUserId, lang.rows[0].id],
+                    );
+                }
+            }
+
+            for (const promptItem of user.prompts ?? []) {
+                const prompt = await client.query(
+                    'SELECT id FROM profile_prompts WHERE code = $1 LIMIT 1',
+                    [promptItem.code],
+                );
+                if (prompt.rowCount > 0) {
+                    await client.query(
+                        `INSERT INTO user_profile_prompts (user_id, prompt_id, answer)
+                         VALUES ($1, $2, $3)
+                         ON CONFLICT (user_id, prompt_id) DO UPDATE SET answer = EXCLUDED.answer`,
+                        [seedUserId, prompt.rows[0].id, promptItem.answer],
                     );
                 }
             }

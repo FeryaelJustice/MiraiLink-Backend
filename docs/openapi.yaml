@@ -389,6 +389,71 @@ paths:
         '200': { $ref: '#/components/responses/Ok' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /api/explore/categories:
+    get:
+      tags: [Explore]
+      operationId: getExploreCategories
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/explore/categories/{categoryId}/feed:
+    get:
+      tags: [Explore]
+      operationId: getCategoryFeed
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: categoryId
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/Uuid' }
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+        - name: radius_km
+          in: query
+          required: false
+          schema: { type: integer, minimum: 10, maximum: 500 }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/explore/categories/{categoryId}/settings:
+    get:
+      tags: [Explore]
+      operationId: getCategorySettings
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: categoryId
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/Uuid' }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Explore]
+      operationId: updateCategorySettings
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: categoryId
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/Uuid' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [radius_km]
+              properties:
+                radius_km: { type: integer, minimum: 10, maximum: 500 }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /api/match:
     get:
       tags: [Matches]

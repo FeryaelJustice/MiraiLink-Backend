@@ -16,6 +16,7 @@ import feedbackRoutes from './routes/feedback.routes.js';
 import matchRoutes from './routes/match.routes.js';
 import reportRoutes from './routes/report.routes.js';
 import swipeRoutes from './routes/swipe.routes.js';
+import exploreRoutes from './routes/explore.routes.js';
 import userRoutes from './routes/user.routes.js';
 import userPhotoRoutes from './routes/userphotos.routes.js';
 import usersRoutes from './routes/users.routes.js';
@@ -95,6 +96,7 @@ export function createApp({ uploadRoot, enableRateLimits = true, trustProxy = 'l
     app.use(`${API_PREFIX}/user`, userRoutes);
     app.use(`${API_PREFIX}/users`, usersRoutes);
     app.use(`${API_PREFIX}/swipe`, swipeRoutes);
+    app.use(`${API_PREFIX}/explore`, exploreRoutes);
     app.use(`${API_PREFIX}/match`, matchRoutes);
     app.use(`${API_PREFIX}/chats`, chatRoutes);
     app.use(`${API_PREFIX}/catalog`, catalogRoutes);
