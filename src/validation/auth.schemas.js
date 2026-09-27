@@ -105,8 +105,8 @@ export const loginSchema = z.object({
 
 export const emailSchema = z.object({ email });
 export const passwordResetSchema = z.object({ email, token: code, newPassword: password });
-export const verificationRequestSchema = z.object({ type: z.enum(['email', 'sms']) });
-export const verificationConfirmSchema = z.object({ token: code, type: z.enum(['email', 'sms']) });
+export const verificationRequestSchema = z.object({ type: z.enum(['email', 'sms']), userId: z.string().optional() });
+export const verificationConfirmSchema = z.object({ token: code, type: z.enum(['email', 'sms']), userId: z.string().optional() });
 export const totpSchema = z.object({ token: z.string().regex(/^\d{6}$/) });
 export const twoFactorCodeSchema = z.object({ code });
 export const twoFactorLoginSchema = z.object({ challengeToken: z.string().min(20).max(4096), code });
