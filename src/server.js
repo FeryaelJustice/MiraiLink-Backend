@@ -1,8 +1,20 @@
 import { createApp } from './app.js';
 import { parseEnv } from './config/env.js';
+import { runMigrations } from './database/migrator.js';
+import pool from './models/db.js';
 import { syncCatalog } from './services/catalogSyncService.js';
 
 const env = parseEnv();
+
+if (env.nodeEnv !== 'test') {
+    try {
+        await runMigrations(pool);
+    } catch (err) {
+        console.error('Fatal: Database migration failed on startup:', err);
+        process.exit(1);
+    }
+}
+
 const app = createApp({ uploadRoot: env.uploadRoot, trustProxy: env.trustProxy });
 const server = app.listen(env.port, () => console.log(`Server running on port ${env.port}`));
 server.requestTimeout = 30_000;

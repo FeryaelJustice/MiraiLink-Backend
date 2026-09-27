@@ -45,3 +45,22 @@ export const authenticateToken = (allowUnverified = false) => async (req, res, n
         return unauthorized(res, 'INVALID_TOKEN', 'Invalid or expired token');
     }
 };
+
+export const optionalAuthenticateToken = () => async (req, res, next) => {
+    const [scheme, token] = (req.headers.authorization ?? '').split(' ');
+    if (scheme !== 'Bearer' || !token) {
+        return next();
+    }
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
+        if (decoded.purpose === 'access') {
+            const userId = decoded.id ?? decoded.sub;
+            req.user = { ...decoded, id: userId };
+            req.token = token;
+        }
+    } catch (_error) {
+        // Continue unauthenticated if token is invalid or expired
+    }
+    return next();
+};

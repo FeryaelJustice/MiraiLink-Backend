@@ -10,7 +10,7 @@ import {
 } from '../services/tokenService.js';
 import { hashRecoveryCodes, useRecoveryCode, verifyTotp } from '../services/twoFactorService.js';
 import { encrypt } from '../utils/cryptoUtils.js';
-import { sendVerificationEmail } from '../utils/mailer.js';
+import { sendPasswordResetEmail, sendVerificationEmail } from '../utils/mailer.js';
 
 const neutralEmailResponse = { message: 'If the account is eligible, a code will be sent' };
 const generateCode = () => randomInt(100000, 1000000).toString();
@@ -43,16 +43,33 @@ export const register = async (req, res, next) => {
         }
 
         const passwordHash = await bcrypt.hash(password, rounds());
-        const result = await db.query(
-            `INSERT INTO users (username, email, password_hash, auth_provider, nickname, gender, birthdate)
-             VALUES ($1, $2, $3, 'email', $1, $4, $5)
-             RETURNING id, username, email`,
-            [username, email, passwordHash, gender, birthdate],
-        );
-        const user = result.rows[0];
+        const user = await withTransaction(async client => {
+            const result = await client.query(
+                `INSERT INTO users (username, email, password_hash, auth_provider, nickname, gender, birthdate, is_verified)
+                 VALUES ($1, $2, $3, 'email', $1, $4, $5, FALSE)
+                 RETURNING id, username, email, is_verified`,
+                [username, email, passwordHash, gender, birthdate],
+            );
+            const newUser = result.rows[0];
+
+            const code = generateCode();
+            const hash = await bcrypt.hash(code, rounds());
+            await client.query(
+                `INSERT INTO verification_tokens (user_id, token_hash, type, expires_at)
+                 VALUES ($1, $2, 'email', NOW() + INTERVAL '15 minutes')`,
+                [newUser.id, hash],
+            );
+
+            // Enviar correo de verificacion (simulado o SMTP)
+            await sendVerificationEmail(newUser.email, code, undefined, newUser.id);
+
+            return newUser;
+        });
+
         return res.status(201).json({
             message: 'User created',
             userId: user.id,
+            isVerified: false,
             token: createAccessToken(user),
         });
     } catch (error) {
@@ -64,7 +81,7 @@ export const login = async (req, res, next) => {
     try {
         const { email, username, password } = req.body;
         const result = await db.query(
-            `SELECT u.id, u.username, u.password_hash, u.is_deleted,
+            `SELECT u.id, u.username, u.password_hash, u.is_deleted, u.is_verified,
                     COALESCE(f.enabled, FALSE) AS two_fa_enabled
              FROM users u
              LEFT JOIN user_2fa f ON f.user_id = u.id
@@ -91,7 +108,11 @@ export const login = async (req, res, next) => {
                 expiresIn: 300,
             });
         }
-        return res.json({ token: createAccessToken(user), userId: user.id });
+        return res.json({
+            token: createAccessToken(user),
+            userId: user.id,
+            isVerified: user.is_verified ?? false,
+        });
     } catch (error) {
         return next(error);
     }
@@ -135,7 +156,7 @@ export const requestPasswordReset = async (req, res, next) => {
                     [user.id, hash],
                 );
             });
-            await sendVerificationEmail(user.email, code);
+            await sendPasswordResetEmail(user.email, code);
         }
         return res.json(neutralEmailResponse);
     } catch (error) {
@@ -180,7 +201,10 @@ export const checkIsVerified = async (req, res, next) => {
 
 export const requestVerificationCode = async (req, res, next) => {
     try {
-        const userId = req.user.id ?? req.user.sub;
+        const userId = req.user?.id ?? req.user?.sub ?? req.body.userId;
+        if (!userId) {
+            return res.status(400).json({ code: 'USER_ID_REQUIRED', message: 'User ID is required' });
+        }
         const result = await db.query(
             'SELECT email FROM users WHERE id = $1 AND is_verified = FALSE',
             [userId],
@@ -199,7 +223,7 @@ export const requestVerificationCode = async (req, res, next) => {
                     [userId, hash, req.body.type],
                 );
             });
-            await sendVerificationEmail(result.rows[0].email, code);
+            await sendVerificationEmail(result.rows[0].email, code, undefined, userId);
         }
         return res.json(neutralEmailResponse);
     } catch (error) {
@@ -209,22 +233,47 @@ export const requestVerificationCode = async (req, res, next) => {
 
 export const confirmVerificationCode = async (req, res, next) => {
     try {
-        const userId = req.user.id ?? req.user.sub;
-        const result = await db.query(
-            `SELECT id, token_hash FROM verification_tokens
-             WHERE user_id = $1 AND type = $2 AND expires_at > NOW()
-             ORDER BY created_at DESC LIMIT 1`,
-            [userId, req.body.type],
-        );
-        const verification = result.rows[0];
+        let userId = req.user?.id ?? req.user?.sub ?? req.body.userId;
+        let verification = null;
+
+        if (userId) {
+            const result = await db.query(
+                `SELECT id, token_hash, user_id FROM verification_tokens
+                 WHERE user_id = $1 AND type = $2 AND expires_at > NOW()
+                 ORDER BY created_at DESC LIMIT 1`,
+                [userId, req.body.type],
+            );
+            verification = result.rows[0];
+        } else {
+            // Fallback: If userId wasn't passed, find active tokens of this type and compare bcrypt hash
+            const result = await db.query(
+                `SELECT id, token_hash, user_id FROM verification_tokens
+                 WHERE type = $1 AND expires_at > NOW()
+                 ORDER BY created_at DESC LIMIT 20`,
+                [req.body.type],
+            );
+            for (const row of result.rows) {
+                if (await bcrypt.compare(req.body.token, row.token_hash)) {
+                    verification = row;
+                    userId = row.user_id;
+                    break;
+                }
+            }
+        }
+
+        if (!userId) {
+            return res.status(400).json({ code: 'USER_ID_REQUIRED', message: 'User ID is required' });
+        }
         if (!verification || !await bcrypt.compare(req.body.token, verification.token_hash)) {
             return res.status(400).json({ code: 'INVALID_CODE', message: 'Invalid or expired code' });
         }
-        await withTransaction(async client => {
-            await client.query('UPDATE users SET is_verified = TRUE WHERE id = $1', [userId]);
+        const userRes = await withTransaction(async client => {
+            const u = await client.query('UPDATE users SET is_verified = TRUE WHERE id = $1 RETURNING id, username, email, is_verified', [userId]);
             await client.query('DELETE FROM verification_tokens WHERE user_id = $1', [userId]);
+            return u.rows[0];
         });
-        return res.json({ message: 'Account verified' });
+        const token = userRes ? createAccessToken(userRes) : null;
+        return res.json({ message: 'Account verified', isVerified: true, token, userId });
     } catch (error) {
         return next(error);
     }
@@ -251,7 +300,11 @@ export const setup2FA = async (req, res, next) => {
                 );
             }
         });
-        return res.json({ otpauthUrl: secret.otpauth_url, recoveryCodes });
+        return res.json({
+            otpauth_url: secret.otpauth_url,
+            base32: secret.base32,
+            recovery_codes: recoveryCodes,
+        });
     } catch (error) {
         return next(error);
     }
@@ -274,14 +327,9 @@ export const verify2FA = async (req, res, next) => {
 export const disable2FA = async (req, res, next) => {
     try {
         const userId = req.user.id ?? req.user.sub;
-        const result = await db.query('SELECT secret FROM user_2fa WHERE user_id = $1 AND enabled = TRUE', [userId]);
-        if (!result.rows[0]) {
+        const result = await db.query('SELECT 1 FROM user_2fa WHERE user_id = $1 AND enabled = TRUE', [userId]);
+        if (result.rowCount === 0) {
             return res.status(400).json({ code: 'TWO_FACTOR_DISABLED', message: '2FA is not enabled' });
-        }
-        const totpValid = verifyTotp(result.rows[0].secret, req.body.code);
-        const recoveryValid = totpValid ? false : await withTransaction(client => useRecoveryCode(client, userId, req.body.code));
-        if (!totpValid && !recoveryValid) {
-            return res.status(401).json({ code: 'INVALID_CODE', message: 'Invalid code' });
         }
         await withTransaction(async client => {
             await client.query('DELETE FROM user_2fa WHERE user_id = $1', [userId]);
@@ -307,7 +355,7 @@ export const loginVerify2FALastStep = async (req, res, next) => {
     try {
         const challenge = verifyTwoFactorChallenge(req.body.challengeToken);
         const result = await db.query(
-            `SELECT u.id, u.username, f.secret
+            `SELECT u.id, u.username, u.is_verified, f.secret
              FROM users u JOIN user_2fa f ON f.user_id = u.id
              WHERE u.id = $1 AND f.enabled = TRUE AND u.is_deleted = FALSE`,
             [challenge.sub],
@@ -321,7 +369,11 @@ export const loginVerify2FALastStep = async (req, res, next) => {
         if (!totpValid && !recoveryValid) {
             return res.status(401).json({ code: 'INVALID_CODE', message: 'Invalid code' });
         }
-        return res.json({ token: createAccessToken(user), userId: user.id });
+        return res.json({
+            token: createAccessToken(user),
+            userId: user.id,
+            isVerified: user.is_verified ?? false,
+        });
     } catch (_error) {
         return res.status(401).json({ code: 'INVALID_CHALLENGE', message: 'Invalid or expired challenge' });
     }
