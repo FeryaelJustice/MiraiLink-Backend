@@ -68,7 +68,7 @@ psql -d mirailink -f src/database/migrations/003_user_location_and_search_settin
 psql -d mirailink -f src/database/migrations/004_recovery_codes_code_hash.sql
 ```
 
-Para una base nueva también puedes usar `npm run db:reset`, que aplica el baseline y todas las migraciones automáticamente.
+Para una base nueva también puedes usar `npm run db:reset`, que aplica el baseline y todas las migraciones automáticamente. Para restablecer pruebas sin perder usuarios ni perfiles (limpiar matches, likes, dislikes, chats y mensajes), se usa `npm run db:reset-interactions`.
 
 ## Integridad pendiente
 

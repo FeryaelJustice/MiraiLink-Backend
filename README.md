@@ -364,6 +364,7 @@ MiraiLink-Backend/
 | `npm run check:routes` | Comprueba que todas las rutas coincidan con la especificacion OpenAPI 3.1. |
 | `npm run db:migrate` | Aplica una sola vez las migraciones incrementales pendientes a una base existente. No se ejecuta al arrancar el servidor. |
 | `npm run db:reset` | Recrea de forma destructiva una base local o desechable. Nunca usar en producción. |
+| `npm run db:reset-interactions` | Restablece matches, likes, dislikes, chats y mensajes para pruebas sin tocar cuentas, perfiles ni fotos. |
 | `npm run db:seed` | Inserta o actualiza los usuarios de prueba, sus ubicaciones y sus intereses. |
 | `npm run check` | Verificacion integral de calidad: lint, cobertura y contrato de rutas. |
 
