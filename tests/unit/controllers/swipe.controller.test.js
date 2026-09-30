@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const query = vi.fn();
 vi.mock('../../../src/models/db.js', () => ({ default: { query } }));
 
-const { getFeed } = await import('../../../src/controllers/swipe.controller.js');
+const { getFeed, likeUser } = await import('../../../src/controllers/swipe.controller.js');
 const userId = '00000000-0000-4000-8000-000000000001';
 
 function request(queryParams = {}) {
@@ -99,5 +99,65 @@ describe('getFeed geographic contract', () => {
         expect(sql).toContain('residence_country_id IS NULL OR residence_country_id = $6');
         expect(params.at(-2)).toBe('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
         expect(params).not.toContain(100);
+    });
+});
+
+describe('likeUser daily limit contract', () => {
+    const targetUserId = '00000000-0000-4000-8000-000000000002';
+
+    beforeEach(() => query.mockReset());
+
+    it('blocks free user when reaching daily likes limit', async () => {
+        // targetExists -> true
+        query.mockResolvedValueOnce({ rowCount: 1 });
+        // user_subscriptions -> none
+        query.mockResolvedValueOnce({ rows: [] });
+        // daily likes count -> 50
+        query.mockResolvedValueOnce({ rows: [{ count: 50 }] });
+
+        const res = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+        await likeUser({ user: { id: userId }, body: { toUserId: targetUserId } }, res, vi.fn());
+
+        expect(res.status).toHaveBeenCalledWith(403);
+        expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+            code: 'DAILY_LIKES_LIMIT_REACHED',
+            limit: 50,
+        }));
+    });
+
+    it('allows free user when below daily limit', async () => {
+        // targetExists -> true
+        query.mockResolvedValueOnce({ rowCount: 1 });
+        // user_subscriptions -> none
+        query.mockResolvedValueOnce({ rows: [] });
+        // daily likes count -> 10
+        query.mockResolvedValueOnce({ rows: [{ count: 10 }] });
+        // INSERT INTO likes
+        query.mockResolvedValueOnce({ rowCount: 1 });
+        // check reciprocal
+        query.mockResolvedValueOnce({ rowCount: 0 });
+
+        const res = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+        await likeUser({ user: { id: userId }, body: { toUserId: targetUserId } }, res, vi.fn());
+
+        expect(res.json).toHaveBeenCalledWith({ message: 'Liked', match: false });
+    });
+
+    it('bypasses daily limit when user has active plus or premium subscription', async () => {
+        // targetExists -> true
+        query.mockResolvedValueOnce({ rowCount: 1 });
+        // user_subscriptions -> active plus
+        query.mockResolvedValueOnce({
+            rows: [{ product_id: 'mirailink_plus', status: 'active', expires_at: new Date(Date.now() + 86400000).toISOString() }],
+        });
+        // INSERT INTO likes
+        query.mockResolvedValueOnce({ rowCount: 1 });
+        // check reciprocal
+        query.mockResolvedValueOnce({ rowCount: 0 });
+
+        const res = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+        await likeUser({ user: { id: userId }, body: { toUserId: targetUserId } }, res, vi.fn());
+
+        expect(res.json).toHaveBeenCalledWith({ message: 'Liked', match: false });
     });
 });

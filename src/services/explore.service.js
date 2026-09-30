@@ -5,6 +5,7 @@ import { candidateCoordinateSql, resolveUserCoordinates } from '../utils/geoSear
 import { localizedResidenceColumns, localizedResidenceJoins } from '../utils/geographyLocalization.js';
 import { localizedInterestSql, toLocalizedCatalogItem } from '../utils/catalogLocalization.js';
 import { localizedAttributeColumns, localizedAttributeJoins } from '../controllers/user.controller.js';
+import { SUBSCRIPTION_FEATURES, SUBSCRIPTION_PRODUCTS } from '../consts/subscriptionConsts.js';
 
 // Cache de conteos agregados por usuario y categoria con TTL de 5 minutos
 const COUNT_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -409,6 +410,27 @@ export async function updateCategorySettings(userId, categoryId, radiusKm) {
     const checkCat = await db.query('SELECT id, code FROM explore_categories WHERE id = $1', [categoryId]);
     if (checkCat.rowCount === 0) {
         throw new AppError({ status: 404, code: 'CATEGORY_NOT_FOUND', message: 'Category not found' });
+    }
+
+    if (Number(radiusKm) > SUBSCRIPTION_FEATURES.FREE_MAX_RADIUS_KM) {
+        const subResult = await db.query(
+            `SELECT product_id, status, expires_at
+             FROM user_subscriptions
+             WHERE user_id = $1
+             LIMIT 1`,
+            [userId],
+        );
+        const sub = subResult.rows[0];
+        const isNotExpired = !sub?.expires_at || new Date(sub.expires_at) > new Date();
+        const isActive = sub?.status === 'active' && isNotExpired;
+        const isPlusOrPremium = isActive && (sub.product_id === SUBSCRIPTION_PRODUCTS.PLUS || sub.product_id === SUBSCRIPTION_PRODUCTS.PREMIUM);
+        if (!isPlusOrPremium) {
+            throw new AppError({
+                status: 403,
+                code: 'PREMIUM_RADIUS_REQUIRED',
+                message: `Un radio superior a ${SUBSCRIPTION_FEATURES.FREE_MAX_RADIUS_KM} km requiere suscripción MiraiLink Plus o Premium.`,
+            });
+        }
     }
 
     await db.query(

@@ -6,6 +6,7 @@ import { candidateCoordinateSql, resolveUserCoordinates } from '../utils/geoSear
 import { localizedResidenceColumns, localizedResidenceJoins } from '../utils/geographyLocalization.js';
 import { localizedAttributeColumns, localizedAttributeJoins } from './user.controller.js';
 import { invalidateUserCountCache } from '../services/explore.service.js';
+import { FREE_DAILY_LIKES_LIMIT, SUBSCRIPTION_PRODUCTS } from '../consts/subscriptionConsts.js';
 
 async function targetExists(userId) {
     const result = await db.query(
@@ -258,6 +259,38 @@ export const likeUser = async (req, res, next) => {
         if (!await targetExists(toUserId)) {
             return res.status(404).json({ code: 'USER_NOT_FOUND', message: 'User not found' });
         }
+
+        // Check if user has active Plus or Premium subscription (unlimited likes)
+        const subResult = await db.query(
+            `SELECT product_id, status, expires_at
+             FROM user_subscriptions
+             WHERE user_id = $1
+             LIMIT 1`,
+            [fromUserId],
+        );
+        const sub = subResult.rows[0];
+        const isNotExpired = !sub?.expires_at || new Date(sub.expires_at) > new Date();
+        const hasActiveSub = sub?.status === 'active' && isNotExpired &&
+            (sub.product_id === SUBSCRIPTION_PRODUCTS.PREMIUM || sub.product_id === SUBSCRIPTION_PRODUCTS.PLUS);
+
+        if (!hasActiveSub) {
+            const countResult = await db.query(
+                `SELECT COUNT(*)::int AS count
+                 FROM likes
+                 WHERE from_user_id = $1
+                   AND created_at >= NOW() - INTERVAL '24 hours'`,
+                [fromUserId],
+            );
+            const dailyLikesCount = countResult.rows[0]?.count ?? 0;
+            if (dailyLikesCount >= FREE_DAILY_LIKES_LIMIT) {
+                return res.status(403).json({
+                    code: 'DAILY_LIKES_LIMIT_REACHED',
+                    message: `Has alcanzado el límite diario de ${FREE_DAILY_LIKES_LIMIT} likes. Pásate a MiraiLink Plus o Premium para likes ilimitados.`,
+                    limit: FREE_DAILY_LIKES_LIMIT,
+                });
+            }
+        }
+
         await db.query('INSERT INTO likes (from_user_id, to_user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [fromUserId, toUserId]);
         invalidateUserCountCache(fromUserId);
         const reciprocal = await db.query('SELECT 1 FROM likes WHERE from_user_id = $1 AND to_user_id = $2', [toUserId, fromUserId]);

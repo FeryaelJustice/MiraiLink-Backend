@@ -11,6 +11,7 @@ const prefixes = {
     'explore.routes.js': '/api/explore',
     'user.routes.js': '/api/user', 'userphotos.routes.js': '/api/user/photos',
     'users.routes.js': '/api/users',
+    'subscription.routes.js': '/api/subscription',
 };
 
 function openApiPath(expressPath) {

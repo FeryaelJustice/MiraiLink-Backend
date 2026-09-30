@@ -20,6 +20,7 @@ import exploreRoutes from './routes/explore.routes.js';
 import userRoutes from './routes/user.routes.js';
 import userPhotoRoutes from './routes/userphotos.routes.js';
 import usersRoutes from './routes/users.routes.js';
+import subscriptionRoutes from './routes/subscription.routes.js';
 
 const API_PREFIX = '/api';
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -102,6 +103,7 @@ export function createApp({ uploadRoot, enableRateLimits = true, trustProxy = 'l
     app.use(`${API_PREFIX}/catalog`, catalogRoutes);
     app.use(`${API_PREFIX}/report`, reportRoutes);
     app.use(`${API_PREFIX}/feedback`, feedbackRoutes);
+    app.use(`${API_PREFIX}/subscription`, subscriptionRoutes);
     app.use((_req, res) => res.status(404).json({ code: 'NOT_FOUND', message: 'Resource not found' }));
     app.use(errorHandler);
     return app;
