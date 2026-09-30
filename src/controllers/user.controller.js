@@ -10,6 +10,7 @@ import {
     removePhotoFile,
     stagePhoto,
 } from '../utils/photoStorage.js';
+import { SUBSCRIPTION_FEATURES, SUBSCRIPTION_PRODUCTS } from '../consts/subscriptionConsts.js';
 
 function parseInterestIds(value) {
     if (value === undefined) return null;
@@ -530,6 +531,37 @@ export const updateSearchSettings = async (req, res, next) => {
             search_target_country_id = null,
             search_match_live_location = false,
         } = req.body;
+
+        // Validar suscripcion activa para caracteristicas Plus y Premium
+        const subResult = await db.query(
+            `SELECT product_id, status, expires_at
+             FROM user_subscriptions
+             WHERE user_id = $1
+             LIMIT 1`,
+            [req.user.id],
+        );
+        const sub = subResult.rows[0];
+        const isNotExpired = !sub?.expires_at || new Date(sub.expires_at) > new Date();
+        const isActive = sub?.status === 'active' && isNotExpired;
+        const isPremium = isActive && sub.product_id === SUBSCRIPTION_PRODUCTS.PREMIUM;
+        const isPlus = isActive && (sub.product_id === SUBSCRIPTION_PRODUCTS.PLUS || isPremium);
+
+        // 1. Radio ampliado (> 250 km) requiere al menos MiraiLink Plus
+        if (Number(search_radius_km) > SUBSCRIPTION_FEATURES.FREE_MAX_RADIUS_KM && !isPlus) {
+            return res.status(403).json({
+                code: 'PREMIUM_RADIUS_REQUIRED',
+                message: `Un radio superior a ${SUBSCRIPTION_FEATURES.FREE_MAX_RADIUS_KM} km requiere suscripción MiraiLink Plus o Premium.`,
+                maxFreeRadiusKm: SUBSCRIPTION_FEATURES.FREE_MAX_RADIUS_KM,
+            });
+        }
+
+        // 2. Modo Pasaporte ('specific_country' o 'world') requiere MiraiLink Premium
+        if (SUBSCRIPTION_FEATURES.PASSPORT_SCOPES.includes(search_scope) && !isPremium) {
+            return res.status(403).json({
+                code: 'PREMIUM_PASSPORT_REQUIRED',
+                message: 'El Modo Pasaporte y búsqueda mundial requiere suscripción MiraiLink Premium.',
+            });
+        }
 
         await db.query(
             `INSERT INTO user_search_preferences (

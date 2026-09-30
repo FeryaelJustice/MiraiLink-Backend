@@ -656,6 +656,43 @@ paths:
         '201': { $ref: '#/components/responses/Created' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '429': { $ref: '#/components/responses/RateLimited' }
+  /api/subscription/status:
+    get:
+      tags: [Subscription]
+      operationId: getSubscriptionStatus
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/subscription/verify:
+    post:
+      tags: [Subscription]
+      operationId: verifySubscription
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [purchaseToken, productId]
+              properties:
+                purchaseToken: { type: string }
+                productId: { type: string }
+                basePlanId: { type: string, default: 'monthly-autorenew' }
+                orderId: { type: string }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/subscription/cancel-intent:
+    post:
+      tags: [Subscription]
+      operationId: cancelSubscriptionIntent
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
 
 components:
   securitySchemes:
