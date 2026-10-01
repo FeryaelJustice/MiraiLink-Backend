@@ -25,6 +25,10 @@ async function initializeMessaging() {
     return getMessaging(app);
 }
 
+/**
+ * Inicializa Messaging al primer uso y memoriza la Promise, incluida una posible rejection.
+ * Falta de archivo de credenciales puede manifestarse después del arranque HTTP.
+ */
 export function getFcm() {
     messagingPromise ??= initializeMessaging();
     return messagingPromise;

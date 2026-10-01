@@ -260,7 +260,7 @@ export const likeUser = async (req, res, next) => {
             return res.status(404).json({ code: 'USER_NOT_FOUND', message: 'User not found' });
         }
 
-        // Check if user has active Plus or Premium subscription (unlimited likes)
+        // Comprobar el estado Plus/Premium local para aplicar el límite de likes
         const subResult = await db.query(
             `SELECT product_id, status, expires_at
              FROM user_subscriptions

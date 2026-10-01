@@ -37,6 +37,10 @@ function setCachedCount(userId, categoryId, radiusKm, count) {
     countsCache.set(key, { count, expiresAt: Date.now() + COUNT_CACHE_TTL_MS });
 }
 
+/**
+ * Construye filtros desde categorías internas y adapta códigos de metas.
+ * Anime/game comprueban existencia de intereses; no filtran por cada subgénero de filter_value.
+ */
 function buildCategoryFilterSql(filterType, filterValue) {
     switch (filterType) {
         case 'anime':
@@ -406,6 +410,10 @@ export async function getCategorySettings(userId, categoryId) {
     };
 }
 
+/**
+ * Valida categoría/radio/plan y hace upsert de preferencia usuario-categoría.
+ * El radio de categoría no es la preferencia global; la caché se mantiene en memoria de proceso.
+ */
 export async function updateCategorySettings(userId, categoryId, radiusKm) {
     const checkCat = await db.query('SELECT id, code FROM explore_categories WHERE id = $1', [categoryId]);
     if (checkCat.rowCount === 0) {

@@ -1,0 +1,21 @@
+@startuml
+object "chat : chats" as Chat {
+ type = private
+}
+object "miembroA : chat_members" as A {
+ role = admin
+}
+object "miembroB : chat_members" as B {
+ role = member
+}
+object "mensaje : messages" as M {
+ text = ejemplo sin datos reales
+}
+A --> Chat : chat_id
+B --> Chat : chat_id
+M --> Chat : chat_id
+note bottom of Chat
+Instancias conceptuales del esquema.
+No contiene registros de una base real.
+end note
+@enduml

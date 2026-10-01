@@ -1,5 +1,9 @@
 const FALLBACK_LANGUAGE = 'es';
 
+/**
+ * Resuelve idiomas y variantes de Accept-Language en orden, con fallback es.
+ * No implementa ordenación por quality weights; textos localizados conservan IDs canónicos.
+ */
 export function resolveCatalogLanguage(header) {
     const candidates = String(header ?? '')
         .split(',')
@@ -9,6 +13,10 @@ export function resolveCatalogLanguage(header) {
     return candidates.find(value => ['es', 'en', 'ja'].includes(value)) ?? FALLBACK_LANGUAGE;
 }
 
+/**
+ * Conserva URLs absolutas y resuelve rutas relativas contra PUBLIC_ORIGIN u origen request.
+ * Detrás de proxy, una configuración incorrecta puede dar URLs inaccesibles para clientes.
+ */
 export function resolvePublicMediaUrl(value, req) {
     if (!value || /^https?:\/\//i.test(value)) return value ?? null;
     const origin = process.env.PUBLIC_ORIGIN ?? `${req.protocol}://${req.get('host')}`;

@@ -1,3 +1,7 @@
+/**
+ * Compone rutas de denuncias: ordena guardas, validación y handler.
+ * El prefijo /api lo monta createApp; consultar docs/estudio/flujos y OpenAPI al cambiar contratos.
+ */
 import express from 'express';
 import { reportUser } from '../controllers/report.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';

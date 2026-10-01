@@ -67,6 +67,10 @@ export function printSimulatorLog({ to, subject, type, code, deepLink, webLink, 
     console.log('======================================================\n');
 }
 
+/**
+ * Envía SMTP cuando hay credenciales; si faltan o falla, usa simulación por consola.
+ * El resultado simulated no acredita entrega real y el log puede incluir códigos sensibles.
+ */
 export async function sendGenericEmail({ to, subject, html, text, logData = {} }) {
     const transport = getTransporter();
 

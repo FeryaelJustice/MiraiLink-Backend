@@ -1,0 +1,19 @@
+@startuml
+node "Dispositivo cliente" as Cliente
+node "TLS proxy opcional" as Proxy
+node "Host backend" {
+ artifact "Proceso Node / Express" as API
+ folder "Fotos en filesystem" as Media
+}
+database "PostgreSQL" as DB
+cloud "SMTP / Firebase / RAWG / Jikan" as Proveedores
+Cliente --> Proxy : HTTPS
+Proxy --> API : HTTP interno
+API --> DB : pg
+API --> Media : staging y entrega
+API --> Proveedores : llamadas externas
+note right of Proxy
+Topología orientativa.
+No confirma infraestructura desplegada.
+end note
+@enduml

@@ -54,6 +54,10 @@ const environmentSchema = z.object({
     CATALOG_SYNC_INTERVAL_HOURS: z.coerce.number().int().min(1).default(24),
 });
 
+/**
+ * Valida configuración del arranque y devuelve un objeto normalizado.
+ * Los defaults no se escriben en process.env; los consumidores directos mantienen sus propios fallbacks.
+ */
 export function parseEnv(input = process.env) {
     const result = environmentSchema.safeParse(input);
     if (!result.success) {

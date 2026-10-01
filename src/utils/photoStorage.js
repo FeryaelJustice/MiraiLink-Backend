@@ -9,6 +9,10 @@ export function profileUploadRoot() {
         : resolve('src', UPLOAD_DIR_PROFILES_STRING);
 }
 
+/**
+ * Escribe imagen validada en staging exclusivo con UUID y permisos 0600.
+ * El caller promueve o limpia el archivo: este paso no confirma una fila PostgreSQL.
+ */
 export async function stagePhoto(userId, file, root = profileUploadRoot()) {
     const directory = join(root, userId);
     await fs.mkdir(directory, { recursive: true });
@@ -39,6 +43,10 @@ export async function removePhotoFile(url, root = profileUploadRoot()) {
     });
 }
 
+/**
+ * Limpia staging y destino como compensación de un fallo de upload.
+ * Ignora ENOENT, pero no convierte filesystem en una transacción PostgreSQL.
+ */
 export async function cleanupStagedPhoto(staged) {
     await Promise.all([staged.stagingPath, staged.finalPath].map(path =>
         fs.unlink(path).catch(error => {

@@ -1,3 +1,7 @@
+/**
+ * Compone rutas de descubrimiento y votos: ordena guardas, validación y handler.
+ * El prefijo /api lo monta createApp; consultar docs/estudio/flujos y OpenAPI al cambiar contratos.
+ */
 import express from 'express';
 import { dislikeUser, getFeed, getReceivedLikes, likeUser } from '../controllers/swipe.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';

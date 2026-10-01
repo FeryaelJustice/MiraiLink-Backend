@@ -1,0 +1,14 @@
+@startuml
+object "cliente HTTP" as C
+object "sendMessage" as H
+object "cliente pg" as D
+object "notificationService" as N
+C --> H : 1. request
+H --> D : 2. BEGIN / lock / INSERT / COMMIT
+H --> C : 3. respuesta 201
+H --> N : 4. notificación asíncrona
+note bottom of H
+Vista de comunicación numerada.
+No sustituye la secuencia con alternativas.
+end note
+@enduml

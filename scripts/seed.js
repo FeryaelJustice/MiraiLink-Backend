@@ -407,8 +407,8 @@ async function runSeed() {
 
         for (const user of testUsers) {
             const passwordHash = await bcrypt.hash(user.password, rounds);
-            // Reuse an existing row when the seed username already exists.
-            // This keeps the seed idempotent across databases created by older seeds.
+            // Reutilizar la fila existente cuando el username del seed ya está presente.
+            // Evita duplicar identidades en bases creadas con seeds anteriores.
             const existingUser = await client.query(
                 'SELECT id FROM users WHERE username = $1 LIMIT 1',
                 [user.username],
@@ -555,7 +555,7 @@ async function runSeed() {
             }
         }
 
-        // Ensure app version is seeded
+        // Precargar configuración de versión Android
         await client.query(
             `INSERT INTO app_versions (platform, min_supported_version_code, latest_version_code, message, play_store_url)
              VALUES ('android', 1, 33, 'Actualización recomendada', 'https://play.google.com/store/apps/details?id=com.feryaeljustice.mirailink')

@@ -1,3 +1,7 @@
+/**
+ * Compone rutas de mensajes de soporte: ordena guardas, validación y handler.
+ * El prefijo /api lo monta createApp; consultar docs/estudio/flujos y OpenAPI al cambiar contratos.
+ */
 import express from 'express';
 import { sendFeedback } from '../controllers/feedback.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';

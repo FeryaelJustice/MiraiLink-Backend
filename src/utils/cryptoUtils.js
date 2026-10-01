@@ -12,6 +12,10 @@ function keyBuffer(keyHex = process.env.SECRET_2FA_KEY) {
     return key;
 }
 
+/**
+ * Cifra secreto recuperable con AES-256-GCM y nonce aleatorio de 12 bytes.
+ * El formato v2 incluye versión, nonce, tag y ciphertext; no es un password hash.
+ */
 export function encrypt(text, { keyHex } = {}) {
     const nonce = crypto.randomBytes(12);
     const cipher = crypto.createCipheriv(CURRENT_ALGORITHM, keyBuffer(keyHex), nonce);
@@ -58,6 +62,10 @@ function decryptLegacy(encrypted, { keyHex, legacyIvHex }) {
     return decipher.update(encrypted, 'hex', 'utf8') + decipher.final('utf8');
 }
 
+/**
+ * Lee formato v2 GCM o usa compatibilidad legacy CBC con IV explícito.
+ * Cambiar clave sin migrar datos impide recuperar secretos ya almacenados.
+ */
 export function decrypt(encrypted, options = {}) {
     const parts = encrypted.split(':');
     if (parts[0] === CURRENT_VERSION) {

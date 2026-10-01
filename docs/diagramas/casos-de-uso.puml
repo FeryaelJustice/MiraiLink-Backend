@@ -1,0 +1,26 @@
+@startuml
+left to right direction
+actor "Cliente autenticado" as Cliente
+actor "Cliente sin sesión" as Visitante
+actor "Operador autorizado" as Operador
+rectangle "API MiraiLink" {
+ usecase "Registrar o iniciar sesión" as Acceso
+ usecase "Confirmar código o challenge" as Codigo
+ usecase "Gestionar perfil y fotos" as Perfil
+ usecase "Descubrir y votar" as Feed
+ usecase "Enviar y consultar mensajes" as Chat
+ usecase "Registrar purchaseToken" as Compra
+ usecase "Migrar y mantener catálogos" as Mantenimiento
+}
+Visitante --> Acceso
+Visitante --> Codigo
+Cliente --> Perfil
+Cliente --> Feed
+Cliente --> Chat
+Cliente --> Compra
+Operador --> Mantenimiento
+note right of Compra
+El handler no verifica la compra
+con Google Play Developer API.
+end note
+@enduml

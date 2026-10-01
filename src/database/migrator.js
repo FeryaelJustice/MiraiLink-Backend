@@ -5,6 +5,10 @@ import { fileURLToPath } from 'node:url';
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
 const migrationsDir = path.join(currentDir, 'migrations');
 
+/**
+ * Serializa migraciones con advisory lock de sesión y procesa filenames en orden.
+ * Requiere baseline previo. El registro del filename ocurre después del SQL y no comparte su COMMIT.
+ */
 export async function runMigrations(pool) {
     const client = await pool.connect();
     try {

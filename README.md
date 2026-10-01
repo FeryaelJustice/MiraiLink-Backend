@@ -1,3 +1,5 @@
+> **Estudio técnico del proyecto:** [Guía maestra en español](docs/guia-maestra.md), con documentos por tema, diagramas, configuración, casos de error y revisión conectada con el otro repositorio.
+
 <p align="center">
   <img src="https://raw.githubusercontent.com/FeryaelJustice/MiraiLink/master/app/src/main/res/drawable/logomirailink.webp" alt="MiraiLink Logo" width="130" />
 </p>
@@ -5,7 +7,7 @@
 <h1 align="center">MiraiLink Backend</h1>
 
 <p align="center">
-  <strong>Motor de servicios RESTful, autenticacion blindada y persistencia para la plataforma social MiraiLink.</strong><br>
+  <strong>Motor de servicios RESTful, autenticacion y persistencia para la plataforma social MiraiLink.</strong><br>
   <em>Construido con Node.js 22, Express 5, PostgreSQL 16, validacion Zod, 2FA TOTP y contrato OpenAPI 3.1.</em>
 </p>
 
@@ -66,7 +68,7 @@
 **MiraiLink Backend** es el corazon del ecosistema social y de citas MiraiLink. Proporciona una plataforma de servicios robusta, segura y de alto rendimiento que conecta usuarios a traves de afinidades tematicas en anime, manga y videojuegos.
 
 El servicio esta desarrollado bajo estandares rigurosos de calidad de software:
-- **43 Operaciones RESTful Verificadas**: Cubriendo autenticacion, gestion de perfil, fotografias con validacion de firmas binarias, algoritmo de swipes/matching, mensajeria privada, catalogos de cultura otaku y moderacion.
+- **59 Operaciones RESTful Documentadas**: Cubriendo autenticacion, gestion de perfil, fotografias con validacion de firmas binarias, algoritmo de swipes/matching, mensajeria privada, catalogos de cultura otaku y moderacion.
 - **Validacion Estricta con Zod**: Parseo de esquemas y coercion segura en query, params y body antes de que cualquier controlador intervenga.
 - **Seguridad Multicapa**: Autenticacion basada en Bearer JWT con lista negra de tokens revocados, autenticacion en dos pasos (2FA) con TOTP y codigos de recuperacion con hash bcrypt, rate limiting adaptativo y cabeceras de proteccion con Helmet y CORS.
 - **Desacoplamiento para Testing**: La definicion de la aplicacion Express (`src/app.js`) esta separada del proceso de red (`src/server.js`), posibilitando la ejecucion de suites de pruebas con Supertest sin levantar sockets TCP ni depender de servicios externos en frio.
@@ -129,19 +131,19 @@ No se utiliza un ORM pesado: los controladores ejecutan **consultas SQL parametr
 
 ## Matriz de Dominios y Modulos de la API
 
-La API cuenta con 43 operaciones organizadas en 9 modulos de dominio:
+El contrato vigente documenta 59 operaciones. La siguiente tabla resume dominios; el inventario completo está en [Contratos HTTP](docs/estudio/contratos-http.md):
 
 | Dominio | Prefijo de Ruta | Controlador | Persistencia Principal | Descripcion Funcional |
 | :--- | :--- | :--- | :--- | :--- |
 | **Version Android** | `/api/app` | `app.controller.js` | `app_versions` | Control de versiones requeridas y compatibilidad con el cliente movil. |
 | **Autenticacion y 2FA** | `/api/auth` | `auth.controller.js` | `users`, `user_2fa`, `token_blacklist` | Registro, login, verificacion de email, recuperacion de clave y flujo TOTP 2FA. |
-| **Perfil de Usuario** | `/api/user`, `/api/users` | `user.controller.js` | `users`, `user_interests` | Consulta y edicion de biografia, animes, videojuegos, genero y preferencias. |
-| **Fotografias y Media** | `/api/userphotos` | `photo.controller.js` | `user_photos`, filesystem | Subida transaccional con validacion de magic bytes y gestion de avatar principal. |
-| **Descubrimiento (Swipes)** | `/api/swipes` | `swipe.controller.js` | `users`, `likes`, `dislikes` | Obtencion de cartas de descubrimiento y registro de interacciones Like/Dislike. |
-| **Coincidencias (Matches)**| `/api/matches` | `match.controller.js` | `matches` | Listado y detalle de matches mutuos activos. |
-| **Mensajeria y Chat** | `/api/chats` | `chat.controller.js` | `chats`, `chat_members`, `chat_messages`| Historial de chats privados, envio de mensajes, lectura y contador de no leidos. |
+| **Perfil de Usuario** | `/api/user`, `/api/users` | `user.controller.js` | `users`, `user_anime_interests`, `user_game_interests` | Consulta y edicion de biografia, animes, videojuegos, genero y preferencias. |
+| **Fotografias y Media** | `/api/user/photos` | `photo.controller.js` | `user_photos`, filesystem | Subida transaccional con validacion de magic bytes y gestion de avatar principal. |
+| **Descubrimiento (Swipes)** | `/api/swipe` | `swipe.controller.js` | `users`, `likes`, `dislikes` | Obtencion de cartas de descubrimiento y registro de interacciones Like/Dislike. |
+| **Coincidencias (Matches)**| `/api/match` | `match.controller.js` | `matches` | Listado y detalle de matches mutuos activos. |
+| **Mensajeria y Chat** | `/api/chats` | `chat.controller.js` | `chats`, `chat_members`, `messages`| Historial de chats privados, envio de mensajes, lectura y contador de no leidos. |
 | **Catalogos Otaku/Gamer** | `/api/catalog` | `catalog.controller.js` | `animes`, `games` | Listado y busqueda de animes y franquicias de videojuegos precargadas. |
-| **Moderacion y Soporte** | `/api/reports`, `/api/feedback` | Controladores dedicados | `reports`, `feedback` | Denuncia de conductas inapropiadas y buzon de sugerencias de la aplicacion. |
+| **Moderacion y Soporte** | `/api/report`, `/api/feedback` | Controladores dedicados | `reports`, `feedback` | Denuncia de conductas inapropiadas y buzon de sugerencias de la aplicacion. |
 
 - - -
 
@@ -252,7 +254,7 @@ El workflow de GitHub Actions (`.github/workflows/ci.yml`) se ejecuta de manera 
 ```text
 MiraiLink-Backend/
 ├── docs/                                  # Documentacion tecnica exhaustiva
-│   ├── api-reference.md                   # Catalogo de las 43 operaciones de la API
+│   ├── api-reference.md                   # Catalogo de las 59 operaciones de la API
 │   ├── architecture.md                    # Diseno del sistema y decisiones tecnicas
 │   ├── code-reference.md                  # Referencia de metodos, parametros y retornos
 │   ├── codebase-map.md                    # Mapa navegable de carpetas y archivos
@@ -377,7 +379,7 @@ El repositorio incluye documentacion tecnica profunda en la carpeta `docs/`. Se 
 1. [Arquitectura](docs/architecture.md): Recorrido de peticiones, limites, dependencias y decisiones de diseno.
 2. [Mapa del Codigo](docs/codebase-map.md): Funcion especifica de cada directorio y archivo del proyecto.
 3. [Referencia de Codigo](docs/code-reference.md): Funciones, parametros, efectos colaterales y consumidores.
-4. [Guia de API](docs/api-reference.md): Autenticacion, requests, responses y catalogo de las 43 operaciones.
+4. [Guia de API](docs/api-reference.md): Autenticacion, requests, responses y catalogo de las 59 operaciones.
 5. [Especificacion OpenAPI 3.1](docs/openapi.yaml): Contrato legible por maquinas para Swagger, Redoc y agentes.
 6. [Base de Datos](docs/database.md): Modelo relacional, tablas, indices y migraciones de seguridad.
 7. [Runtime y Configuracion](docs/runtime-and-configuration.md): Variables de entorno y ciclo operativo.

@@ -1,3 +1,7 @@
+/**
+ * Esquemas de entrada consumidos por validate() antes de los controllers.
+ * Coerciones, defaults y campos omitidos afectan el contrato; no prueban autorización ni existencia en DB.
+ */
 import { z } from 'zod';
 
 const email = z.string().trim().email().max(254).transform(value => value.toLowerCase());
@@ -35,10 +39,10 @@ function isNotTrivialPassword(pwd) {
     if (!pwd || typeof pwd !== 'string') return false;
     if (!isSafeSqlInput(pwd)) return false;
 
-    // Reject repeated characters (e.g. 11111111, aaaaaaaa)
+    // Rechazar caracteres repetidos, por ejemplo 11111111 o aaaaaaaa
     if (/^(.)\1+$/.test(pwd)) return false;
 
-    // Reject sequential ascending or descending digits or letters (e.g. 12345678, 87654321, abcdefgh)
+    // Rechazar secuencias ascendentes/descendentes triviales, por ejemplo 12345678, 87654321 o abcdefgh
     const sequences = [
         '01234567890123456789',
         '98765432109876543210',

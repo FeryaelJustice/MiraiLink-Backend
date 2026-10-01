@@ -1,3 +1,7 @@
+/**
+ * Compone rutas de coincidencias y marcas de visto: ordena guardas, validación y handler.
+ * El prefijo /api lo monta createApp; consultar docs/estudio/flujos y OpenAPI al cambiar contratos.
+ */
 import express from 'express';
 import { getMatches, getUnseenMatches, markMatchesSeen } from '../controllers/match.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';

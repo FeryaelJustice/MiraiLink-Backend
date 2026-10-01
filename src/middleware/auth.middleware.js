@@ -5,6 +5,10 @@ function unauthorized(res, code, message) {
     return res.status(401).json({ code, message });
 }
 
+/**
+ * Exige Bearer access, comprueba revocación y estado actual de usuario en PostgreSQL.
+ * allowUnverified se limita a rutas de cuenta; no autoriza pertenencia a recursos como chats.
+ */
 export const authenticateToken = (allowUnverified = false) => async (req, res, next) => {
     const [scheme, token] = (req.headers.authorization ?? '').split(' ');
     if (scheme !== 'Bearer' || !token) {
@@ -46,6 +50,10 @@ export const authenticateToken = (allowUnverified = false) => async (req, res, n
     }
 };
 
+/**
+ * Añade identidad si firma/purpose son válidos, o continúa sin ella.
+ * No repite blacklist ni estado actual del usuario; no sustituye authenticateToken en rutas protegidas.
+ */
 export const optionalAuthenticateToken = () => async (req, res, next) => {
     const [scheme, token] = (req.headers.authorization ?? '').split(' ');
     if (scheme !== 'Bearer' || !token) {
@@ -60,7 +68,7 @@ export const optionalAuthenticateToken = () => async (req, res, next) => {
             req.token = token;
         }
     } catch (_error) {
-        // Continue unauthenticated if token is invalid or expired
+        // Continuar sin autenticación si el token es inválido o ha vencido
     }
     return next();
 };

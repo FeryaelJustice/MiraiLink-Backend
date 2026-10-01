@@ -2,6 +2,10 @@ import { AppError } from '../errors/AppError.js';
 
 const requestSections = ['params', 'query', 'body'];
 
+/**
+ * Reemplaza una sección por datos saneados de Zod mediante property descriptor.
+ * Evita asignar directamente a getters de Express 5, especialmente req.query.
+ */
 function replaceRequestSection(req, section, value) {
     Object.defineProperty(req, section, {
         configurable: true,

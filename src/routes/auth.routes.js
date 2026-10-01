@@ -1,3 +1,7 @@
+/**
+ * Compone rutas de acceso, verificación, reset y segundo factor: ordena guardas, validación y handler.
+ * El prefijo /api lo monta createApp; consultar docs/estudio/flujos y OpenAPI al cambiar contratos.
+ */
 import express from 'express';
 import { autoLogin, check2FAStatus, checkIsVerified, confirmPasswordReset, confirmVerificationCode, disable2FA, login, loginVerify2FALastStep, logout, register, requestPasswordReset, requestVerificationCode, setup2FA, verify2FA } from '../controllers/auth.controller.js';
 import { authenticateToken, optionalAuthenticateToken } from '../middleware/auth.middleware.js';
