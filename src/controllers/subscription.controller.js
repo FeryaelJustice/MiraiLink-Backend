@@ -52,6 +52,10 @@ export const getSubscriptionStatus = async (req, res, next) => {
     }
 };
 
+/**
+ * Registra purchaseToken y calcula expiración por base plan en la base local.
+ * No consulta Google Play Developer API. Repetir el request recalcula vencimiento desde NOW().
+ */
 export const verifySubscription = async (req, res, next) => {
     try {
         const userId = req.user.id;
@@ -108,6 +112,10 @@ export const verifySubscription = async (req, res, next) => {
     }
 };
 
+/**
+ * Registra intención local y devuelve enlace de gestión de Google Play.
+ * Cambiar auto_renewing aquí no cancela facturación en el proveedor.
+ */
 export const cancelSubscriptionIntent = async (req, res, next) => {
     try {
         const userId = req.user.id;

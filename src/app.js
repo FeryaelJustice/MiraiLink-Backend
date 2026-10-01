@@ -67,6 +67,10 @@ function createCorsOptions() {
     };
 }
 
+/**
+ * Construye Express sin abrir listener, para server y pruebas HTTP con Supertest.
+ * Middleware global precede routers; uploadRoot permite pruebas sin usar almacenamiento real.
+ */
 export function createApp({ uploadRoot, enableRateLimits = true, trustProxy = 'loopback' } = {}) {
     const resolvedProfileUploadRoot =
         (uploadRoot && uploadRoot.trim().length > 0)

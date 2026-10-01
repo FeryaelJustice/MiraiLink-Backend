@@ -21,7 +21,7 @@ if (!process.env.DB_URL) {
 }
 
 async function resetDatabase() {
-    // 0. Ensure target database exists
+    // 0. Asegurar existencia de la base objetivo; este script modifica el entorno
     const urlObj = new URL(process.env.DB_URL);
     const targetDbName = urlObj.pathname.replace(/^\//, '');
     const adminUrlObj = new URL(process.env.DB_URL);

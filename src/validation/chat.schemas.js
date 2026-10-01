@@ -1,3 +1,7 @@
+/**
+ * Esquemas de entrada consumidos por validate() antes de los controllers.
+ * Coerciones, defaults y campos omitidos afectan el contrato; no prueban autorización ni existencia en DB.
+ */
 import { z } from 'zod';
 import { uuid } from './common.schemas.js';
 

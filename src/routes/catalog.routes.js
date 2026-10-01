@@ -1,3 +1,7 @@
+/**
+ * Compone rutas de catálogos localizados y geografía: ordena guardas, validación y handler.
+ * El prefijo /api lo monta createApp; consultar docs/estudio/flujos y OpenAPI al cambiar contratos.
+ */
 import express from 'express';
 import { getAllAnimes, getAllGames, getCities, getCountries, getProfileOptions, getRegions } from '../controllers/catalog.controller.js';
 

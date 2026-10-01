@@ -1,6 +1,10 @@
 import db from '../models/db.js';
 import { cleanupStagedPhoto, finalizePhoto, removePhotoFile, stagePhoto } from '../utils/photoStorage.js';
 
+/**
+ * Compensa staging mientras bloquea fotos existentes y actualiza posición/archivo.
+ * El filesystem no comparte COMMIT: la limpieza posterior puede fallar con la fila ya confirmada.
+ */
 export const uploadPhoto = async (req, res, next) => {
     if (!req.file) return res.status(400).json({ code: 'FILE_REQUIRED', message: 'A photo is required' });
     const client = await db.connect();

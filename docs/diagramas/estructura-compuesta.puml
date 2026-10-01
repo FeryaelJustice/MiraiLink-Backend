@@ -1,0 +1,18 @@
+@startuml
+component "Express app" {
+ component "requestId / CORS / JSON / Helmet" as Global
+ component "routers API" as R
+ component "controllers" as C
+ component "errorHandler" as E
+ Global --> R
+ R --> C
+ R --> E : next(error)
+ C --> E : next(error)
+}
+interface "HTTP" as HTTP
+HTTP --> Global
+note bottom of R
+Composición interna de createApp.
+Vista estructural; no representa procesos separados.
+end note
+@enduml

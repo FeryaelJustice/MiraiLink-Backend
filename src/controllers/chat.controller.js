@@ -80,6 +80,10 @@ export const getMessages = async (req, res, next) => {
     }
 };
 
+/**
+ * Serializa la pareja ordenada con advisory lock transaccional y reutiliza chat existente.
+ * La pertenencia se guarda en chat_members; no se requiere un FK a matches.
+ */
 export const createPrivateChat = async (req, res, next) => {
     try {
         if (req.user.id === req.body.otherUserId) {
@@ -139,6 +143,10 @@ export const getChatMembers = async (req, res, next) => {
     }
 };
 
+/**
+ * Actualiza last_read_at del miembro, usado para calcular unread_count.
+ * No marca todas las filas messages.is_read; la autorización pertenece a requireChatMember.
+ */
 export const markChatAsRead = async (req, res, next) => {
     try {
         await db.query('UPDATE chat_members SET last_read_at = NOW() WHERE user_id = $1 AND chat_id = $2', [req.user.id, req.params.chatId]);
@@ -148,6 +156,10 @@ export const markChatAsRead = async (req, res, next) => {
     }
 };
 
+/**
+ * Guarda chat/membresía/mensaje en transacción; responde antes de enviar FCM.
+ * No requiere match previo ni clave idempotente; el fallo push no deshace el mensaje confirmado.
+ */
 export const sendMessage = async (req, res, next) => {
     try {
         if (req.user.id === req.body.toUserId) {

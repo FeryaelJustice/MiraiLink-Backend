@@ -1,3 +1,5 @@
+> **Referencia de estudio actualizada (2026-10-01):** [Guía maestra](guia-maestra.md). Para el estado vigente por tema, seguir sus enlaces. Los recuentos, rutas y ejemplos históricos de este documento deben contrastarse con los routers y el contrato actual.
+
 # Referencia de código
 
 Esta referencia cubre los archivos activos, la única clase propia y las funciones exportadas. Los handlers Express reciben `(req, res, next)` salvo que se indique lo contrario.

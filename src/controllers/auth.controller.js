@@ -16,6 +16,10 @@ const neutralEmailResponse = { message: 'If the account is eligible, a code will
 const generateCode = () => randomInt(100000, 1000000).toString();
 const rounds = () => Number(process.env.SALT_ROUNDS ?? 12);
 
+/**
+ * Ejecuta trabajo SQL en un cliente y libera la conexión incluso al fallar.
+ * Efectos externos dentro de work, como SMTP, no se revierten con ROLLBACK.
+ */
 async function withTransaction(work) {
     const client = await db.connect();
     try {
@@ -164,6 +168,10 @@ export const requestPasswordReset = async (req, res, next) => {
     }
 };
 
+/**
+ * Comprueba código vigente, actualiza bcrypt hash y elimina solicitudes en una transacción.
+ * No revoca por sí solo todos los JWT de acceso previamente emitidos.
+ */
 export const confirmPasswordReset = async (req, res, next) => {
     try {
         const result = await db.query(
@@ -245,7 +253,7 @@ export const confirmVerificationCode = async (req, res, next) => {
             );
             verification = result.rows[0];
         } else {
-            // Fallback: If userId wasn't passed, find active tokens of this type and compare bcrypt hash
+            // Fallback sin userId: comparar hashes bcrypt de hasta 20 códigos activos del tipo; no equivale a identificar al solicitante.
             const result = await db.query(
                 `SELECT id, token_hash, user_id FROM verification_tokens
                  WHERE type = $1 AND expires_at > NOW()
@@ -279,6 +287,10 @@ export const confirmVerificationCode = async (req, res, next) => {
     }
 };
 
+/**
+ * Genera secreto y ocho recovery codes, devuelve material de configuración una vez.
+ * Guarda secreto cifrado y hashes con enabled false hasta que verify2FA confirme TOTP.
+ */
 export const setup2FA = async (req, res, next) => {
     try {
         const userId = req.user.id ?? req.user.sub;

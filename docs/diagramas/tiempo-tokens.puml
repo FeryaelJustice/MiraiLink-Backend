@@ -1,0 +1,18 @@
+@startuml
+robust "Challenge 2FA" as Challenge
+robust "Access JWT" as Access
+@0
+Challenge is Emitido
+Access is NoEmitido
+@300
+Challenge is Expirado
+@0
+Access is Emitido
+@86400
+Access is Expirado
+note bottom of Access
+Vistas de TTL independientes desde emisión.
+Access no se emite necesariamente en t=0 del challenge.
+Revocación puede invalidarlo antes de su TTL.
+end note
+@enduml

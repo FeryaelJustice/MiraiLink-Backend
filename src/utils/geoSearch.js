@@ -23,6 +23,10 @@ export function isActiveLocationFresh(updatedAt, now = new Date()) {
         && now.getTime() - updatedTime <= ACTIVE_LOCATION_MAX_AGE_MS;
 }
 
+/**
+ * Elige residencia o ubicación activa fresca según el scope, sin inventar origen si falta.
+ * Se usa para radio/feed; null debe conservarse como geografía desconocida.
+ */
 export function resolveUserCoordinates(user, useActiveLocation, now = new Date()) {
     if (
         useActiveLocation
@@ -38,6 +42,10 @@ export function resolveUserCoordinates(user, useActiveLocation, now = new Date()
     return null;
 }
 
+/**
+ * Genera expresiones SQL internas para coordenadas candidatas, no valores de usuario.
+ * La condición SQL tiene límite inferior de antigüedad; no descarta futuro como el helper JS.
+ */
 export function candidateCoordinateSql(useActiveLocation) {
     if (!useActiveLocation) {
         return {

@@ -9,6 +9,10 @@ const TOTP_OPTIONS = {
     window: 1,
 };
 
+/**
+ * Descifra secreto y verifica TOTP de seis dígitos con step 30s y window 1.
+ * No consume recovery codes ni cambia el estado enabled por sí solo.
+ */
 export function verifyTotp(encryptedSecret, token) {
     return speakeasy.totp.verify({
         ...TOTP_OPTIONS,
@@ -22,6 +26,10 @@ export function hashRecoveryCodes(codes) {
     return Promise.all(codes.map(code => bcrypt.hash(code, rounds)));
 }
 
+/**
+ * Compara hashes no usados bajo FOR UPDATE y marca exactamente la fila aceptada.
+ * El caller debe abrir/confirmar la transacción en el mismo cliente para conservar el lock.
+ */
 export async function useRecoveryCode(client, userId, candidate) {
     const result = await client.query(
         `SELECT id, code_hash FROM recovery_codes

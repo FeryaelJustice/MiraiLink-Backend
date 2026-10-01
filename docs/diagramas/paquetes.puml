@@ -1,0 +1,24 @@
+@startuml
+package routes
+package middleware
+package validation
+package controllers
+package services
+package utils
+package dto
+package models
+package database
+routes --> middleware
+routes --> validation
+routes --> controllers
+controllers --> services
+controllers --> utils
+controllers --> dto
+controllers --> models
+services --> models
+database --> models
+note bottom of controllers
+Incluye SQL y orquestación.
+No existe ORM/repositorio aislado.
+end note
+@enduml

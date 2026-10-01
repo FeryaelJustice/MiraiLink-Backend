@@ -1,0 +1,21 @@
+@startuml
+start
+:Validar entrada de login;
+if (Credencial correcta?) then (sí)
+ if (2FA enabled?) then (sí)
+  :Interacción de challenge y código;
+  if (Segundo factor válido?) then (sí)
+   :Interacción de emisión access JWT;
+  else (no)
+   :Responder error;
+   stop
+  endif
+ else (no)
+  :Interacción de emisión access JWT;
+ endif
+ :Interacción de autorización de recursos;
+else (no)
+ :Responder INVALID_CREDENTIALS;
+endif
+stop
+@enduml

@@ -9,6 +9,10 @@ function secret() {
     return process.env.JWT_SECRET;
 }
 
+/**
+ * Emite JWT de acceso HS256 durante 24h con purpose access.
+ * Su consumidor debe validar blacklist y estado actual de la cuenta además de la firma.
+ */
 export function createAccessToken(user) {
     return jwt.sign(
         { id: user.id, username: user.username, purpose: 'access' },
@@ -17,6 +21,10 @@ export function createAccessToken(user) {
     );
 }
 
+/**
+ * Emite challenge de 5 minutos con purpose 2fa-login; no concede acceso a recursos API.
+ * Solo el último paso 2FA puede canjearlo por access token tras comprobar código.
+ */
 export function createTwoFactorChallenge(user) {
     return jwt.sign(
         { purpose: '2fa-login' },
@@ -33,6 +41,10 @@ export function verifyTwoFactorChallenge(token) {
     return payload;
 }
 
+/**
+ * Obtiene exp de un token ya autenticado para registrar revocación.
+ * jwt.decode no valida firma; no usar este helper como guarda de autorización.
+ */
 export function decodeTokenExpiry(token) {
     const payload = jwt.decode(token);
     if (!payload || typeof payload.exp !== 'number') {
