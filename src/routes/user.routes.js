@@ -58,6 +58,7 @@ const searchSettingsSchema = z.object({
     search_scope: z.enum(['radius_residence', 'radius_active', 'country', 'world', 'specific_country']).default('radius_residence'),
     search_target_country_id: optionalUuid,
     search_match_live_location: z.boolean().default(false),
+    search_gender: z.enum(['male', 'female', 'all']).nullable().optional(),
 });
 
 const locationPingSchema = z.object({

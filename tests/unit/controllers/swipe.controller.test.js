@@ -107,6 +107,64 @@ describe('getFeed geographic contract', () => {
         expect(params.at(-2)).toBe('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
         expect(params).not.toContain(100);
     });
+
+    it('defaults to all for free user regardless of their gender', async () => {
+        query.mockResolvedValueOnce({ rows: [{ ...baseUser, gender: 'male', subscription_product_id: null }] }).mockResolvedValueOnce({ rows: [] });
+
+        await getFeed(request(), response(), vi.fn());
+
+        const [sql, params] = query.mock.calls[1];
+        expect(sql).not.toContain('u.gender =');
+        expect(params).not.toContain('female');
+        expect(params).not.toContain('male');
+    });
+
+    it('ignores free user query param requesting male/female and stays on all', async () => {
+        query.mockResolvedValueOnce({ rows: [{ ...baseUser, gender: 'male', subscription_product_id: null }] }).mockResolvedValueOnce({ rows: [] });
+
+        await getFeed(request({ query: { gender: 'female' } }), response(), vi.fn());
+
+        const [sql, params] = query.mock.calls[1];
+        expect(sql).not.toContain('u.gender =');
+        expect(params).not.toContain('female');
+    });
+
+    it('allows Plus subscriber to filter by female candidates', async () => {
+        query.mockResolvedValueOnce({
+            rows: [{
+                ...baseUser,
+                gender: 'male',
+                subscription_product_id: 'mirailink_plus',
+                subscription_status: 'active',
+                subscription_expires_at: new Date(Date.now() + 86400000).toISOString(),
+                search_gender: 'female',
+            }],
+        }).mockResolvedValueOnce({ rows: [] });
+
+        await getFeed(request(), response(), vi.fn());
+
+        const [sql, params] = query.mock.calls[1];
+        expect(sql).toContain('u.gender =');
+        expect(params).toContain('female');
+    });
+
+    it('allows Plus subscriber to filter by all candidates', async () => {
+        query.mockResolvedValueOnce({
+            rows: [{
+                ...baseUser,
+                gender: 'male',
+                subscription_product_id: 'mirailink_plus',
+                subscription_status: 'active',
+                subscription_expires_at: new Date(Date.now() + 86400000).toISOString(),
+                search_gender: 'all',
+            }],
+        }).mockResolvedValueOnce({ rows: [] });
+
+        await getFeed(request(), response(), vi.fn());
+
+        const [sql] = query.mock.calls[1];
+        expect(sql).not.toContain('u.gender =');
+    });
 });
 
 describe('likeUser daily limit contract', () => {
