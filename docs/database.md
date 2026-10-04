@@ -26,6 +26,7 @@ No hay un framework ni una tabla de historial de migraciones. La operación debe
 | `user_anime_interests`, `user_game_interests` | Relaciones de intereses |
 | `likes`, `dislikes` | Decisiones dirigidas |
 | `matches` | Relación recíproca y estado seen |
+| `user_swipe_undos` | Auditoría de deshacer votos y control de cuotas por ventana de 24h |
 | `chats` | Chat privado o grupo |
 | `chat_members` | Membresía, rol y last read |
 | `messages` | Mensajes por chat |
@@ -34,6 +35,12 @@ No hay un framework ni una tabla de historial de migraciones. La operación debe
 | `app_versions` | Política de versión Android |
 
 `auth_provider` admite `email`, `phone` y `google`.
+
+## Migración 010 (Timezones TIMESTAMPTZ y Cuotas de Deshacer)
+
+La migración `010_timezone_and_swipe_undo_quota.sql`:
+- Convierte todas las columnas de tiempo de `TIMESTAMP` ingenuo a `TIMESTAMPTZ` (asumiendo UTC) para garantizar consistencia global contra manipulaciones horarias en clientes.
+- Crea la tabla `user_swipe_undos` (`user_id`, `target_user_id`, `action_undone`, `created_at`) con índice en `(user_id, created_at DESC)` para evaluar rápidamente la ventana deslizante de 24 horas.
 
 ## Migración 002
 

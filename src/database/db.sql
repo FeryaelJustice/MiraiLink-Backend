@@ -27,13 +27,13 @@ CREATE TABLE users (
     residence_longitude DOUBLE PRECISION,
     current_latitude DOUBLE PRECISION,
     current_longitude DOUBLE PRECISION,
-    last_location_updated_at TIMESTAMP,
+    last_location_updated_at TIMESTAMPTZ,
     search_radius_km INT DEFAULT 40,
     search_scope VARCHAR(20) DEFAULT 'radius_residence',
     search_target_country VARCHAR(10),
     search_match_live_location BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ,
     is_deleted BOOLEAN DEFAULT FALSE
 );
 
@@ -45,13 +45,13 @@ CREATE TABLE user_location_history (
     longitude DOUBLE PRECISION NOT NULL,
     city VARCHAR(100),
     country_code VARCHAR(10),
-    recorded_at TIMESTAMP DEFAULT NOW()
+    recorded_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- STATELESS JWT FOR INVALIDATING BEFORE TIME
 CREATE TABLE token_blacklist (
     token TEXT PRIMARY KEY,
-    invalidated_at TIMESTAMP DEFAULT NOW()
+    invalidated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- VERIFICATION TOKENS
@@ -60,8 +60,8 @@ CREATE TABLE verification_tokens (
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     token VARCHAR NOT NULL,
     type VARCHAR(10) CHECK (type IN ('email', 'sms')),
-    expires_at TIMESTAMP NOT NULL,
-    created_at TIMESTAMP DEFAULT NOW()
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- PASSWORD RESET TOKENS
@@ -69,8 +69,8 @@ CREATE TABLE password_reset_tokens (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     token VARCHAR NOT NULL,
-    expires_at TIMESTAMP NOT NULL,
-    created_at TIMESTAMP DEFAULT NOW()
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- PHOTOS
@@ -157,7 +157,7 @@ CREATE TABLE likes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     from_user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     to_user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    created_at TIMESTAMP DEFAULT NOW(),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE (from_user_id, to_user_id)
 );
 
@@ -166,8 +166,17 @@ CREATE TABLE dislikes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     from_user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     to_user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    created_at TIMESTAMP DEFAULT NOW(),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE (from_user_id, to_user_id)
+);
+
+-- USER SWIPE UNDOS (REWIND LOG & QUOTA AUDITING)
+CREATE TABLE user_swipe_undos (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    target_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    action_undone VARCHAR(10) NOT NULL, -- 'like' o 'dislike'
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- MATCHES
@@ -177,7 +186,7 @@ CREATE TABLE matches (
     user2_id UUID REFERENCES users(id) ON DELETE CASCADE,
     seen_by_user1 BOOLEAN DEFAULT false,
     seen_by_user2 BOOLEAN DEFAULT false,
-    created_at TIMESTAMP DEFAULT NOW(),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE (user1_id, user2_id)
 );
 
@@ -188,7 +197,7 @@ CREATE TABLE chats (
     name TEXT,
     -- solo si es grupo
     created_by UUID REFERENCES users(id) ON DELETE SET NULL,
-    created_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- CHAT MEMBERS
@@ -197,8 +206,8 @@ CREATE TABLE chat_members (
     chat_id UUID REFERENCES chats(id) ON DELETE CASCADE,
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     role TEXT CHECK (role IN ('admin', 'member')) DEFAULT 'member',
-    joined_at TIMESTAMP DEFAULT NOW(),
-    last_read_at TIMESTAMP DEFAULT NOW(),
+    joined_at TIMESTAMPTZ DEFAULT NOW(),
+    last_read_at TIMESTAMPTZ DEFAULT NOW(),
     -- Evita duplicados de miembros en el mismo chat
     PRIMARY KEY (chat_id, user_id)
 );
@@ -209,9 +218,9 @@ CREATE TABLE messages (
     sender_id UUID REFERENCES users(id) ON DELETE CASCADE,
     chat_id UUID REFERENCES chats(id) ON DELETE CASCADE,
     is_read BOOLEAN DEFAULT false,
-    created_at TIMESTAMP DEFAULT NOW(),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
     text TEXT NOT NULL,
-    sent_at TIMESTAMP DEFAULT NOW()
+    sent_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- PUSH NOTIFICATIONS
@@ -220,7 +229,7 @@ CREATE TABLE push_tokens (
     user_id UUID UNIQUE REFERENCES users(id) ON DELETE CASCADE,
     token TEXT NOT NULL,
     platform TEXT CHECK (platform IN ('android', 'ios', 'web')),
-    created_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- REPORTS
@@ -229,7 +238,7 @@ CREATE TABLE reports (
     reported_by UUID REFERENCES users(id) ON DELETE SET NULL,
     reported_user UUID REFERENCES users(id) ON DELETE SET NULL,
     reason TEXT,
-    created_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- FEEDBACK
@@ -237,7 +246,7 @@ CREATE TABLE IF NOT EXISTS public.feedback (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES users(id) ON DELETE SET NULL,
     message TEXT CHECK (char_length(message) <= 10000),
-    created_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- USER 2FA (TWO-FACTOR AUTHENTICATION)
@@ -273,3 +282,5 @@ CREATE INDEX idx_likes_to_user ON likes(to_user_id);
 CREATE INDEX idx_matches_user1 ON matches(user1_id);
 
 CREATE INDEX idx_matches_user2 ON matches(user2_id);
+
+CREATE INDEX idx_user_swipe_undos_user_created ON user_swipe_undos(user_id, created_at DESC);

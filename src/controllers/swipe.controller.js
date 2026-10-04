@@ -4,9 +4,9 @@ import { AppError } from '../errors/AppError.js';
 import { localizedInterestSql, resolveCatalogLanguage, toLocalizedCatalogItem } from '../utils/catalogLocalization.js';
 import { candidateCoordinateSql, resolveUserCoordinates } from '../utils/geoSearch.js';
 import { localizedResidenceColumns, localizedResidenceJoins } from '../utils/geographyLocalization.js';
-import { localizedAttributeColumns, localizedAttributeJoins } from './user.controller.js';
+import { localizedAttributeColumns, localizedAttributeJoins, profileExtras } from './user.controller.js';
 import { invalidateUserCountCache } from '../services/explore.service.js';
-import { FREE_DAILY_LIKES_LIMIT, SUBSCRIPTION_PRODUCTS } from '../consts/subscriptionConsts.js';
+import { FREE_DAILY_LIKES_LIMIT, SUBSCRIPTION_PRODUCTS, UNDO_DAILY_LIMITS } from '../consts/subscriptionConsts.js';
 
 async function targetExists(userId) {
     const result = await db.query(
@@ -372,6 +372,263 @@ export const getReceivedLikes = async (req, res, next) => {
 
         return res.json(likes);
     } catch (error) {
+        return next(error);
+    }
+};
+
+/**
+ * Resuelve el nivel de suscripcion activo del usuario comprobando el estado
+ * y la fecha de expiracion contra la hora actual del servidor (UTC).
+ *
+ * @param {string} userId - UUID del usuario autenticado.
+ * @returns {Promise<'free' | 'plus' | 'premium'>} Nivel de suscripcion efectivo.
+ */
+export async function getUserSubscriptionTier(userId) {
+    const subResult = await db.query(
+        `SELECT product_id, status, expires_at
+         FROM user_subscriptions
+         WHERE user_id = $1
+         LIMIT 1`,
+        [userId],
+    );
+    const sub = subResult.rows[0];
+    const isNotExpired = !sub?.expires_at || new Date(sub.expires_at) > new Date();
+    const isActive = sub?.status === 'active' && isNotExpired;
+
+    if (isActive && sub.product_id === SUBSCRIPTION_PRODUCTS.PREMIUM) {
+        return 'premium';
+    }
+    if (isActive && sub.product_id === SUBSCRIPTION_PRODUCTS.PLUS) {
+        return 'plus';
+    }
+    return 'free';
+}
+
+/**
+ * Mapea el nivel de suscripcion al limite diario de deshaceres permitidos.
+ * Cuotas: Free = 1, Plus = 3, Premium = 6 deshaceres por ventana de 24 horas.
+ *
+ * @param {'free' | 'plus' | 'premium'} tier - Nivel de suscripcion.
+ * @returns {number} Limite maximo de deshaceres por ventana.
+ */
+function getTierUndoLimit(tier) {
+    if (tier === 'premium') return UNDO_DAILY_LIMITS.PREMIUM;
+    if (tier === 'plus') return UNDO_DAILY_LIMITS.PLUS;
+    return UNDO_DAILY_LIMITS.FREE;
+}
+
+/**
+ * Obtiene la cuota disponible de deshacer votos para el usuario autenticado.
+ *
+ * Calcula los deshaceres consumidos en una ventana deslizante de 24 horas
+ * (`NOW() - INTERVAL '24 hours'`), determina la fecha ISO de recuperacion del proximo
+ * deshacer (`resetsAt`) y comprueba si existen interacciones reversibles en `likes` o `dislikes`.
+ *
+ * @route GET /api/swipe/undo-quota
+ */
+export const getUndoQuota = async (req, res, next) => {
+    try {
+        const userId = req.user.id;
+        const tier = await getUserSubscriptionTier(userId);
+        const maxUndos = getTierUndoLimit(tier);
+
+        const countResult = await db.query(
+            `SELECT COUNT(*)::int AS count, MIN(created_at) AS oldest_undo
+             FROM user_swipe_undos
+             WHERE user_id = $1
+               AND created_at >= NOW() - INTERVAL '24 hours'`,
+            [userId],
+        );
+        const usedUndos = countResult.rows[0]?.count ?? 0;
+        const oldestUndo = countResult.rows[0]?.oldest_undo;
+        const remainingUndos = Math.max(0, maxUndos - usedUndos);
+        const resetsAt = oldestUndo
+            ? new Date(new Date(oldestUndo).getTime() + 24 * 60 * 60 * 1000).toISOString()
+            : null;
+
+        const undoableCheck = await db.query(
+            `SELECT 1 FROM likes WHERE from_user_id = $1
+             UNION ALL
+             SELECT 1 FROM dislikes WHERE from_user_id = $1
+             LIMIT 1`,
+            [userId],
+        );
+        const hasUndoableSwipe = undoableCheck.rowCount > 0;
+        const canUndo = remainingUndos > 0 && hasUndoableSwipe;
+
+        return res.json({
+            tier,
+            maxUndos,
+            usedUndos,
+            remainingUndos,
+            resetsAt,
+            hasUndoableSwipe,
+            canUndo,
+        });
+    } catch (error) {
+        return next(error);
+    }
+};
+
+/**
+ * Revierte el ultimo voto de interaccion (like o dislike) del usuario autenticado.
+ *
+ * Flujo:
+ * 1. Verifica la cuota consumida en la ventana deslizante de 24 horas; si excede el limite
+ *    del plan, responde con 403 `DAILY_UNDO_LIMIT_REACHED`.
+ * 2. Identifica el ultimo voto emitido (por targetUserId opcional o por orden cronologico
+ *    descendente). Permite deshacer interacciones de sesiones pasadas.
+ * 3. Ejecuta una transaccion atomica (BEGIN/COMMIT):
+ *    - Si fue 'like', elimina el registro de `likes` y el posible `matches` bidireccional.
+ *    - Si fue 'dislike', elimina el registro de `dislikes`.
+ *    - Inserta un registro de auditoria en `user_swipe_undos`.
+ * 4. Invalida la cache de conteos del usuario y reconstruye el perfil publico completo
+ *    (con fotos, idiomas, preguntas, objetivos) para que el frontend pueda restaurar la tarjeta.
+ *
+ * @route POST /api/swipe/undo
+ */
+export const undoSwipe = async (req, res, next) => {
+    let client;
+    try {
+        const fromUserId = req.user.id;
+        const targetUserId = req.body?.targetUserId;
+
+        const tier = await getUserSubscriptionTier(fromUserId);
+        const maxUndos = getTierUndoLimit(tier);
+
+        const countResult = await db.query(
+            `SELECT COUNT(*)::int AS count, MIN(created_at) AS oldest_undo
+             FROM user_swipe_undos
+             WHERE user_id = $1
+               AND created_at >= NOW() - INTERVAL '24 hours'`,
+            [fromUserId],
+        );
+        const usedUndos = countResult.rows[0]?.count ?? 0;
+        const oldestUndo = countResult.rows[0]?.oldest_undo;
+        const resetsAt = oldestUndo
+            ? new Date(new Date(oldestUndo).getTime() + 24 * 60 * 60 * 1000).toISOString()
+            : null;
+
+        if (usedUndos >= maxUndos) {
+            return res.status(403).json({
+                code: 'DAILY_UNDO_LIMIT_REACHED',
+                message: `Has alcanzado el límite diario de ${maxUndos} deshaceres para tu plan (${tier}). Pásate a MiraiLink Plus o Premium para más deshaceres.`,
+                limit: maxUndos,
+                remaining: 0,
+                resetsAt,
+            });
+        }
+
+        let swipeResult;
+        if (targetUserId) {
+            swipeResult = await db.query(
+                `SELECT 'like' AS action, to_user_id, created_at FROM likes WHERE from_user_id = $1 AND to_user_id = $2
+                 UNION ALL
+                 SELECT 'dislike' AS action, to_user_id, created_at FROM dislikes WHERE from_user_id = $1 AND to_user_id = $2
+                 ORDER BY created_at DESC LIMIT 1`,
+                [fromUserId, targetUserId],
+            );
+        } else {
+            swipeResult = await db.query(
+                `SELECT 'like' AS action, to_user_id, created_at FROM likes WHERE from_user_id = $1
+                 UNION ALL
+                 SELECT 'dislike' AS action, to_user_id, created_at FROM dislikes WHERE from_user_id = $1
+                 ORDER BY created_at DESC LIMIT 1`,
+                [fromUserId],
+            );
+        }
+
+        if (swipeResult.rowCount === 0) {
+            return res.status(404).json({
+                code: 'NO_SWIPE_TO_UNDO',
+                message: 'No se encontraron votos recientes para deshacer',
+            });
+        }
+
+        const { action, to_user_id: undoneUserId } = swipeResult.rows[0];
+
+        client = await db.connect();
+        await client.query('BEGIN');
+
+        if (action === 'like') {
+            await client.query(
+                'DELETE FROM likes WHERE from_user_id = $1 AND to_user_id = $2',
+                [fromUserId, undoneUserId],
+            );
+            await client.query(
+                'DELETE FROM matches WHERE (user1_id = $1 AND user2_id = $2) OR (user1_id = $2 AND user2_id = $1)',
+                [fromUserId, undoneUserId],
+            );
+        } else {
+            await client.query(
+                'DELETE FROM dislikes WHERE from_user_id = $1 AND to_user_id = $2',
+                [fromUserId, undoneUserId],
+            );
+        }
+
+        await client.query(
+            'INSERT INTO user_swipe_undos (user_id, target_user_id, action_undone, created_at) VALUES ($1, $2, $3, NOW())',
+            [fromUserId, undoneUserId, action],
+        );
+
+        await client.query('COMMIT');
+        client.release();
+        client = null;
+
+        invalidateUserCountCache(fromUserId);
+
+        const locale = resolveCatalogLanguage(req.get('accept-language'));
+        const userQuery = `
+            SELECT u.id, u.username, u.nickname, u.bio, u.gender,
+                   TO_CHAR(u.birthdate, 'YYYY-MM-DD') AS birthdate,
+                   ${localizedResidenceColumns('u')},
+                   ${localizedAttributeColumns('u')}
+            FROM users u
+            ${localizedResidenceJoins('u', 2)}
+            ${localizedAttributeJoins('u', 2)}
+            WHERE u.id = $1 AND u.is_deleted = FALSE
+        `;
+        const userRes = await db.query(userQuery, [undoneUserId, locale]);
+        let userDto = null;
+        if (userRes.rows[0]) {
+            const rawUser = userRes.rows[0];
+            const extras = await profileExtras(rawUser.id, req);
+            userDto = { ...toPublicUser(rawUser), ...extras };
+        }
+
+        const newUsed = usedUndos + 1;
+        const newRemaining = Math.max(0, maxUndos - newUsed);
+        const calculatedResetsAt = resetsAt || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+        const remainingCheck = await db.query(
+            `SELECT 1 FROM likes WHERE from_user_id = $1
+             UNION ALL
+             SELECT 1 FROM dislikes WHERE from_user_id = $1
+             LIMIT 1`,
+            [fromUserId],
+        );
+        const hasUndoableSwipe = remainingCheck.rowCount > 0;
+        const canUndo = newRemaining > 0 && hasUndoableSwipe;
+
+        return res.json({
+            message: 'Swipe reverted successfully',
+            actionUndone: action,
+            user: userDto,
+            quota: {
+                tier,
+                maxUndos,
+                usedUndos: newUsed,
+                remainingUndos: newRemaining,
+                resetsAt: calculatedResetsAt,
+                hasUndoableSwipe,
+                canUndo,
+            },
+        });
+    } catch (error) {
+        if (client) {
+            await client.query('ROLLBACK').catch(() => {});
+            client.release();
+        }
         return next(error);
     }
 };

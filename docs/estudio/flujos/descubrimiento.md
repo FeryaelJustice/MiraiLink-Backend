@@ -12,11 +12,31 @@ Sin coordenadas válidas, no inventar distancia cero. Ubicación activa expira a
 
 No corregir consultas para satisfacer docs. SQL parametriza valores; los fragmentos dinámicos solo son seguros cuando vienen de opciones internas controladas.
 
+## Sistema de Deshacer (Undo Swipe) y Cuotas por Nivel
+
+El endpoint `POST /api/swipe/undo` revierte el último voto (like o dislike) del usuario dentro de una transacción atómica:
+- Si el voto deshecho era un `like`, elimina el registro de `likes` y cualquier `matches` mutuo correspondiente.
+- Si era un `dislike`, elimina el registro de `dislikes`.
+- Registra el evento en `user_swipe_undos` con marca temporal UTC.
+- Devuelve el DTO completo del usuario restaurado para que la app cliente reconstruya la tarjeta en Discovery.
+
+### Cuotas Diarias y Ventana Deslizante
+Las cuotas están definidas en `UNDO_DAILY_LIMITS`:
+- **Free**: 1 deshacer por día.
+- **Plus**: 3 deshaceres por día.
+- **Premium**: 6 deshaceres por día.
+
+La ventana se evalúa de manera deslizante (`created_at >= NOW() - INTERVAL '24 hours'`). El endpoint `GET /api/swipe/undo-quota` informa la cuota consumida, remanente, timestamp de expiración del próximo uso (`resetsAt`) y si el usuario tiene votos reversibles (`hasUndoableSwipe`).
+
+## Integridad Temporal y Timezones (TIMESTAMPTZ)
+Todas las columnas de fecha/hora de la base de datos se migraron a `TIMESTAMPTZ` (migración `010_timezone_and_swipe_undo_quota.sql`) para garantizar consistencia absoluta en UTC y evitar vulnerabilidades derivadas del huso horario o cambios manuales de reloj en clientes.
+
 ## Fuentes para estudiar
 
 - [swipe.controller.js](../../../src/controllers/swipe.controller.js)
 - [match.controller.js](../../../src/controllers/match.controller.js)
 - [geoSearch.js](../../../src/utils/geoSearch.js)
 - [swipe.routes.js](../../../src/routes/swipe.routes.js)
+- [010_timezone_and_swipe_undo_quota.sql](../../../src/database/migrations/010_timezone_and_swipe_undo_quota.sql)
 
-Revisión: 2026-10-01, por inspección del código. Consultar [verificación](../desarrollo-y-verificacion.md) para resultados ejecutados.
+Revisión: 2026-10-04, actualización con sistema de deshacer y estandarización a TIMESTAMPTZ. Consultar [verificación](../desarrollo-y-verificacion.md) para resultados ejecutados.

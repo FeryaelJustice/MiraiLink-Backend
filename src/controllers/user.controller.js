@@ -84,7 +84,7 @@ export function localizedAttributeJoins(alias = 'u', localePosition = 2) {
     `;
 }
 
-async function profileExtras(userId, req) {
+export async function profileExtras(userId, req) {
     const locale = resolveCatalogLanguage(req.get('accept-language'));
     const [animes, games, photos, goals, family, languages, prompts] = await Promise.all([
         db.query(localizedInterestSql('anime', 'i.user_id = $1', 2), [userId, locale]),
