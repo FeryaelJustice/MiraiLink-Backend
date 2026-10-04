@@ -20,6 +20,18 @@ export const BASE_PLANS = {
 export const FREE_DAILY_LIKES_LIMIT = 50;
 
 /**
+ * Limites diarios de deshacer (Rewind en Discovery) segun nivel de membresia.
+ * - FREE: 1 deshacer por dia (24 horas deslizantes).
+ * - PLUS: 3 deshaceres por dia (24 horas deslizantes).
+ * - PREMIUM: 6 deshaceres por dia (24 horas deslizantes).
+ */
+export const UNDO_DAILY_LIMITS = {
+    FREE: 1,
+    PLUS: 3,
+    PREMIUM: 6,
+};
+
+/**
  * Restricciones y limites de funcionalidades por nivel de membresia.
  * - FREE: Radio maximo 250 km, sin Modo Pasaporte (solo radio local y pais propio).
  * - PLUS: Radio ampliado hasta 800 km, likes diarios ilimitados, sin anuncios.
