@@ -21,15 +21,27 @@ export const getFeed = async (req, res, next) => {
         const { limit = 10, offset = 0 } = req.query;
 
         const currentUserResult = await db.query(
-            `SELECT u.residence_country_id, u.residence_latitude, u.residence_longitude,
+            `SELECT u.gender, u.residence_country_id, u.residence_latitude, u.residence_longitude,
                     u.current_latitude, u.current_longitude, u.last_location_updated_at,
-                    p.search_radius_km, p.search_scope, p.search_target_country_id, p.search_match_live_location
+                    p.search_radius_km, p.search_scope, p.search_target_country_id, p.search_match_live_location,
+                    p.search_gender,
+                    s.product_id AS subscription_product_id, s.status AS subscription_status, s.expires_at AS subscription_expires_at
              FROM users u
              LEFT JOIN user_search_preferences p ON p.user_id = u.id
+             LEFT JOIN user_subscriptions s ON s.user_id = u.id
              WHERE u.id = $1`,
             [req.user.id],
         );
         const currentUser = currentUserResult.rows[0];
+
+        const isNotExpired = !currentUser?.subscription_expires_at || new Date(currentUser.subscription_expires_at) > new Date();
+        const isActive = currentUser?.subscription_status === 'active' && isNotExpired;
+        const isPlus = isActive && (currentUser?.subscription_product_id === SUBSCRIPTION_PRODUCTS.PLUS || currentUser?.subscription_product_id === SUBSCRIPTION_PRODUCTS.PREMIUM);
+
+        const requestedGender = req.query.gender ?? currentUser?.search_gender;
+        const effectiveGender = (isPlus && (requestedGender === 'male' || requestedGender === 'female'))
+            ? requestedGender
+            : 'all';
 
         const storedScope = currentUser?.search_scope ?? 'radius';
         const scope = req.query.scope ?? storedScope;
@@ -121,6 +133,13 @@ export const getFeed = async (req, res, next) => {
         const locale = resolveCatalogLanguage(req.get('accept-language'));
         params.push(locale);
         const residenceLocalePosition = params.length;
+
+        let genderFilterSql = 'TRUE';
+        if (effectiveGender === 'female' || effectiveGender === 'male') {
+            params.push(effectiveGender);
+            genderFilterSql = `u.gender = $${params.length}`;
+        }
+
         const queryText = `
             WITH candidate_geo AS (
             SELECT ${PUBLIC_USER_SQL_COLUMNS},
@@ -144,6 +163,7 @@ export const getFeed = async (req, res, next) => {
                    ), 0) AS common_interests
             FROM users u
             WHERE u.id != $1 AND u.is_deleted = FALSE
+              AND ${genderFilterSql}
               AND u.id NOT IN (
                   SELECT to_user_id FROM likes WHERE from_user_id = $1
                   UNION SELECT to_user_id FROM dislikes WHERE from_user_id = $1

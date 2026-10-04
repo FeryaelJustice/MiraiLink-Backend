@@ -22,6 +22,7 @@ export const feedQuery = pagination.extend({
         value => value === 'true' ? true : value === 'false' ? false : value,
         z.boolean(),
     ).optional(),
+    gender: z.enum(['male', 'female', 'all']).optional(),
 });
 export const chatIdParams = z.object({ chatId: uuid });
 export const userIdParams = z.object({ userId: uuid });

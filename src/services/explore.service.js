@@ -23,8 +23,8 @@ export function invalidateUserCountCache(userId) {
     }
 }
 
-function getCachedCount(userId, categoryId, radiusKm) {
-    const key = `${userId}:${categoryId}:${radiusKm}`;
+function getCachedCount(userId, categoryId, radiusKm, gender = 'default') {
+    const key = `${userId}:${categoryId}:${radiusKm}:${gender}`;
     const entry = countsCache.get(key);
     if (entry && entry.expiresAt > Date.now()) {
         return entry.count;
@@ -32,8 +32,8 @@ function getCachedCount(userId, categoryId, radiusKm) {
     return null;
 }
 
-function setCachedCount(userId, categoryId, radiusKm, count) {
-    const key = `${userId}:${categoryId}:${radiusKm}`;
+function setCachedCount(userId, categoryId, radiusKm, gender = 'default', count) {
+    const key = `${userId}:${categoryId}:${radiusKm}:${gender}`;
     countsCache.set(key, { count, expiresAt: Date.now() + COUNT_CACHE_TTL_MS });
 }
 
@@ -68,11 +68,13 @@ function buildCategoryFilterSql(filterType, filterValue) {
 export async function getExploreSectionsWithCategories(userId, locale = 'es') {
     // 1. Obtener datos de ubicacion y preferencias del usuario actual
     const userResult = await db.query(
-        `SELECT u.id, u.residence_latitude, u.residence_longitude,
+        `SELECT u.id, u.gender, u.residence_latitude, u.residence_longitude,
                 u.current_latitude, u.current_longitude, u.last_location_updated_at,
-                p.search_radius_km, p.search_scope, p.search_match_live_location
+                p.search_radius_km, p.search_scope, p.search_match_live_location, p.search_gender,
+                us.product_id AS subscription_product_id, us.status AS subscription_status, us.expires_at AS subscription_expires_at
          FROM users u
          LEFT JOIN user_search_preferences p ON p.user_id = u.id
+         LEFT JOIN user_subscriptions us ON us.user_id = u.id AND us.status = 'active'
          WHERE u.id = $1`,
         [userId],
     );
@@ -82,12 +84,21 @@ export async function getExploreSectionsWithCategories(userId, locale = 'es') {
         || (currentUser?.search_scope === 'radius' && currentUser?.search_match_live_location);
     const origin = resolveUserCoordinates(currentUser, useActiveLocation);
 
+    // Validar estado de suscripcion Plus o Premium
+    const isNotExpired = !currentUser?.subscription_expires_at || new Date(currentUser.subscription_expires_at) > new Date();
+    const isActive = currentUser?.subscription_status === 'active' && isNotExpired;
+    const isPlus = isActive && (currentUser?.subscription_product_id === SUBSCRIPTION_PRODUCTS.PLUS || currentUser?.subscription_product_id === SUBSCRIPTION_PRODUCTS.PREMIUM);
+
+    const userGender = currentUser?.gender;
+    const defaultGender = userGender === 'male' ? 'female' : (userGender === 'female' ? 'male' : 'all');
+
     // 2. Obtener todas las categorias con traducciones para el locale y preferencias guardadas
     const categoriesResult = await db.query(
         `SELECT c.id, c.code, c.section_group, c.icon_key, c.filter_type, c.filter_value, c.sort_order,
                 COALESCE(t_req.title, t_es.title, c.code) AS title,
                 COALESCE(t_req.description, t_es.description, '') AS description,
-                COALESCE(ucp.radius_km, $3) AS user_radius_km
+                COALESCE(ucp.radius_km, $3) AS user_radius_km,
+                ucp.target_gender AS user_target_gender
          FROM explore_categories c
          JOIN supported_languages fallback_lang ON fallback_lang.code = 'es'
          LEFT JOIN supported_languages req_lang ON req_lang.code = $2
@@ -103,7 +114,12 @@ export async function getExploreSectionsWithCategories(userId, locale = 'es') {
     // 3. Calcular o recuperar conteo de personas para cada categoria
     for (const cat of categories) {
         const radius = Number(cat.user_radius_km);
-        const cached = getCachedCount(userId, cat.id, radius);
+        const effectiveGender = isPlus
+            ? (cat.user_target_gender ?? currentUser?.search_gender ?? defaultGender)
+            : defaultGender;
+
+        cat.user_effective_gender = effectiveGender;
+        const cached = getCachedCount(userId, cat.id, radius, effectiveGender);
         if (cached !== null) {
             cat.active_count = cached;
             continue;
@@ -114,7 +130,7 @@ export async function getExploreSectionsWithCategories(userId, locale = 'es') {
             const candidateCoords = candidateCoordinateSql(useActiveLocation);
 
             let distanceFilter = 'TRUE';
-            const countParams = [userId];
+            const countParams = [userId, effectiveGender];
 
             if (origin) {
                 countParams.push(origin.latitude, origin.longitude, radius);
@@ -137,6 +153,11 @@ export async function getExploreSectionsWithCategories(userId, locale = 'es') {
                 FROM users u
                 WHERE u.id != $1 AND u.is_deleted = FALSE
                   AND ${categoryFilter}
+                  AND (
+                      $2 = 'all' OR
+                      ($2 = 'female' AND u.gender = 'female') OR
+                      ($2 = 'male' AND u.gender = 'male')
+                  )
                   AND ${distanceFilter}
                   AND u.id NOT IN (
                       SELECT to_user_id FROM likes WHERE from_user_id = $1
@@ -146,7 +167,7 @@ export async function getExploreSectionsWithCategories(userId, locale = 'es') {
 
             const countRes = await db.query(countQuery, countParams);
             const total = countRes.rows[0]?.total ?? 0;
-            setCachedCount(userId, cat.id, radius, total);
+            setCachedCount(userId, cat.id, radius, effectiveGender, total);
             cat.active_count = total;
         } catch {
             // Fallback ante entornos de test o geometrias incompletas
@@ -202,7 +223,7 @@ export async function getExploreSectionsWithCategories(userId, locale = 'es') {
     };
 }
 
-export async function getCategoryFeedUsers(userId, categoryId, { limit = 20, offset = 0, radiusKmOverride, locale = 'es', req } = {}) {
+export async function getCategoryFeedUsers(userId, categoryId, { limit = 20, offset = 0, radiusKmOverride, genderOverride, locale = 'es', req } = {}) {
     // 1. Verificar categoria
     const catResult = await db.query(
         `SELECT c.id, c.code, c.section_group, c.icon_key, c.filter_type, c.filter_value,
@@ -221,24 +242,36 @@ export async function getCategoryFeedUsers(userId, categoryId, { limit = 20, off
     }
     const category = catResult.rows[0];
 
-    // 2. Obtener radio guardado de esta categoria para el usuario
+    // 2. Obtener radio y genero guardados de esta categoria para el usuario
     const prefResult = await db.query(
-        'SELECT radius_km FROM user_category_preferences WHERE user_id = $1 AND category_id = $2',
+        'SELECT radius_km, target_gender FROM user_category_preferences WHERE user_id = $1 AND category_id = $2',
         [userId, categoryId],
     );
     const radiusKm = radiusKmOverride ?? prefResult.rows[0]?.radius_km ?? 40;
 
-    // 3. Resolver coordenadas del usuario
+    // 3. Resolver coordenadas del usuario y suscripcion
     const userResult = await db.query(
-        `SELECT u.id, u.residence_country_id, u.residence_latitude, u.residence_longitude,
+        `SELECT u.id, u.gender, u.residence_country_id, u.residence_latitude, u.residence_longitude,
                 u.current_latitude, u.current_longitude, u.last_location_updated_at,
-                p.search_scope, p.search_match_live_location
+                p.search_scope, p.search_match_live_location, p.search_gender,
+                s.product_id AS subscription_product_id, s.status AS subscription_status, s.expires_at AS subscription_expires_at
          FROM users u
          LEFT JOIN user_search_preferences p ON p.user_id = u.id
+         LEFT JOIN user_subscriptions s ON s.user_id = u.id
          WHERE u.id = $1`,
         [userId],
     );
     const currentUser = userResult.rows[0];
+
+    const isNotExpired = !currentUser?.subscription_expires_at || new Date(currentUser.subscription_expires_at) > new Date();
+    const isActive = currentUser?.subscription_status === 'active' && isNotExpired;
+    const isPlus = isActive && (currentUser?.subscription_product_id === SUBSCRIPTION_PRODUCTS.PLUS || currentUser?.subscription_product_id === SUBSCRIPTION_PRODUCTS.PREMIUM);
+
+    const categoryTargetGender = genderOverride ?? prefResult.rows[0]?.target_gender ?? currentUser?.search_gender;
+    const effectiveGender = (isPlus && (categoryTargetGender === 'male' || categoryTargetGender === 'female'))
+        ? categoryTargetGender
+        : 'all';
+
     const useActiveLocation = currentUser?.search_scope === 'radius_active'
         || (currentUser?.search_scope === 'radius' && currentUser?.search_match_live_location);
     const origin = resolveUserCoordinates(currentUser, useActiveLocation);
@@ -269,6 +302,12 @@ export async function getCategoryFeedUsers(userId, categoryId, { limit = 20, off
     params.push(locale);
     const localePos = params.length;
 
+    let genderFilterSql = 'TRUE';
+    if (effectiveGender === 'female' || effectiveGender === 'male') {
+        params.push(effectiveGender);
+        genderFilterSql = `u.gender = $${params.length}`;
+    }
+
     const queryText = `
         WITH candidate_geo AS (
             SELECT ${PUBLIC_USER_SQL_COLUMNS},
@@ -292,6 +331,7 @@ export async function getCategoryFeedUsers(userId, categoryId, { limit = 20, off
             FROM users u
             WHERE u.id != $1 AND u.is_deleted = FALSE
               AND ${categoryFilter}
+              AND ${genderFilterSql}
               AND u.id NOT IN (
                   SELECT to_user_id FROM likes WHERE from_user_id = $1
                   UNION SELECT to_user_id FROM dislikes WHERE from_user_id = $1
@@ -400,27 +440,38 @@ export async function getCategorySettings(userId, categoryId) {
     }
 
     const prefResult = await db.query(
-        'SELECT radius_km FROM user_category_preferences WHERE user_id = $1 AND category_id = $2',
+        'SELECT radius_km, target_gender FROM user_category_preferences WHERE user_id = $1 AND category_id = $2',
         [userId, categoryId],
     );
 
-    return {
+    const result = {
         categoryId,
         radius_km: prefResult.rows[0]?.radius_km ?? 40,
     };
+    if (prefResult.rows[0]?.target_gender !== undefined) {
+        result.target_gender = prefResult.rows[0].target_gender;
+    }
+    return result;
 }
 
 /**
- * Valida categoría/radio/plan y hace upsert de preferencia usuario-categoría.
- * El radio de categoría no es la preferencia global; la caché se mantiene en memoria de proceso.
+ * Valida categoría/radio/genero/plan y hace upsert de preferencia usuario-categoría.
+ * El radio y genero de categoría no son la preferencia global; la caché se mantiene en memoria de proceso.
  */
-export async function updateCategorySettings(userId, categoryId, radiusKm) {
+export async function updateCategorySettings(userId, categoryId, settingsOrRadius, targetGenderParam) {
     const checkCat = await db.query('SELECT id, code FROM explore_categories WHERE id = $1', [categoryId]);
     if (checkCat.rowCount === 0) {
         throw new AppError({ status: 404, code: 'CATEGORY_NOT_FOUND', message: 'Category not found' });
     }
 
-    if (Number(radiusKm) > SUBSCRIPTION_FEATURES.FREE_MAX_RADIUS_KM) {
+    const radiusKm = typeof settingsOrRadius === 'object' && settingsOrRadius !== null
+        ? settingsOrRadius.radius_km
+        : settingsOrRadius;
+    const targetGender = typeof settingsOrRadius === 'object' && settingsOrRadius !== null
+        ? settingsOrRadius.target_gender
+        : targetGenderParam;
+
+    if ((radiusKm !== undefined && Number(radiusKm) > SUBSCRIPTION_FEATURES.FREE_MAX_RADIUS_KM) || (targetGender !== undefined && targetGender !== null)) {
         const subResult = await db.query(
             `SELECT product_id, status, expires_at
              FROM user_subscriptions
@@ -428,33 +479,58 @@ export async function updateCategorySettings(userId, categoryId, radiusKm) {
              LIMIT 1`,
             [userId],
         );
-        const sub = subResult.rows[0];
+        const sub = subResult?.rows?.[0];
         const isNotExpired = !sub?.expires_at || new Date(sub.expires_at) > new Date();
         const isActive = sub?.status === 'active' && isNotExpired;
-        const isPlusOrPremium = isActive && (sub.product_id === SUBSCRIPTION_PRODUCTS.PLUS || sub.product_id === SUBSCRIPTION_PRODUCTS.PREMIUM);
-        if (!isPlusOrPremium) {
+        const isPlusOrPremium = isActive && (sub?.product_id === SUBSCRIPTION_PRODUCTS.PLUS || sub?.product_id === SUBSCRIPTION_PRODUCTS.PREMIUM);
+
+        if (radiusKm !== undefined && Number(radiusKm) > SUBSCRIPTION_FEATURES.FREE_MAX_RADIUS_KM && !isPlusOrPremium) {
             throw new AppError({
                 status: 403,
                 code: 'PREMIUM_RADIUS_REQUIRED',
                 message: `Un radio superior a ${SUBSCRIPTION_FEATURES.FREE_MAX_RADIUS_KM} km requiere suscripción MiraiLink Plus o Premium.`,
             });
         }
+
+        if (targetGender !== undefined && targetGender !== null && targetGender !== 'all' && !isPlusOrPremium) {
+            throw new AppError({
+                status: 403,
+                code: 'PREMIUM_GENDER_FILTER_REQUIRED',
+                message: 'Filtrar específicamente por hombres o mujeres requiere suscripción MiraiLink Plus o Premium.',
+            });
+        }
     }
 
-    await db.query(
-        `INSERT INTO user_category_preferences (user_id, category_id, radius_km, updated_at)
-         VALUES ($1, $2, $3, NOW())
-         ON CONFLICT (user_id, category_id)
-         DO UPDATE SET radius_km = EXCLUDED.radius_km, updated_at = NOW()`,
-        [userId, categoryId, radiusKm],
-    );
+    if (targetGender === undefined) {
+        await db.query(
+            `INSERT INTO user_category_preferences (user_id, category_id, radius_km, updated_at)
+             VALUES ($1, $2, $3, NOW())
+             ON CONFLICT (user_id, category_id)
+             DO UPDATE SET radius_km = EXCLUDED.radius_km, updated_at = NOW()`,
+            [userId, categoryId, Number(radiusKm)],
+        );
+    } else {
+        await db.query(
+            `INSERT INTO user_category_preferences (user_id, category_id, radius_km, target_gender, updated_at)
+             VALUES ($1, $2, COALESCE($3, 40), $4, NOW())
+             ON CONFLICT (user_id, category_id)
+             DO UPDATE SET
+                radius_km = COALESCE(EXCLUDED.radius_km, user_category_preferences.radius_km),
+                target_gender = EXCLUDED.target_gender,
+                updated_at = NOW()`,
+            [userId, categoryId, radiusKm !== undefined ? Number(radiusKm) : null, targetGender],
+        );
+    }
 
-    // Invalidar cache de conteo para esta categoria
-    const key = `${userId}:${categoryId}:${radiusKm}`;
-    countsCache.delete(key);
+    // Invalidar cache de conteo para este usuario
+    invalidateUserCountCache(userId);
 
-    return {
+    const result = {
         categoryId,
-        radius_km: radiusKm,
+        radius_km: radiusKm !== undefined ? Number(radiusKm) : 40,
     };
+    if (targetGender !== undefined) {
+        result.target_gender = targetGender;
+    }
+    return result;
 }

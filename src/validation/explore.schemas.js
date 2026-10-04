@@ -10,9 +10,13 @@ export const categoryParamsSchema = z.object({
 });
 
 export const updateCategorySettingsSchema = z.object({
-    radius_km: z.coerce.number().int().min(10).max(500),
+    radius_km: z.coerce.number().int().min(10).max(500).optional(),
+    target_gender: z.enum(['male', 'female', 'all']).nullable().optional(),
+}).refine(data => data.radius_km !== undefined || data.target_gender !== undefined, {
+    message: 'Either radius_km or target_gender must be provided',
 });
 
 export const categoryFeedQuery = pagination.extend({
     radius_km: z.coerce.number().int().min(10).max(500).optional(),
+    target_gender: z.enum(['male', 'female', 'all']).optional(),
 });

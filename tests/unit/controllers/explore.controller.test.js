@@ -115,6 +115,65 @@ describe('explore.controller', () => {
         expect(query.mock.calls[1][0]).toContain('DO UPDATE SET radius_km = EXCLUDED.radius_km');
     });
 
+    it('updateCategorySettings blocks specific target_gender (female/male) for free user', async () => {
+        // 1. category check
+        query.mockResolvedValueOnce({ rowCount: 1, rows: [{ id: categoryId, code: 'anime_marathon' }] });
+        // 2. subscription check
+        query.mockResolvedValueOnce({ rows: [] });
+
+        const req = mockRequest({ params: { categoryId }, body: { target_gender: 'female' } });
+        const res = mockResponse();
+        const next = vi.fn();
+
+        await updateCategorySettings(req, res, next);
+
+        expect(next).toHaveBeenCalledWith(expect.objectContaining({ status: 403, code: 'PREMIUM_GENDER_FILTER_REQUIRED' }));
+    });
+
+    it('updateCategorySettings allows all target_gender for free user', async () => {
+        // 1. category check
+        query.mockResolvedValueOnce({ rowCount: 1, rows: [{ id: categoryId, code: 'anime_marathon' }] });
+        // 2. upsert
+        query.mockResolvedValueOnce({ rowCount: 1 });
+
+        const req = mockRequest({ params: { categoryId }, body: { target_gender: 'all' } });
+        const res = mockResponse();
+        const next = vi.fn();
+
+        await updateCategorySettings(req, res, next);
+
+        expect(next).not.toHaveBeenCalled();
+        expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ categoryId, target_gender: 'all' }));
+    });
+
+    it('updateCategorySettings allows Plus subscriber to set custom target_gender', async () => {
+        // 1. category check
+        query.mockResolvedValueOnce({ rowCount: 1, rows: [{ id: categoryId, code: 'anime_marathon' }] });
+        // 2. subscription check
+        query.mockResolvedValueOnce({
+            rows: [{
+                product_id: 'mirailink_plus',
+                status: 'active',
+                expires_at: new Date(Date.now() + 86400000).toISOString(),
+            }],
+        });
+        // 3. upsert query
+        query.mockResolvedValueOnce({ rowCount: 1 });
+
+        const req = mockRequest({ params: { categoryId }, body: { target_gender: 'all', radius_km: 50 } });
+        const res = mockResponse();
+        const next = vi.fn();
+
+        await updateCategorySettings(req, res, next);
+
+        expect(next).not.toHaveBeenCalled();
+        expect(res.json).toHaveBeenCalledWith({
+            categoryId,
+            radius_km: 50,
+            target_gender: 'all',
+        });
+    });
+
     it('getCategoryFeed returns candidate profiles matching category', async () => {
         // 1. check category
         query.mockResolvedValueOnce({

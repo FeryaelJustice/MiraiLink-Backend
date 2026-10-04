@@ -156,7 +156,8 @@ export const getProfile = async (req, res, next) => {
                     COALESCE(p.search_radius_km, 40) AS search_radius_km,
                     COALESCE(p.search_scope, 'radius_residence') AS search_scope,
                     p.search_target_country_id,
-                    COALESCE(p.search_match_live_location, FALSE) AS search_match_live_location
+                    COALESCE(p.search_match_live_location, FALSE) AS search_match_live_location,
+                    p.search_gender
              FROM users u
              LEFT JOIN user_search_preferences p ON p.user_id = u.id
              ${localizedResidenceJoins('u', 2)}
@@ -530,6 +531,7 @@ export const updateSearchSettings = async (req, res, next) => {
             search_scope = 'radius_residence',
             search_target_country_id = null,
             search_match_live_location = false,
+            search_gender = null,
         } = req.body;
 
         // Validar suscripcion activa para caracteristicas Plus y Premium
@@ -563,17 +565,26 @@ export const updateSearchSettings = async (req, res, next) => {
             });
         }
 
+        // 3. Filtro de genero especifico ('male' o 'female') requiere al menos MiraiLink Plus. 'all' es gratuito.
+        if (search_gender !== undefined && search_gender !== null && search_gender !== 'all' && !isPlus) {
+            return res.status(403).json({
+                code: 'PREMIUM_GENDER_FILTER_REQUIRED',
+                message: 'Filtrar específicamente por hombres o mujeres requiere suscripción MiraiLink Plus o Premium.',
+            });
+        }
+
         await db.query(
             `INSERT INTO user_search_preferences (
-                user_id, search_radius_km, search_scope, search_target_country_id, search_match_live_location, updated_at
-             ) VALUES ($1, $2, $3, $4, $5, NOW())
+                user_id, search_radius_km, search_scope, search_target_country_id, search_match_live_location, search_gender, updated_at
+             ) VALUES ($1, $2, $3, $4, $5, $6, NOW())
              ON CONFLICT (user_id) DO UPDATE SET
                 search_radius_km = EXCLUDED.search_radius_km,
                 search_scope = EXCLUDED.search_scope,
                 search_target_country_id = EXCLUDED.search_target_country_id,
                 search_match_live_location = EXCLUDED.search_match_live_location,
+                search_gender = COALESCE(EXCLUDED.search_gender, user_search_preferences.search_gender),
                 updated_at = NOW()`,
-            [req.user.id, search_radius_km, search_scope, search_target_country_id, search_match_live_location],
+            [req.user.id, search_radius_km, search_scope, search_target_country_id, search_match_live_location, search_gender],
         );
         return res.json({ message: 'Search settings updated' });
     } catch (error) {

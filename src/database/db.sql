@@ -18,7 +18,7 @@ CREATE TABLE users (
     two_fa_enabled BOOLEAN DEFAULT FALSE,
     two_fa_secret TEXT,
     bio TEXT,
-    gender VARCHAR(20),
+    gender VARCHAR(20) CHECK (gender IS NULL OR gender IN ('male', 'female')),
     birthdate DATE,
     residence_city VARCHAR(100),
     residence_region VARCHAR(100),

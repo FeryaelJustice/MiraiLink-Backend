@@ -92,7 +92,7 @@ export const registerSchema = z.object({
     username: z.string().trim().min(3).max(30).regex(/^[a-zA-Z0-9_.]+$/),
     email,
     password,
-    gender: z.enum(['male', 'female', 'non_binary', 'other', 'prefer_not_to_say']),
+    gender: z.enum(['male', 'female']),
     birthdate: z.iso.date().refine(isAtLeast16YearsOld, {
         message: 'You must be at least 16 years old to register',
     }),
