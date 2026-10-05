@@ -37,6 +37,7 @@ function createCorsOptions() {
     return {
         credentials: false,
         methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+        exposedHeaders: ['X-Subscription-Plan'],
         origin(origin, callback) {
             // Permitir peticiones sin cabecera origin (clientes moviles nativos, curl, etc.)
             if (!origin || allowAll) {

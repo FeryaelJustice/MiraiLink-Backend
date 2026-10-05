@@ -71,3 +71,40 @@ export async function sendChatMessageNotification({
         },
     });
 }
+
+const recentSubscriptionPushMap = new Map();
+
+export async function sendSubscriptionUpdatedNotification(userId) {
+    if (!userId) return;
+    const now = Date.now();
+    const lastSent = recentSubscriptionPushMap.get(userId);
+    if (lastSent && now - lastSent < 5000) {
+        return;
+    }
+    recentSubscriptionPushMap.set(userId, now);
+    if (recentSubscriptionPushMap.size > 1000) {
+        for (const [id, ts] of recentSubscriptionPushMap.entries()) {
+            if (now - ts > 10000) recentSubscriptionPushMap.delete(id);
+        }
+    }
+
+    const destination = await getUserFcmToken(userId);
+    if (!destination?.token) return;
+
+    const message = {
+        token: destination.token,
+        data: {
+            type: 'subscription_updated',
+            userId: String(userId),
+        },
+        android: { priority: 'high' },
+    };
+
+    try {
+        const fcm = await getFcm();
+        await fcm.send(message);
+    } catch (error) {
+        console.error('Error sending silent subscription FCM notification:', error?.message);
+    }
+}
+

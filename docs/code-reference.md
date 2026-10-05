@@ -76,6 +76,14 @@ Los limiters se saltan si `app.locals.enableRateLimits === false`.
 | `getUserFcmToken(userId)` | Devuelve token push o `null`. |
 | `sendPushToToken(token, payload)` | Convierte data a strings y llama Firebase Messaging. |
 | `sendChatMessageNotification(args)` | Obtiene token y nombre del sender; envía push best-effort. |
+| `sendSubscriptionUpdatedNotification(userId)` | Despacha push silencioso FCM `subscription_updated` con deduplicación de 5 s. |
+
+### Listener de suscripciones - `src/services/subscriptionListener.js`
+
+| Función | Contrato |
+| --- | --- |
+| `startSubscriptionListener(pool)` | Abre conexión persistente en PostgreSQL para `LISTEN subscription_changed` y despacha push silencioso. |
+| `stopSubscriptionListener()` | Detiene reintentos y libera de forma segura el cliente PostgreSQL en apagado del servidor. |
 
 ## Utilidades y DTO
 

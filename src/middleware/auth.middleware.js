@@ -29,7 +29,13 @@ export const authenticateToken = (allowUnverified = false) => async (req, res, n
         }
         const userId = decoded.id ?? decoded.sub;
         const user = await db.query(
-            'SELECT is_verified, is_deleted FROM users WHERE id = $1',
+            `SELECT u.is_verified, u.is_deleted,
+                    s.product_id AS subscription_product_id,
+                    s.status AS subscription_status,
+                    s.expires_at AS subscription_expires_at
+             FROM users u
+             LEFT JOIN user_subscriptions s ON s.user_id = u.id
+             WHERE u.id = $1`,
             [userId],
         );
         if (user.rowCount === 0 || user.rows[0].is_deleted) {
@@ -42,7 +48,25 @@ export const authenticateToken = (allowUnverified = false) => async (req, res, n
                 verified: false,
             });
         }
-        req.user = { ...decoded, id: userId };
+
+        const userData = user.rows[0];
+        const isNotExpired = !userData.subscription_expires_at || new Date(userData.subscription_expires_at) > new Date();
+        const isActive = userData.subscription_status === 'active' && isNotExpired;
+        const isPremium = isActive && userData.subscription_product_id === 'mirailink_premium';
+        const isPlus = isActive && (userData.subscription_product_id === 'mirailink_plus' || isPremium);
+        const plan = isActive ? (isPremium ? 'premium' : 'plus') : 'free';
+
+        res.setHeader('X-Subscription-Plan', plan);
+
+        req.user = {
+            ...decoded,
+            id: userId,
+            subscription: {
+                isPremium,
+                isPlus,
+                plan,
+            },
+        };
         req.token = token;
         return next();
     } catch (_error) {
