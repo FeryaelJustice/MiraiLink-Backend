@@ -71,3 +71,26 @@ export async function sendChatMessageNotification({
         },
     });
 }
+
+export async function sendSubscriptionUpdatedNotification(userId) {
+    if (!userId) return;
+    const destination = await getUserFcmToken(userId);
+    if (!destination?.token) return;
+
+    const message = {
+        token: destination.token,
+        data: {
+            type: 'subscription_updated',
+            userId: String(userId),
+        },
+        android: { priority: 'high' },
+    };
+
+    try {
+        const fcm = await getFcm();
+        await fcm.send(message);
+    } catch (error) {
+        console.error('Error sending silent subscription FCM notification:', error?.message);
+    }
+}
+

@@ -3,12 +3,14 @@ import { parseEnv } from './config/env.js';
 import { runMigrations } from './database/migrator.js';
 import pool from './models/db.js';
 import { syncCatalog } from './services/catalogSyncService.js';
+import { startSubscriptionListener, stopSubscriptionListener } from './services/subscriptionListener.js';
 
 const env = parseEnv();
 
 if (env.nodeEnv !== 'test') {
     try {
         await runMigrations(pool);
+        await startSubscriptionListener(pool);
     } catch (err) {
         console.error('Fatal: Database migration failed on startup:', err);
         process.exit(1);
@@ -39,6 +41,7 @@ if (env.nodeEnv !== 'test') {
 function shutdown(signal) {
     console.log(`Received ${signal}, closing HTTP server`);
     if (syncInterval) clearInterval(syncInterval);
+    stopSubscriptionListener();
     server.close(error => {
         if (error) {
             console.error('Failed to close HTTP server', error);
@@ -48,4 +51,5 @@ function shutdown(signal) {
 }
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('SIGINT', () => shutdown('SIGINT'));
+
 
