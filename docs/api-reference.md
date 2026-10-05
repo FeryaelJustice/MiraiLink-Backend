@@ -20,6 +20,7 @@ Authorization: Bearer <access-token>
 ```
 
 Los access tokens usan HS256, duran 24 horas y llevan `purpose: access`. Un token ausente, inválido, expirado, de otro purpose, revocado o ligado a un usuario eliminado devuelve 401. Un usuario no verificado recibe 403 en rutas que lo exigen.
+En toda respuesta autenticada exitosa, la API incluye la cabecera `X-Subscription-Plan` (`free`, `plus` o `premium`), permitiendo a los clientes sincronizar el nivel de suscripción del usuario sin peticiones adicionales.
 
 ## Errores comunes
 

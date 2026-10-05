@@ -96,11 +96,14 @@ export const verifySubscription = async (req, res, next) => {
         const savedSub = result.rows[0];
         const isPremium = savedSub.product_id === SUBSCRIPTION_PRODUCTS.PREMIUM;
         const isPlus = savedSub.product_id === SUBSCRIPTION_PRODUCTS.PLUS || isPremium;
+        const currentPlan = isPremium ? 'premium' : 'plus';
+
+        res.setHeader('X-Subscription-Plan', currentPlan);
 
         return res.json({
             isPremium,
             isPlus,
-            plan: isPremium ? 'premium' : 'plus',
+            plan: currentPlan,
             status: savedSub.status,
             productId: savedSub.product_id,
             basePlanId: savedSub.base_plan_id,

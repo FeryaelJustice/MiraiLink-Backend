@@ -793,6 +793,12 @@ components:
     ChatMessage: { required: true, content: { application/json: { schema: { type: object, required: [toUserId, text], properties: { toUserId: { $ref: '#/components/schemas/Uuid' }, text: { type: string, minLength: 1, maxLength: 4000 } } } } } }
     Report: { required: true, content: { application/json: { schema: { type: object, required: [reportedUser, reason], properties: { reportedUser: { $ref: '#/components/schemas/Uuid' }, reason: { type: string, minLength: 5, maxLength: 2000 } } } } } }
     Feedback: { required: true, content: { application/json: { schema: { type: object, required: [feedback], properties: { feedback: { type: string, minLength: 1, maxLength: 10000 } } } } } }
+  headers:
+    SubscriptionPlan:
+      description: Nivel de membresía activo del usuario (free, plus o premium)
+      schema:
+        type: string
+        enum: [free, plus, premium]
   responses:
     Ok: { description: Operación correcta }
     Created: { description: Recurso creado }

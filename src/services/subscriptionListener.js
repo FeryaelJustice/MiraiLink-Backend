@@ -18,7 +18,14 @@ export async function startSubscriptionListener(pool) {
         if (isStopping) return;
 
         try {
-            listenerClient = await pool.connect();
+            const client = await pool.connect();
+            if (isStopping) {
+                try {
+                    client.release(true);
+                } catch (_) {}
+                return;
+            }
+            listenerClient = client;
             console.log('[SubscriptionListener] Connected and listening to channel "subscription_changed"');
 
             listenerClient.on('notification', async msg => {
@@ -45,6 +52,7 @@ export async function startSubscriptionListener(pool) {
 
             await listenerClient.query('LISTEN subscription_changed');
         } catch (err) {
+            if (isStopping) return;
             console.error('[SubscriptionListener] Failed to establish listener connection:', err?.message);
             cleanupAndReconnect();
         }
