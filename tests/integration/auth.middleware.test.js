@@ -88,8 +88,6 @@ describe('authenticateToken', () => {
 
         expect(next).toHaveBeenCalled();
         expect(res.setHeader).toHaveBeenCalledWith('X-Subscription-Plan', 'premium');
-        expect(res.setHeader).toHaveBeenCalledWith('X-Subscription-Premium', 'true');
-        expect(res.setHeader).toHaveBeenCalledWith('X-Subscription-Plus', 'true');
         expect(req.user.subscription).toEqual({
             isPremium: true,
             isPlus: true,

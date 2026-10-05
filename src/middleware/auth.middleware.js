@@ -57,8 +57,6 @@ export const authenticateToken = (allowUnverified = false) => async (req, res, n
         const plan = isActive ? (isPremium ? 'premium' : 'plus') : 'free';
 
         res.setHeader('X-Subscription-Plan', plan);
-        res.setHeader('X-Subscription-Premium', String(isPremium));
-        res.setHeader('X-Subscription-Plus', String(isPlus));
 
         req.user = {
             ...decoded,
