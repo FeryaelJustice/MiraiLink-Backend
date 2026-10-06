@@ -4,6 +4,14 @@ let listenerClient = null;
 let reconnectTimeout = null;
 let isStopping = false;
 
+function releaseListenerClient(client) {
+    try {
+        client.release(true);
+    } catch (err) {
+        console.warn('[SubscriptionListener] Failed to release listener client:', err?.message);
+    }
+}
+
 /**
  * Starts a persistent PostgreSQL LISTEN connection on the 'subscription_changed' channel.
  * Whenever an INSERT/UPDATE/DELETE occurs on user_subscriptions (even via raw SQL),
@@ -20,9 +28,7 @@ export async function startSubscriptionListener(pool) {
         try {
             const client = await pool.connect();
             if (isStopping) {
-                try {
-                    client.release(true);
-                } catch (_) {}
+                releaseListenerClient(client);
                 return;
             }
             listenerClient = client;
@@ -60,9 +66,7 @@ export async function startSubscriptionListener(pool) {
 
     function cleanupAndReconnect() {
         if (listenerClient) {
-            try {
-                listenerClient.release(true);
-            } catch (_) {}
+            releaseListenerClient(listenerClient);
             listenerClient = null;
         }
         if (!isStopping && !reconnectTimeout) {
@@ -84,9 +88,7 @@ export function stopSubscriptionListener() {
         reconnectTimeout = null;
     }
     if (listenerClient) {
-        try {
-            listenerClient.release(true);
-        } catch (_) {}
+        releaseListenerClient(listenerClient);
         listenerClient = null;
     }
 }
