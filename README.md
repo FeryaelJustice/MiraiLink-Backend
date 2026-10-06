@@ -7,8 +7,8 @@
 <h1 align="center">MiraiLink Backend</h1>
 
 <p align="center">
-  <strong>Motor de servicios RESTful, autenticacion y persistencia para la plataforma social MiraiLink.</strong><br>
-  <em>Construido con Node.js 22, Express 5, PostgreSQL 16, validacion Zod, 2FA TOTP y contrato OpenAPI 3.1.</em>
+  <strong>Motor de servicios RESTful, autenticación y persistencia para la plataforma social MiraiLink.</strong><br>
+  <em>Construido con Node.js 22, Express 5, PostgreSQL 16, validación Zod, 2FA TOTP y contrato OpenAPI 3.1.</em>
 </p>
 
 <p align="center">
@@ -37,41 +37,41 @@
 
 - - -
 
-## Indice
+## Índice
 
-- [Indice](#indice)
-- [Vision General](#vision-general)
+- [Índice](#índice)
+- [Visión General](#visión-general)
 - [Arquitectura y Pipeline de Peticiones](#arquitectura-y-pipeline-de-peticiones)
   - [Arquitectura de Datos](#arquitectura-de-datos)
-- [Matriz de Dominios y Modulos de la API](#matriz-de-dominios-y-modulos-de-la-api)
-- [Seguridad y Criptografia](#seguridad-y-criptografia)
-  - [Protocolo de Autenticacion en Dos Fases (2FA)](#protocolo-de-autenticacion-en-dos-fases-2fa)
-  - [Validacion Binaria de Imagenes](#validacion-binaria-de-imagenes)
+- [Matriz de Dominios y Módulos de la API](#matriz-de-dominios-y-módulos-de-la-api)
+- [Seguridad y Criptografía](#seguridad-y-criptografía)
+  - [Protocolo de Autenticación en Dos Fases (2FA)](#protocolo-de-autenticación-en-dos-fases-2fa)
+  - [Validación Binaria de Imágenes](#validación-binaria-de-imágenes)
 - [Formato de Respuestas y Errores Normalizados](#formato-de-respuestas-y-errores-normalizados)
   - [Respuestas de Error Estandarizadas](#respuestas-de-error-estandarizadas)
-  - [Codigos de Estado HTTP Habituales](#codigos-de-estado-http-habituales)
+  - [Códigos de Estado HTTP Habituales](#códigos-de-estado-http-habituales)
 - [Estrategia y Suite de Testing](#estrategia-y-suite-de-testing)
-  - [Integracion Continua (CI)](#integracion-continua-ci)
+  - [Integración Continua (CI)](#integración-continua-ci)
 - [Estructura del Repositorio](#estructura-del-repositorio)
 - [Requisitos y Puesta en Marcha](#requisitos-y-puesta-en-marcha)
   - [Prerrequisitos](#prerrequisitos)
-  - [Instalacion Paso a Paso](#instalacion-paso-a-paso)
-- [Comandos de Desarrollo y Operacion](#comandos-de-desarrollo-y-operacion)
-- [Guia de Documentacion Detallada](#guia-de-documentacion-detallada)
+  - [Instalación Paso a Paso](#instalación-paso-a-paso)
+- [Comandos de Desarrollo y Operación](#comandos-de-desarrollo-y-operación)
+- [Guía de Documentación Detallada](#guía-de-documentación-detallada)
 - [Limitaciones Conocidas](#limitaciones-conocidas)
 - [Contacto y Licencia](#contacto-y-licencia)
 
 - - -
 
-## Vision General
+## Visión General
 
-**MiraiLink Backend** es el corazon del ecosistema social y de citas MiraiLink. Proporciona una plataforma de servicios robusta, segura y de alto rendimiento que conecta usuarios a traves de afinidades tematicas en anime, manga y videojuegos.
+**MiraiLink Backend** es el corazón del ecosistema social y de citas MiraiLink. Proporciona una plataforma de servicios robusta, segura y de alto rendimiento que conecta usuarios a través de afinidades temáticas en anime, manga y videojuegos.
 
-El servicio esta desarrollado bajo estandares rigurosos de calidad de software:
-- **59 Operaciones RESTful Documentadas**: Cubriendo autenticacion, gestion de perfil, fotografias con validacion de firmas binarias, algoritmo de swipes/matching, mensajeria privada, catalogos de cultura otaku y moderacion.
-- **Validacion Estricta con Zod**: Parseo de esquemas y coercion segura en query, params y body antes de que cualquier controlador intervenga.
-- **Seguridad Multicapa**: Autenticacion basada en Bearer JWT con lista negra de tokens revocados, autenticacion en dos pasos (2FA) con TOTP y codigos de recuperacion con hash bcrypt, rate limiting adaptativo y cabeceras de proteccion con Helmet y CORS.
-- **Desacoplamiento para Testing**: La definicion de la aplicacion Express (`src/app.js`) esta separada del proceso de red (`src/server.js`), posibilitando la ejecucion de suites de pruebas con Supertest sin levantar sockets TCP ni depender de servicios externos en frio.
+El servicio está desarrollado bajo estándares rigurosos de calidad de software:
+- **59 Operaciones RESTful Documentadas**: Cubriendo autenticación, gestión de perfil, fotografías con validación de firmas binarias, algoritmo de swipes/matching, mensajería privada, catálogos de cultura otaku y moderación.
+- **Validación Estricta con Zod**: Parseo de esquemas y coerción segura en query, params y body antes de que cualquier controlador intervenga.
+- **Seguridad Multicapa**: Autenticación basada en Bearer JWT con lista negra de tokens revocados, autenticación en dos pasos (2FA) con TOTP y códigos de recuperación con hash bcrypt, rate limiting adaptativo y cabeceras de protección con Helmet y CORS.
+- **Desacoplamiento para Testing**: La definición de la aplicación Express (`src/app.js`) está separada del proceso de red (`src/server.js`), posibilitando la ejecución de suites de pruebas con Supertest sin levantar sockets TCP ni depender de servicios externos en frío.
 
 - - -
 
@@ -85,9 +85,9 @@ flowchart TD
     Srv --> App["src/app.js (createApp)"]
 
     subgraph Middleware ["Middleware Global"]
-        ReqId["x-request-id (Correlacion de trazas)"]
+        ReqId["x-request-id (Correlación de trazas)"]
         Cors["CORS (Allowlist de dominios)"]
-        Body["JSON Parser (Limite estricto 100 KiB)"]
+        Body["JSON Parser (Límite estricto 100 KiB)"]
         Comp["Compression (Gzip / Deflate)"]
         Hel["Helmet (Cabeceras de seguridad)"]
         ReqId --> Cors --> Body --> Comp --> Hel
@@ -117,39 +117,39 @@ flowchart TD
 
     subgraph Output ["Respuesta y Errores"]
         DTO["DTO Projections (user.dto.js - Sin datos sensibles)"]
-        ErrorH["errorHandler (Normalizacion de codigos AppError)"]
-        Controller --> DTO --> Resp["Respuesta JSON Estandar"]
+        ErrorH["errorHandler (Normalización de códigos AppError)"]
+        Controller --> DTO --> Resp["Respuesta JSON Estándar"]
         Controller -.->|Error| ErrorH --> RespErr["JSON Normalizado con requestId"]
     end
 ```
 
 ### Arquitectura de Datos
 
-No se utiliza un ORM pesado: los controladores ejecutan **consultas SQL parametrizadas** directamente mediante un pool unico de conexiones PostgreSQL (`src/models/db.js`), eliminando riesgos de inyeccion SQL y asegurando transacciones atomicas (`BEGIN`, `COMMIT`, `ROLLBACK`) para operaciones criticas como matches, consumo de codigos de recuperacion y subida de fotografias.
+No se utiliza un ORM pesado: los controladores ejecutan **consultas SQL parametrizadas** directamente mediante un pool único de conexiones PostgreSQL (`src/models/db.js`), eliminando riesgos de inyección SQL y asegurando transacciones atómicas (`BEGIN`, `COMMIT`, `ROLLBACK`) para operaciones críticas como matches, consumo de códigos de recuperación y subida de fotografías.
 
 - - -
 
-## Matriz de Dominios y Modulos de la API
+## Matriz de Dominios y Módulos de la API
 
 El contrato vigente documenta 59 operaciones. La siguiente tabla resume dominios; el inventario completo está en [Contratos HTTP](docs/estudio/contratos-http.md):
 
-| Dominio | Prefijo de Ruta | Controlador | Persistencia Principal | Descripcion Funcional |
+| Dominio | Prefijo de Ruta | Controlador | Persistencia Principal | Descripción Funcional |
 | :--- | :--- | :--- | :--- | :--- |
-| **Version Android** | `/api/app` | `app.controller.js` | `app_versions` | Control de versiones requeridas y compatibilidad con el cliente movil. |
-| **Autenticacion y 2FA** | `/api/auth` | `auth.controller.js` | `users`, `user_2fa`, `token_blacklist` | Registro, login, verificacion de email, recuperacion de clave y flujo TOTP 2FA. |
-| **Perfil de Usuario** | `/api/user`, `/api/users` | `user.controller.js` | `users`, `user_anime_interests`, `user_game_interests` | Consulta y edicion de biografia, animes, videojuegos, genero y preferencias. |
-| **Fotografias y Media** | `/api/user/photos` | `photo.controller.js` | `user_photos`, filesystem | Subida transaccional con validacion de magic bytes y gestion de avatar principal. |
-| **Descubrimiento (Swipes)** | `/api/swipe` | `swipe.controller.js` | `users`, `likes`, `dislikes` | Obtencion de cartas de descubrimiento y registro de interacciones Like/Dislike. |
+| **Versión Android** | `/api/app` | `app.controller.js` | `app_versions` | Control de versiones requeridas y compatibilidad con el cliente móvil. |
+| **Autenticación y 2FA** | `/api/auth` | `auth.controller.js` | `users`, `user_2fa`, `token_blacklist` | Registro, login, verificación de email, recuperación de clave y flujo TOTP 2FA. |
+| **Perfil de Usuario** | `/api/user`, `/api/users` | `user.controller.js` | `users`, `user_anime_interests`, `user_game_interests` | Consulta y edición de biografía, animes, videojuegos, género y preferencias. |
+| **Fotografías y Media** | `/api/user/photos` | `photo.controller.js` | `user_photos`, filesystem | Subida transaccional con validación de magic bytes y gestión de avatar principal. |
+| **Descubrimiento (Swipes)** | `/api/swipe` | `swipe.controller.js` | `users`, `likes`, `dislikes` | Obtención de cartas de descubrimiento y registro de interacciones Like/Dislike. |
 | **Coincidencias (Matches)**| `/api/match` | `match.controller.js` | `matches` | Listado y detalle de matches mutuos activos. |
-| **Mensajeria y Chat** | `/api/chats` | `chat.controller.js` | `chats`, `chat_members`, `messages`| Historial de chats privados, envio de mensajes, lectura y contador de no leidos. |
-| **Catalogos Otaku/Gamer** | `/api/catalog` | `catalog.controller.js` | `animes`, `games` | Listado y busqueda de animes y franquicias de videojuegos precargadas. |
-| **Moderacion y Soporte** | `/api/report`, `/api/feedback` | Controladores dedicados | `reports`, `feedback` | Denuncia de conductas inapropiadas y buzon de sugerencias de la aplicacion. |
+| **Mensajería y Chat** | `/api/chats` | `chat.controller.js` | `chats`, `chat_members`, `messages`| Historial de chats privados, envío de mensajes, lectura y contador de no leidos. |
+| **Catálogos Otaku/Gamer** | `/api/catalog` | `catalog.controller.js` | `animes`, `games` | Listado y búsqueda de animes y franquicias de videojuegos precargadas. |
+| **Moderación y Soporte** | `/api/report`, `/api/feedback` | Controladores dedicados | `reports`, `feedback` | Denuncia de conductas inapropiadas y buzon de sugerencias de la aplicación. |
 
 - - -
 
-## Seguridad y Criptografia
+## Seguridad y Criptografía
 
-MiraiLink Backend incorpora politicas de seguridad proactivas en cada capa:
+MiraiLink Backend incorpora políticas de seguridad proactivas en cada capa:
 
 ```
            +-------------------------------------------------------+
@@ -160,29 +160,29 @@ MiraiLink Backend incorpora politicas de seguridad proactivas en cada capa:
            | 3. Acceso: Bearer JWT (24h) con lista negra de tokens |
            | 4. Doble Factor: TOTP (speakeasy) + hash bcrypt       |
            | 5. Cifrado: AES-256-GCM para secretos de usuario      |
-           | 6. Archivos: Validacion de cabeceras magicas binarias |
-           | 7. Proyeccion: DTOs publicos sin fugas de datos       |
+           | 6. Archivos: Validación de cabeceras mágicas binarias |
+           | 7. Proyección: DTOs públicos sin fugas de datos       |
            +-------------------------------------------------------+
 ```
 
-### Protocolo de Autenticacion en Dos Fases (2FA)
+### Protocolo de Autenticación en Dos Fases (2FA)
 
 1. **Fase 1 (Credenciales)**: `POST /api/auth/login`
    - Si el usuario tiene 2FA activado, el backend **no entrega un access token**.
    - Devuelve `requires2FA: true`, un `challengeToken` temporal firmado (validez de 5 minutos, `purpose: 2fa-login`) y `expiresIn`.
-2. **Fase 2 (Verificacion)**: `POST /api/auth/2fa/loginVerifyLastStep`
-   - Requiere el `challengeToken` y el codigo TOTP de 6 digitos (o un codigo de recuperacion).
+2. **Fase 2 (Verificación)**: `POST /api/auth/2fa/loginVerifyLastStep`
+   - Requiere el `challengeToken` y el código TOTP de 6 dígitos (o un código de recuperación).
    - Valida el segundo factor y, si es correcto, emite el `access-token` definitivo (`purpose: access`).
-   - Los codigos de recuperacion se verifican con `bcrypt` y se invalidan transaccionalmente tras un unico uso.
+   - Los códigos de recuperación se verifican con `bcrypt` y se invalidan transaccionalmente tras un único uso.
 
-### Validacion Binaria de Imagenes
+### Validación Binaria de Imágenes
 
 Para prevenir inyecciones de archivos maliciosos (shells, ejecutables o polyglots), el middleware `validateImage` inspecciona las cabeceras binarias reales (Magic Bytes) del buffer en memoria:
 - **JPEG**: Firma `FF D8 FF`
 - **PNG**: Firma `89 50 4E 47`
 - **WebP**: Firma `RIFF` con subtipo `WEBP`
 
-Cualquier archivo que no coincida con su firma real es rechazado de inmediato con codigo HTTP 415 antes de escribir nada en disco.
+Cualquier archivo que no coincida con su firma real es rechazado de inmediato con código HTTP 415 antes de escribir nada en disco.
 
 - - -
 
@@ -207,16 +207,16 @@ Todas las peticiones incluyen la cabecera de trazabilidad `x-request-id`.
 }
 ```
 
-### Codigos de Estado HTTP Habituales
+### Códigos de Estado HTTP Habituales
 
-| Status | Codigo de Negocio | Causa |
+| Status | Código de Negocio | Causa |
 | :--- | :--- | :--- |
-| `400` | `VALIDATION_ERROR` | Los parametros, query o body no satisfacen los esquemas Zod. |
-| `401` | `TOKEN_REQUIRED` / `INVALID_TOKEN` / `TOKEN_REVOKED` | Falta la cabecera Bearer, el token ha expirado o esta en lista negra. |
+| `400` | `VALIDATION_ERROR` | Los parámetros, query o body no satisfacen los esquemas Zod. |
+| `401` | `TOKEN_REQUIRED` / `INVALID_TOKEN` / `TOKEN_REVOKED` | Falta la cabecera Bearer, el token ha expirado o está en lista negra. |
 | `403` | `ACCOUNT_UNVERIFIED` / `CORS_REJECTED` | Cuenta sin verificar o dominio de origen no permitido por CORS. |
 | `404` | `NOT_FOUND` / `USER_NOT_FOUND` / `CHAT_NOT_FOUND` | El recurso solicitado no existe o no es accesible para el usuario. |
 | `409` | `ACCOUNT_EXISTS` | Conflicto de duplicidad (email o nombre de usuario ya registrado). |
-| `415` | `INVALID_IMAGE_SIGNATURE` | El archivo subido no contiene una firma valida de imagen. |
+| `415` | `INVALID_IMAGE_SIGNATURE` | El archivo subido no contiene una firma válida de imagen. |
 | `429` | `RATE_LIMITED` | Se ha superado el umbral de peticiones permitido para la IP. |
 | `500` | `INTERNAL_ERROR` | Error imprevisto en el servidor (los detalles sensibles no se exponen al cliente). |
 
@@ -238,14 +238,14 @@ El proyecto cuenta con un sistema de pruebas automatizadas con **Vitest**, **Sup
          -------------------
 ```
 
-### Integracion Continua (CI)
+### Integración Continua (CI)
 
-El workflow de GitHub Actions (`.github/workflows/ci.yml`) se ejecuta de manera automatica en cada pull request y push a la rama principal:
+El workflow de GitHub Actions (`.github/workflows/ci.yml`) se ejecuta de manera automática en cada pull request y push a la rama principal:
 1. Levanta un contenedor de servicio con **PostgreSQL 16**.
-2. Ejecuta instalacion determinista (`npm ci`) sobre **Node.js 22**.
-3. Pasa el linter estatico (`npm run lint`).
-4. Ejecuta toda la bateria de tests con reporte de cobertura (`npm run test:coverage`).
-5. Valida la correspondencia estricta entre las rutas de Express y la especificacion OpenAPI 3.1 (`npm run check:routes`).
+2. Ejecuta instalación determinista (`npm ci`) sobre **Node.js 22**.
+3. Pasa el linter estático (`npm run lint`).
+4. Ejecuta toda la batería de tests con reporte de cobertura (`npm run test:coverage`).
+5. Valida la correspondencia estricta entre las rutas de Express y la especificación OpenAPI 3.1 (`npm run check:routes`).
 
 - - -
 
@@ -253,26 +253,26 @@ El workflow de GitHub Actions (`.github/workflows/ci.yml`) se ejecuta de manera 
 
 ```text
 MiraiLink-Backend/
-├── docs/                                  # Documentacion tecnica exhaustiva
-│   ├── api-reference.md                   # Catalogo de las 59 operaciones de la API
-│   ├── architecture.md                    # Diseno del sistema y decisiones tecnicas
-│   ├── code-reference.md                  # Referencia de metodos, parametros y retornos
+├── docs/                                  # Documentación técnica exhaustiva
+│   ├── api-reference.md                   # Catálogo de las 59 operaciones de la API
+│   ├── architecture.md                    # Diseño del sistema y decisiones técnicas
+│   ├── code-reference.md                  # Referencia de métodos, parámetros y retornos
 │   ├── codebase-map.md                    # Mapa navegable de carpetas y archivos
-│   ├── database.md                        # Modelo relacional, tablas e indices PostgreSQL
-│   ├── future-vps-deployment.md           # Guia de despliegue en VPS (Nginx, PM2, systemd)
-│   ├── openapi.yaml                       # Especificacion oficial OpenAPI 3.1
-│   ├── runtime-and-configuration.md       # Variables de entorno y ciclo de ejecucion
-│   ├── security-review.md                 # Auditoria y revision de seguridad
+│   ├── database.md                        # Modelo relacional, tablas e índices PostgreSQL
+│   ├── future-vps-deployment.md           # Guía de despliegue en VPS (Nginx, PM2, systemd)
+│   ├── openapi.yaml                       # Especificación oficial OpenAPI 3.1
+│   ├── runtime-and-configuration.md       # Variables de entorno y ciclo de ejecución
+│   ├── security-review.md                 # Auditoría y revisión de seguridad
 │   └── testing-strategy.md                # Estrategia de pruebas y umbrales de cobertura
 ├── scripts/
 │   └── check-openapi-routes.js            # Script de paridad entre Express y OpenAPI
 ├── src/
-│   ├── app.js                             # Definicion de la aplicacion Express y middleware
+│   ├── app.js                             # Definición de la aplicación Express y middleware
 │   ├── server.js                          # Punto de entrada HTTP y arranque del listener
 │   ├── config/
-│   │   ├── env.js                         # Carga y validacion de variables de entorno
-│   │   └── firebaseAdmin.js               # Inicializacion lazy de Firebase Messaging
-│   ├── controllers/                       # 10 controladores de logica de negocio
+│   │   ├── env.js                         # Carga y validación de variables de entorno
+│   │   └── firebaseAdmin.js               # Inicialización lazy de Firebase Messaging
+│   ├── controllers/                       # 10 controladores de lógica de negocio
 │   ├── database/
 │   │   ├── db.sql                         # Esquema base de la base de datos PostgreSQL
 │   │   └── migrations/                    # Migraciones de seguridad y esquema
@@ -283,14 +283,14 @@ MiraiLink-Backend/
 │   │   └── db.js                          # Pool compartido de PostgreSQL
 │   ├── routes/                            # Routers modulares de Express
 │   ├── services/                          # Notificaciones push y persistencia de fotos
-│   ├── utils/                             # Criptografia, validacion binaria y mailer SMTP
-│   └── validation/                        # Esquemas de validacion Zod
+│   ├── utils/                             # Criptografía, validación binaria y mailer SMTP
+│   └── validation/                        # Esquemas de validación Zod
 ├── tests/
 │   ├── database/                          # Pruebas de esquema y migraciones SQL
-│   ├── integration/                       # Pruebas de endpoints HTTP y autenticacion
+│   ├── integration/                       # Pruebas de endpoints HTTP y autenticación
 │   └── unit/                              # Pruebas unitarias de utilidades y middleware
 ├── .env.example                           # Plantilla de variables de entorno
-├── eslint.config.js                       # Configuracion moderna de ESLint 10
+├── eslint.config.js                       # Configuración moderna de ESLint 10
 └── package.json                           # Manifiesto del proyecto y scripts
 ```
 
@@ -300,13 +300,13 @@ MiraiLink-Backend/
 
 ### Prerrequisitos
 
-- **Node.js**: Version 22.x o superior.
-- **npm**: Version compatible con `package-lock.json` v3.
-- **PostgreSQL**: Version 16 recomendada.
-- **Servidor SMTP (Opcional)**: Requerido solo si se desean enviar correos de verificacion o recuperacion reales.
-- **Credenciales Firebase (Opcional)**: Requeridas solo para la emision de notificaciones push a dispositivos Android.
+- **Node.js**: Versión 22.x o superior.
+- **npm**: Versión compatible con `package-lock.json` v3.
+- **PostgreSQL**: Versión 16 recomendada.
+- **Servidor SMTP (Opcional)**: Requerido solo si se desean enviar correos de verificación o recuperación reales.
+- **Credenciales Firebase (Opcional)**: Requeridas solo para la emisión de notificaciones push a dispositivos Android.
 
-### Instalacion Paso a Paso
+### Instalación Paso a Paso
 
 1. **Clonar el repositorio**:
    ```bash
@@ -345,56 +345,56 @@ MiraiLink-Backend/
    ```bash
    npm run dev
    ```
-   El servicio arrancara en `http://localhost:3000` con recarga en caliente mediante Nodemon.
+   El servicio arrancará en `http://localhost:3000` con recarga en caliente mediante Nodemon.
 
 - - -
 
-## Comandos de Desarrollo y Operacion
+## Comandos de Desarrollo y Operación
 
-| Comando | Descripcion / Proposito |
+| Comando | Descripción / Propósito |
 | :--- | :--- |
 | `npm run dev` | Arranca el entorno de desarrollo con Nodemon y lectura de `.env`. |
-| `npm start` | Inicia el proceso optimizado de produccion (`NODE_ENV=production`). |
+| `npm start` | Inicia el proceso optimizado de producción (`NODE_ENV=production`). |
 | `npm run build` | Comprueba la sintaxis del entrypoint sin arrancar el proceso. |
 | `npm test` | Ejecuta toda la suite de pruebas automatizadas con Vitest. |
 | `npm run test:unit` | Ejecuta exclusivamente las pruebas unitarias. |
-| `npm run test:integration` | Ejecuta las pruebas de integracion HTTP y autenticacion. |
+| `npm run test:integration` | Ejecuta las pruebas de integración HTTP y autenticación. |
 | `npm run test:database` | Valida el esquema y las migraciones contra PostgreSQL. |
-| `npm run test:coverage` | Genera el informe completo de cobertura de codigo con motor V8. |
-| `npm run lint` | Analiza el codigo fuente mediante ESLint 10. |
-| `npm run lint:fix` | Corrige de forma automatica desviaciones de estilo con ESLint. |
-| `npm run check:routes` | Comprueba que todas las rutas coincidan con la especificacion OpenAPI 3.1. |
+| `npm run test:coverage` | Genera el informe completo de cobertura de código con motor V8. |
+| `npm run lint` | Analiza el código fuente mediante ESLint 10. |
+| `npm run lint:fix` | Corrige de forma automática desviaciones de estilo con ESLint. |
+| `npm run check:routes` | Comprueba que todas las rutas coincidan con la especificación OpenAPI 3.1. |
 | `npm run db:migrate` | Aplica una sola vez las migraciones incrementales pendientes a una base existente. No se ejecuta al arrancar el servidor. |
 | `npm run db:reset` | Recrea de forma destructiva una base local o desechable. Nunca usar en producción. |
 | `npm run db:reset-interactions` | Restablece matches, likes, dislikes, chats y mensajes para pruebas sin tocar cuentas, perfiles ni fotos. |
 | `npm run db:seed` | Inserta o actualiza los usuarios de prueba, sus ubicaciones y sus intereses. |
-| `npm run check` | Verificacion integral de calidad: lint, cobertura y contrato de rutas. |
+| `npm run check` | Verificación integral de calidad: lint, cobertura y contrato de rutas. |
 
 - - -
 
-## Guia de Documentacion Detallada
+## Guía de Documentación Detallada
 
-El repositorio incluye documentacion tecnica profunda en la carpeta `docs/`. Se recomienda su lectura en el siguiente orden:
+El repositorio incluye documentación técnica profunda en la carpeta `docs/`. Se recomienda su lectura en el siguiente orden:
 
-1. [Arquitectura](docs/architecture.md): Recorrido de peticiones, limites, dependencias y decisiones de diseno.
-2. [Mapa del Codigo](docs/codebase-map.md): Funcion especifica de cada directorio y archivo del proyecto.
-3. [Referencia de Codigo](docs/code-reference.md): Funciones, parametros, efectos colaterales y consumidores.
-4. [Guia de API](docs/api-reference.md): Autenticacion, requests, responses y catalogo de las 59 operaciones.
-5. [Especificacion OpenAPI 3.1](docs/openapi.yaml): Contrato legible por maquinas para Swagger, Redoc y agentes.
-6. [Base de Datos](docs/database.md): Modelo relacional, tablas, indices y migraciones de seguridad.
-7. [Runtime y Configuracion](docs/runtime-and-configuration.md): Variables de entorno y ciclo operativo.
-8. [Estrategia de Testing](docs/testing-strategy.md): Suites de pruebas, cobertura y limites actuales.
-9. [Revision de Seguridad](docs/security-review.md): Analisis de controles implementados y mitigacion de riesgos.
+1. [Arquitectura](docs/architecture.md): Recorrido de peticiones, límites, dependencias y decisiones de diseño.
+2. [Mapa del Código](docs/codebase-map.md): Función específica de cada directorio y archivo del proyecto.
+3. [Referencia de Código](docs/code-reference.md): Funciones, parámetros, efectos colaterales y consumidores.
+4. [Guía de API](docs/api-reference.md): Autenticación, requests, responses y catálogo de las 59 operaciones.
+5. [Especificación OpenAPI 3.1](docs/openapi.yaml): Contrato legible por maquinas para Swagger, Redoc y agentes.
+6. [Base de Datos](docs/database.md): Modelo relacional, tablas, índices y migraciones de seguridad.
+7. [Runtime y Configuración](docs/runtime-and-configuration.md): Variables de entorno y ciclo operativo.
+8. [Estrategia de Testing](docs/testing-strategy.md): Suites de pruebas, cobertura y límites actuales.
+9. [Revisión de Seguridad](docs/security-review.md): Análisis de controles implementados y mitigación de riesgos.
 10. [Despliegue Futuro en VPS](docs/future-vps-deployment.md): Arquitectura de despliegue en Linux con PM2 y Nginx.
-11. [Metodologia SDMD](docs/SDMD.md): Estandar de desarrollo guiado por especificaciones con IA (Spec-Anchor).
+11. [Metodología SDMD](docs/SDMD.md): Estándar de desarrollo guiado por especificaciones con IA (Spec-Anchor).
 
 - - -
 
 ## Limitaciones Conocidas
 
-- **Rate Limiter en Memoria**: Actualmente utiliza memoria volatil de proceso; en un despliegue horizontal multi-instancia debe configurarse un almacenamiento compartido como Redis.
-- **Almacenamiento de Multimedia**: Las fotografias se persisten en el sistema de archivos local; para clusters distribuidos se requerira un bucket de objetos (S3 o compatible).
-- **Rutas de la API**: La version actual de la API no incluye prefijo de version en la ruta (por ejemplo `/api/v1/`).
+- **Rate Limiter en Memoria**: Actualmente utiliza memoria volátil de proceso; en un despliegue horizontal multi-instancia debe configurarse un almacenamiento compartido como Redis.
+- **Almacenamiento de Multimedia**: Las fotografías se persisten en el sistema de archivos local; para clusters distribuidos se requerirá un bucket de objetos (S3 o compatible).
+- **Rutas de la API**: La versión actual de la API no incluye prefijo de versión en la ruta (por ejemplo `/api/v1/`).
 
 - - -
 
@@ -406,9 +406,9 @@ Creado y mantenido por **Feryael Justice** como parte integral del proyecto estr
 - **App en Google Play Store**: [Descargar MiraiLink](https://play.google.com/store/apps/details?id=com.feryaeljustice.mirailink)
 - **Reporte de Incidencias**: [GitHub Issues](https://github.com/FeryaelJustice/MiraiLink-Backend/issues)
 
-Licencia bajo los terminos de la [Licencia ISC](LICENSE).
+Licencia bajo los términos de la [Licencia ISC](LICENSE).
 
 <p align="center">
-  <sub>Construido con dedicacion para impulsar comunidades y experiencias sociales modernas.</sub>
+  <sub>Construido con dedicación para impulsar comunidades y experiencias sociales modernas.</sub>
 </p>
 

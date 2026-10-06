@@ -4,7 +4,7 @@
 
 ## Responsabilidad y recorrido
 
-Lista conversaciones por pertenencia, calcula último mensaje con LATERAL y unread desde last_read_at. getMessages pagina por before/limit y revierte orden para respuesta. Private chat usa advisory lock por pareja ordenada y recupera el existente o crea chat/members.
+Lista conversaciones por pertenencia, calcula último mensaje con LATERAL y unread desde last_read_at. getMessages página por before/limit y revierte orden para respuesta. Private chat usa advisory lock por pareja ordenada y recupera el existente o crea chat/members.
 
 ## Alternativas y efectos
 

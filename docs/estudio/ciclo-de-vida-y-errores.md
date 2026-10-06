@@ -19,7 +19,7 @@ Revisión de fuentes: 2026-10-01. Las observaciones estáticas no certifican el 
 | FCM caído | Envío capturado; escritura mensaje puede seguir confirmada |
 | Sin geografía activa fresca | No usar coordenadas antiguas como actuales; revisar scope y origen |
 | Timeout cliente tras COMMIT | Reintentar puede repetir efecto si no existe clave idempotente |
-| Reinicio de proceso | Rate limits y cache de recuentos se pierden; persistencia PostgreSQL depende del commit |
+| Reinicio de proceso | Rate limits y caché de recuentos se pierden; persistencia PostgreSQL depende del commit |
 
 [geoSearch.js](../../src/utils/geoSearch.js) considera activa una ubicación con edad <=24 h y no futura en helper JS. candidateCoordinateSql solo compara el límite inferior temporal, sin excluir timestamps futuros: registrar la diferencia en hallazgos.
 
