@@ -15,7 +15,7 @@ Revisión de fuentes: 2026-10-01. Las observaciones estáticas no certifican el 
 | Reset no revoca todos los tokens existentes | confirmPasswordReset | Cambio de contraseña no implica logout global |
 | Ficheros y SQL no son transacción distribuida | photo.controller.js/photoStorage.js | Error post-COMMIT o interrupción puede dejar inconsistencias |
 | Renumeración de fotos con UNIQUE inmediata | deletePhoto UPDATE posiciones | Revisar colisiones según filas/orden de actualización; requiere test específico, no afirmar reproducción |
-| Historial privado no página | getChatHistory | No equivale a la ruta paginada getMessages |
+| Historial privado no pagina | getChatHistory | No equivale a la ruta paginada getMessages |
 | Envío no exige match/idempotency key | sendMessage | No atribuir limitación a match previo ni entrega exactamente una vez |
 | SQL freshness no descarta futuro como helper JS | geoSearch.js | Semántica temporal discrepante |
 | Migración registra filename después de SQL | migrator.js | Interrupción tras COMMIT puede reejecutar archivo no registrado |

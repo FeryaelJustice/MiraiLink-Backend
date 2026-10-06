@@ -215,7 +215,7 @@ Mensajes, members y read exigen membresía mediante guard. Un no miembro recibe 
 
 | Operación | Auth | Success |
 | --- | --- | --- |
-| `GET /api/app/version/android` | Público | Plataforma, min/latest versión code, mensaje y Play Store URL; caché 300 s |
+| `GET /api/app/version/android` | Público | Plataforma, min/latest version code, mensaje y Play Store URL; caché 300 s |
 | `GET /api/catalog/animes` | Público | Cabecera opcional `Accept-Language`; `{id, catalog_key, name, biography, image_url}[]` ordenado |
 | `GET /api/catalog/games` | Público | Cabecera opcional `Accept-Language`; `{id, catalog_key, name, biography, image_url}[]` ordenado |
 

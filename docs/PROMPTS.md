@@ -47,7 +47,7 @@ Ahora genera el plan técnico en docs/features/<nombre_feature>/plan.md copiando
 Instrucciones estrictas:
 1. Inspecciona package.json para verificar las librerías y versiones reales del proyecto (Node 22, Express 5, Zod 4, PostgreSQL, Vitest). No inventes dependencias externas.
 2. Define las rutas y middlewares en src/routes/, esquemas de validación Zod en src/validation/, controladores y transacciones en src/controllers/, y consultas SQL parametrizadas.
-3. Específica los cambios DDL de base de datos en src/database/migrations/ y las proyecciones en src/dto/.
+3. Especifica los cambios DDL de base de datos en src/database/migrations/ y las proyecciones en src/dto/.
 4. Detalla los cambios requeridos en el contrato OpenAPI (docs/openapi.yaml).
 5. Disena la estrategia de testing (pruebas unitarias, integración HTTP con Supertest y tests de esquema).
 6. NO generes código de producción todavía. Espera mi aprobación explícita del plan.
