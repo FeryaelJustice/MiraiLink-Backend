@@ -8,7 +8,7 @@ Catalog controller ofrece anime/game, geografía y opciones de perfil. resolveCa
 
 ## Alternativas y efectos
 
-Ciudad se consulta con texto dentro de región; no reutilizar country label como region ID. Media relativa necesita PUBLIC_ORIGIN u origen request correcto. Traducción ausente y elemento sin imagen requieren fallback distinto. Sync RAWG/Jikan conserva datos existentes y añade entradas/idiomas; puede copiar mismo texto en varios idiomas y capturar fallo por proveedor.
+Ciudad se consulta con texto dentro de región; no reutilizar country label como región ID. Media relativa necesita PUBLIC_ORIGIN u origen request correcto. Traducción ausente y elemento sin imagen requieren fallback distinto. Sync RAWG/Jikan conserva datos existentes y añade entradas/idiomas; puede copiar mismo texto en varios idiomas y capturar fallo por proveedor.
 
 ## Fuentes para estudiar
 

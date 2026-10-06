@@ -180,7 +180,7 @@ To prevent malicious file injection (shells, executables, or polyglots), the `va
 - **PNG**: Signature `89 50 4E 47`
 - **WebP**: Signature `RIFF` with `WEBP` subtype
 
-Any uploaded file failing to match its declared magic bytes is rejected immediately with HTTP 415 before anything touches disk.
+Any uploaded file failing to match its declared magic bytes is rejected immediately with HTTP 415 before anything touches the disk.
 
 - - -
 
@@ -210,7 +210,7 @@ All requests include an `x-request-id` header for end-to-end tracing.
 | Status | Business Code | Trigger |
 | :--- | :--- | :--- |
 | `400` | `VALIDATION_ERROR` | Request params, query, or body violate Zod validation schemas. |
-| `401` | `TOKEN_REQUIRED` / `INVALID_TOKEN` / `TOKEN_REVOKED` | Missing Bearer header, expired token, or token listed in blacklist. |
+| `401` | `TOKEN_REQUIRED` / `INVALID_TOKEN` / `TOKEN_REVOKED` | Missing a Bearer header, expired token, or token listed in the blacklist. |
 | `403` | `ACCOUNT_UNVERIFIED` / `CORS_REJECTED` | Unverified email address or origin disallowed by CORS policy. |
 | `404` | `NOT_FOUND` / `USER_NOT_FOUND` / `CHAT_NOT_FOUND` | Requested resource does not exist or is inaccessible. |
 | `409` | `ACCOUNT_EXISTS` | Uniqueness conflict (email or username already registered). |
@@ -336,7 +336,7 @@ MiraiLink-Backend/
    ```
    *Edit `.env` with your PostgreSQL database credentials and JWT secret keys.*
 
-4. **Initialize PostgreSQL database**:
+4. **Initialize the PostgreSQL database**:
    ```bash
    # Load baseline schema
    psql -U postgres -d mirailink -f src/database/db.sql
@@ -357,7 +357,7 @@ MiraiLink-Backend/
 
 | Command | Description / Purpose |
 | :--- | :--- |
-| `npm run dev` | Launches development server with Nodemon and `.env` loading. |
+| `npm run dev` | Launches the development server with Nodemon and `.env` loading. |
 | `npm start` | Runs the production-optimized process (`NODE_ENV=production`). |
 | `npm run build` | Validates entrypoint syntax without binding network ports. |
 | `npm test` | Runs the automated test suite with Vitest. |

@@ -110,7 +110,7 @@ Los limiters se saltan si `app.locals.enableRateLimits === false`.
 
 | Handler | Archivo | Resultado |
 | --- | --- | --- |
-| `checkAndroidAppVersion` | `app.controller.js` | Política Android más reciente y cache 5 minutos. |
+| `checkAndroidAppVersion` | `app.controller.js` | Política Android más reciente y caché 5 minutos. |
 | `getAllAnimes` | `catalog.controller.js` | Catálogo ordenado por nombre. |
 | `getAllGames` | `catalog.controller.js` | Catálogo ordenado por nombre. |
 

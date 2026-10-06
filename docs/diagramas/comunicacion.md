@@ -1,4 +1,4 @@
-# UML: comunicacion
+# UML: comunicación
 
 [Índice](indice.md) | [Fuente editable PlantUML](comunicacion.puml)
 

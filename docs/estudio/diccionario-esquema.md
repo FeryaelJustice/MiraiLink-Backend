@@ -21,10 +21,10 @@ Origen: [src/database/db.sql](../../src/database/db.sql).
 | `bio` | bio TEXT |
 | `gender` | gender VARCHAR(20) |
 | `birthdate` | birthdate DATE |
-| `residence_latitude` | residence_latitude DOUBLE PRECISION |
-| `residence_longitude` | residence_longitude DOUBLE PRECISION |
-| `current_latitude` | current_latitude DOUBLE PRECISION |
-| `current_longitude` | current_longitude DOUBLE PRECISION |
+| `residence_latitude` | residence_latitude DOUBLE PRECISIÓN |
+| `residence_longitude` | residence_longitude DOUBLE PRECISIÓN |
+| `current_latitude` | current_latitude DOUBLE PRECISIÓN |
+| `current_longitude` | current_longitude DOUBLE PRECISIÓN |
 | `last_location_updated_at` | last_location_updated_at TIMESTAMP |
 | `created_at` | created_at TIMESTAMP DEFAULT NOW() |
 | `updated_at` | updated_at TIMESTAMP |
@@ -51,8 +51,8 @@ Origen: [src/database/db.sql](../../src/database/db.sql).
 | --- | --- |
 | `id` | id UUID PRIMARY KEY DEFAULT gen_random_uuid() |
 | `user_id` | user_id UUID REFERENCES users(id) ON DELETE CASCADE |
-| `latitude` | latitude DOUBLE PRECISION NOT NULL |
-| `longitude` | longitude DOUBLE PRECISION NOT NULL |
+| `latitude` | latitude DOUBLE PRECISIÓN NOT NULL |
+| `longitude` | longitude DOUBLE PRECISIÓN NOT NULL |
 | `city` | city VARCHAR(100) |
 | `country_code` | country_code VARCHAR(10) |
 | `recorded_at` | recorded_at TIMESTAMP DEFAULT NOW() |
@@ -400,8 +400,8 @@ Origen: [src/database/migrations/006_canonical_residence_and_search_preferences.
 | `id` | id UUID PRIMARY KEY DEFAULT gen_random_uuid() |
 | `iso_code` | iso_code CHAR(2) NOT NULL UNIQUE |
 | `geonames_id` | geonames_id BIGINT UNIQUE |
-| `latitude` | latitude DOUBLE PRECISION |
-| `longitude` | longitude DOUBLE PRECISION |
+| `latitude` | latitude DOUBLE PRECISIÓN |
+| `longitude` | longitude DOUBLE PRECISIÓN |
 | `created_at` | created_at TIMESTAMPTZ NOT NULL DEFAULT NOW() |
 | `updated_at` | updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW() |
 
@@ -431,8 +431,8 @@ Origen: [src/database/migrations/006_canonical_residence_and_search_preferences.
 | `geonames_id` | geonames_id BIGINT UNIQUE |
 | `catalog_key` | catalog_key VARCHAR(220) UNIQUE |
 | `admin_code` | admin_code VARCHAR(40) |
-| `latitude` | latitude DOUBLE PRECISION |
-| `longitude` | longitude DOUBLE PRECISION |
+| `latitude` | latitude DOUBLE PRECISIÓN |
+| `longitude` | longitude DOUBLE PRECISIÓN |
 | `created_at` | created_at TIMESTAMPTZ NOT NULL DEFAULT NOW() |
 | `updated_at` | updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW() |
 
@@ -462,8 +462,8 @@ Origen: [src/database/migrations/006_canonical_residence_and_search_preferences.
 | `region_id` | region_id UUID REFERENCES regions(id) ON DELETE RESTRICT |
 | `geonames_id` | geonames_id BIGINT UNIQUE |
 | `catalog_key` | catalog_key VARCHAR(220) UNIQUE |
-| `latitude` | latitude DOUBLE PRECISION NOT NULL |
-| `longitude` | longitude DOUBLE PRECISION NOT NULL |
+| `latitude` | latitude DOUBLE PRECISIÓN NOT NULL |
+| `longitude` | longitude DOUBLE PRECISIÓN NOT NULL |
 | `population` | population BIGINT |
 | `created_at` | created_at TIMESTAMPTZ NOT NULL DEFAULT NOW() |
 | `updated_at` | updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW() |

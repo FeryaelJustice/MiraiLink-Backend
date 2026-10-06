@@ -17,7 +17,7 @@ La secuencia del catálogo/geografía requiere revisar migraciones antes del see
 
 ## Despliegue y recuperación
 
-El [documento de VPS](../future-vps-deployment.md) describe una propuesta, no evidencia de un despliegue real. Un reverse proxy debe coordinar TLS, trust proxy, PUBLIC_ORIGIN, limites de upload y timeouts. Cambiar origen afecta clientes e imágenes; cambiar JWT_SECRET invalida tokens y cambiar SECRET_2FA_KEY rompe secretos si no se migra cifrado.
+El [documento de VPS](../future-vps-deployment.md) describe una propuesta, no evidencia de un despliegue real. Un reverse proxy debe coordinar TLS, trust proxy, PUBLIC_ORIGIN, límites de upload y timeouts. Cambiar origen afecta clientes e imágenes; cambiar JWT_SECRET invalida tokens y cambiar SECRET_2FA_KEY rompe secretos si no se migra cifrado.
 
 Con varias instancias, sincronización del catálogo se programa en cada proceso, rate limit/cache no se comparten y fotos locales requieren almacenamiento coordinado. No atribuir alta disponibilidad por usar PM2 o Nginx sin resolver esos puntos.
 

@@ -4,11 +4,11 @@
 
 ## Responsabilidad y recorrido
 
-Lista conversaciones por pertenencia, calcula último mensaje con LATERAL y unread desde last_read_at. getMessages pagina por before/limit y revierte orden para respuesta. Private chat usa advisory lock por pareja ordenada y recupera el existente o crea chat/members.
+Lista conversaciones por pertenencia, calcula último mensaje con LATERAL y unread desde last_read_at. getMessages página por before/limit y revierte orden para respuesta. Private chat usa advisory lock por pareja ordenada y recupera el existente o crea chat/members.
 
 ## Alternativas y efectos
 
-requireChatMember protege rutas por chatId y devuelve 404 ajeno. history por userId consulta membership de ambos y no pagina en el handler revisado. sendMessage escribe en transacción, responde 201 y después solicita FCM sin bloquear respuesta. No exige match previo en el handler.
+requireChatMember protege rutas por chatId y devuelve 404 ajeno. history por userId consulta membership de ambos y no página en el handler revisado. sendMessage escribe en transacción, responde 201 y después solicita FCM sin bloquear respuesta. No exige match previo en el handler.
 
 Grupo crea miembros de una lista sin implementar por sí solo UI grupal. markChatAsRead actualiza marca temporal de miembro, no cambia todos los messages.is_read. Timeout después del commit puede repetir mensaje: sin client message ID no existe deduplicación general.
 

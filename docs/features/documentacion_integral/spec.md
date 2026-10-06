@@ -40,7 +40,7 @@ Esta auditoría es inicial y de lectura. No acredita compilación, pruebas, prod
 
 ### Límite con Android
 
-La documentación del cliente se especifica y mantiene en el [repositorio Android](https://github.com/FeryaelJustice/MiraiLink/blob/codex/documentacion-integral/docs/features/documentacion_integral/spec.md). Este proyecto documenta contratos que ofrece a sus clientes; no explica Compose, navegación, almacenamiento local ni detalles internos del cliente.
+La documentación del cliente se específica y mantiene en el [repositorio Android](https://github.com/FeryaelJustice/MiraiLink/blob/codex/documentacion-integral/docs/features/documentacion_integral/spec.md). Este proyecto documenta contratos que ofrece a sus clientes; no explica Compose, navegación, almacenamiento local ni detalles internos del cliente.
 
 ### Backend
 

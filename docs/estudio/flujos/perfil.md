@@ -4,7 +4,7 @@
 
 ## Responsabilidad y recorrido
 
-user router autentica cuenta verificada y valida entradas. updateProfile coordina campos, intereses, listas y archivos multipart. IDs de geografía se contrastan con país/región/ciudad; textos legacy no sustituyen su jerarquía. Las proyecciones públicas limitan datos; no exponer password_hash/secret.
+user router auténtica cuenta verificada y valida entradas. updateProfile coordina campos, intereses, listas y archivos multipart. IDs de geografía se contrastan con país/región/ciudad; textos legacy no sustituyen su jerarquía. Las proyecciones públicas limitan datos; no exponer password_hash/secret.
 
 ## Alternativas y efectos
 
