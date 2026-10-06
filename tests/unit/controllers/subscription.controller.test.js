@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const query = vi.fn();
+const verifyAndSavePurchase = vi.fn();
+vi.mock('../../../src/services/play-billing.js', () => ({ verifyAndSavePurchase }));
 vi.mock('../../../src/models/db.js', () => ({ default: { query } }));
 
 const {
@@ -29,6 +31,7 @@ function mockResponse() {
 describe('subscription.controller', () => {
     beforeEach(() => {
         query.mockReset();
+        verifyAndSavePurchase.mockReset();
     });
 
     describe('getSubscriptionStatus', () => {
@@ -58,7 +61,7 @@ describe('subscription.controller', () => {
                         id: 'sub-1',
                         product_id: 'mirailink_premium',
                         base_plan_id: 'monthly-autorenew',
-                        status: 'active',
+                        status: 'active', provider_verified: true,
                         auto_renewing: true,
                         expires_at: futureDate,
                         created_at: new Date().toISOString(),
@@ -90,7 +93,7 @@ describe('subscription.controller', () => {
                         id: 'sub-2',
                         product_id: 'mirailink_premium',
                         base_plan_id: 'monthly-autorenew',
-                        status: 'active',
+                        status: 'active', provider_verified: true,
                         auto_renewing: false,
                         expires_at: pastDate,
                         created_at: new Date().toISOString(),
@@ -112,94 +115,15 @@ describe('subscription.controller', () => {
     });
 
     describe('verifySubscription', () => {
-        it('persists purchase and returns active premium status', async () => {
-            const futureExpiresAt = new Date(Date.now() + 86400000 * 30).toISOString();
-            query.mockResolvedValueOnce({
-                rows: [
-                    {
-                        id: 'sub-new',
-                        product_id: 'mirailink_premium',
-                        base_plan_id: 'monthly-autorenew',
-                        status: 'active',
-                        auto_renewing: true,
-                        expires_at: futureExpiresAt,
-                    },
-                ],
-            });
-
-            const req = mockRequest({
-                body: {
-                    purchaseToken: 'play_token_xyz',
-                    productId: 'mirailink_premium',
-                    basePlanId: 'monthly-autorenew',
-                    orderId: 'GPA.9999-1111',
-                },
-            });
-            const res = mockResponse();
-            const next = vi.fn();
-
-            await verifySubscription(req, res, next);
-
-            expect(query).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO user_subscriptions'), [
-                userId,
-                'mirailink_premium',
-                'monthly-autorenew',
-                'play_token_xyz',
-                'GPA.9999-1111',
-                '30 days',
-            ]);
-
-            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
-                isPremium: true,
-                plan: 'premium',
-                status: 'active',
-                productId: 'mirailink_premium',
-                autoRenewing: true,
-            }));
-        });
-
-        it('assigns 90 days interval for threee-month-autorenew basePlanId', async () => {
-            query.mockResolvedValueOnce({
-                rows: [
-                    {
-                        id: 'sub_2',
-                        product_id: 'mirailink_premium',
-                        base_plan_id: 'threee-month-autorenew',
-                        status: 'active',
-                        auto_renewing: true,
-                        expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
-                    },
-                ],
-            });
-
-            const req = mockRequest({
-                body: {
-                    purchaseToken: 'token_3m',
-                    productId: 'mirailink_premium',
-                    basePlanId: 'threee-month-autorenew',
-                    orderId: 'GPA.3333-3333',
-                },
-            });
-            const res = mockResponse();
-            const next = vi.fn();
-
-            await verifySubscription(req, res, next);
-
-            expect(query).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO user_subscriptions'), [
-                userId,
-                'mirailink_premium',
-                'threee-month-autorenew',
-                'token_3m',
-                'GPA.3333-3333',
-                '90 days',
-            ]);
-
-            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
-                isPremium: true,
-                plan: 'premium',
-                status: 'active',
-                basePlanId: 'threee-month-autorenew',
-            }));
+        it('returns verified provider status and propagates rejection', async () => {
+            verifyAndSavePurchase.mockResolvedValueOnce({ provider_verified: true, product_id: 'mirailink_plus', status: 'active', expires_at: new Date(Date.now()+86400000).toISOString() });
+            const res=mockResponse(); const next=vi.fn();
+            await verifySubscription(mockRequest({body:{purchaseToken:'token',productId:'mirailink_plus'}}),res,next);
+            expect(verifyAndSavePurchase).toHaveBeenCalledWith(userId,'token','mirailink_plus');
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({isPlus:true,isPremium:false}));
+            verifyAndSavePurchase.mockRejectedValueOnce(new Error('invalid'));
+            await verifySubscription(mockRequest(),res,next);
+            expect(next).toHaveBeenCalledOnce();
         });
     });
 

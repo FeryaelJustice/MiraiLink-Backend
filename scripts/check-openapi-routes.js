@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import YAML from 'yaml';
 
 const prefixes = {
+    'affinity.routes.js': '/api/affinities',
     'app.routes.js': '/api/app', 'auth.routes.js': '/api/auth',
     'capsule.routes.js': '/api/capsules',
     'catalog.routes.js': '/api/catalog', 'chat.routes.js': '/api/chats',

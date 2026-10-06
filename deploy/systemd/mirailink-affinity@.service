@@ -1,0 +1,16 @@
+[Unit]
+Description=MiraiLink affinity worker (%i)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=mirailink
+Group=mirailink
+WorkingDirectory=/opt/mirailink/backend
+EnvironmentFile=/etc/mirailink/backend.env
+ExecStart=/usr/bin/node scripts/affinity-worker.js %i
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true

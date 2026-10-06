@@ -1,0 +1,11 @@
+[Unit]
+Description=MiraiLink notify timer
+
+[Timer]
+OnBootSec=2min
+OnUnitInactiveSec=1min
+Unit=mirailink-affinity@notify.service
+Persistent=true
+
+[Install]
+WantedBy=timers.target

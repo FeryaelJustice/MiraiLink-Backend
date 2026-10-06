@@ -1,4 +1,5 @@
 import db from '../models/db.js';
+import { ensureContact,pairLock } from '../services/affinity-service.js';
 import { capsuleTransaction, createMatchCapsule, cancelMatchCapsule, requireCapsulesEnabled } from '../services/capsule-service.js';
 import { likeWithMode, verifySwipeMode } from '../services/capsule-matching.js';
 import { PUBLIC_USER_SQL_COLUMNS, toPublicUser, toPublicUsers } from '../dto/user.dto.js';
@@ -30,7 +31,7 @@ export const getFeed = async (req, res, next) => {
                     s.product_id AS subscription_product_id, s.status AS subscription_status, s.expires_at AS subscription_expires_at
              FROM users u
              LEFT JOIN user_search_preferences p ON p.user_id = u.id
-             LEFT JOIN user_subscriptions s ON s.user_id = u.id
+             LEFT JOIN user_subscriptions s ON s.user_id = u.id AND s.provider_verified = TRUE
              WHERE u.id = $1`,
             [req.user.id],
         );
@@ -165,6 +166,7 @@ export const getFeed = async (req, res, next) => {
                    ), 0) AS common_interests
             FROM users u
             WHERE u.id != $1 AND u.is_deleted = FALSE
+              AND NOT EXISTS(SELECT 1 FROM user_blocks b WHERE (b.user_id=$1 AND b.target_id=u.id) OR (b.user_id=u.id AND b.target_id=$1))
               AND COALESCE((SELECT discovery_mode FROM user_search_preferences WHERE user_id=u.id),'classic') = COALESCE((SELECT discovery_mode FROM user_search_preferences WHERE user_id=$1),'classic')
               AND ${genderFilterSql}
               AND u.id NOT IN (
@@ -287,7 +289,7 @@ export const likeUser = async (req, res, next) => {
         const subResult = await db.query(
             `SELECT product_id, status, expires_at
              FROM user_subscriptions
-             WHERE user_id = $1
+             WHERE user_id = $1 AND provider_verified = TRUE
              LIMIT 1`,
             [fromUserId],
         );
@@ -316,7 +318,7 @@ export const likeUser = async (req, res, next) => {
 
         const mode=req.body.discoveryMode ?? 'classic';
         if(mode==='capsule') requireCapsulesEnabled(req);
-        const matched=await capsuleTransaction(client=>likeWithMode(client,fromUserId,toUserId,mode,createMatchCapsule));
+        const matched=await capsuleTransaction(async client=>{ await pairLock(client,fromUserId,toUserId); await ensureContact(client,fromUserId,toUserId); return likeWithMode(client,fromUserId,toUserId,mode,createMatchCapsule); });
         invalidateUserCountCache(fromUserId);
         return res.json({ message: 'Liked', match: matched });
     } catch (error) {
@@ -349,6 +351,7 @@ export const dislikeUser = async (req, res, next) => {
 
 export const getReceivedLikes = async (req, res, next) => {
     try {
+        if (!req.user.subscription?.isPremium) throw new AppError({status:403,code:'PREMIUM_REQUIRED'});
         const { limit = 20, offset = 0 } = req.query;
         const locale = resolveCatalogLanguage(req.get('accept-language'));
 
@@ -361,6 +364,8 @@ export const getReceivedLikes = async (req, res, next) => {
             JOIN users u ON u.id = l.from_user_id
             ${localizedResidenceJoins('u', 4)}
             WHERE l.to_user_id = $1
+              AND l.origin <> 'affinity'
+              AND NOT EXISTS (SELECT 1 FROM user_blocks b WHERE (b.user_id=$1 AND b.target_id=l.from_user_id) OR (b.user_id=l.from_user_id AND b.target_id=$1))
               AND u.is_deleted = FALSE
               AND l.discovery_mode=COALESCE((SELECT discovery_mode FROM user_search_preferences WHERE user_id=$1),'classic')
               AND COALESCE((SELECT discovery_mode FROM user_search_preferences WHERE user_id=u.id),'classic')=l.discovery_mode
@@ -414,7 +419,7 @@ export async function getUserSubscriptionTier(userId) {
     const subResult = await db.query(
         `SELECT product_id, status, expires_at
          FROM user_subscriptions
-         WHERE user_id = $1
+         WHERE user_id = $1 AND provider_verified = TRUE
          LIMIT 1`,
         [userId],
     );
