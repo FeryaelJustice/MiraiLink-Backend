@@ -412,3 +412,8 @@ Licencia bajo los términos de la [Licencia ISC](LICENSE).
   <sub>Construido con dedicación para impulsar comunidades y experiencias sociales modernas.</sub>
 </p>
 
+
+
+## Cápsula de Cristal
+
+Modo opcional de descubrimiento mutuo y fotos veladas con progreso compartido. [Spec SDMD](docs/features/crystal_capsule/spec.md), [plan](docs/features/crystal_capsule/plan.md). Activación: CRYSTAL_CAPSULE_ENABLED=true después de db:migrate y db:seed:capsules. API aditiva con X-MiraiLink-Capabilities: crystal-capsule-v1, discovery_mode, photoPresentation, clientMessageId e include_capsule. Acciones autenticadas: /api/capsules/config y /api/capsules/{id}/actions. Respuestas personales solo en messages; los eventos no contienen textos. No se garantiza anonimato ni protección de URLs conocidas.

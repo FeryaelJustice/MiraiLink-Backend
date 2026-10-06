@@ -169,8 +169,13 @@ describe('getFeed geographic contract', () => {
 
 describe('likeUser daily limit contract', () => {
     const targetUserId = '00000000-0000-4000-8000-000000000002';
-
-    beforeEach(() => query.mockReset());
+    beforeEach(() => {
+        query.mockReset(); clientQuery.mockReset();
+        clientQuery.mockImplementation(async sql => {
+            if(sql.includes('COUNT(*)')) return {rows:[{count:10}],rowCount:1};
+            return {rows:[],rowCount:0};
+        });
+    });
 
     it('blocks free user when reaching daily likes limit', async () => {
         // targetExists -> true
@@ -330,7 +335,7 @@ describe('undoSwipe', () => {
         // remainingCheck
         query.mockResolvedValueOnce({ rows: [{ '?column?': 1 }], rowCount: 1 });
 
-        clientQuery.mockResolvedValue({ rowCount: 1 });
+        clientQuery.mockResolvedValue({ rows: [], rowCount: 1 });
 
         const res = { json: vi.fn() };
         await undoSwipe({ user: { id: userId }, body: {}, get: vi.fn().mockReturnValue('es') }, res, vi.fn());

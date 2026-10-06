@@ -1,4 +1,5 @@
 import db from '../models/db.js';
+import { presentCapsulePhotos } from '../middleware/capsulePresentation.middleware.js';
 import { cleanupStagedPhoto, finalizePhoto, removePhotoFile, stagePhoto } from '../utils/photoStorage.js';
 
 /**
@@ -37,7 +38,10 @@ export const uploadPhoto = async (req, res, next) => {
 export const getUserPhotos = async (req, res, next) => {
     try {
         const result = await db.query('SELECT id, user_id, url, position FROM user_photos WHERE user_id = $1 ORDER BY position', [req.query.userId ?? req.user.id]);
-        return res.json(result.rows);
+        const ownerId=req.query.userId ?? req.user.id;
+        const projection={id:ownerId,photos:result.rows};
+        await presentCapsulePhotos(projection,req);
+        return res.json(projection.photos.map(photo=>({...photo,photoPresentation:projection.photoPresentation})));
     } catch (error) {
         return next(error);
     }

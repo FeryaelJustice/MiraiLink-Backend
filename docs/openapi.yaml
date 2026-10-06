@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: MiraiLink Backend API
   version: 2.0.0
-  description: Contrato vigente de las 43 operaciones REST de MiraiLink.
+  description: Contrato vigente de las 63 operaciones REST de MiraiLink.
 servers:
   - url: http://localhost:3000
 tags:
@@ -19,7 +19,7 @@ tags:
 paths:
   /api/app/version/android:
     get:
-      tags: [App]
+      tags: [ App ]
       operationId: getAndroidVersionPolicy
       responses:
         '200': { $ref: '#/components/responses/Ok' }
@@ -27,7 +27,7 @@ paths:
 
   /api/auth/register:
     post:
-      tags: [Auth]
+      tags: [ Auth ]
       operationId: register
       requestBody: { $ref: '#/components/requestBodies/Register' }
       responses:
@@ -37,7 +37,7 @@ paths:
         '429': { $ref: '#/components/responses/RateLimited' }
   /api/auth/login:
     post:
-      tags: [Auth]
+      tags: [ Auth ]
       operationId: login
       requestBody: { $ref: '#/components/requestBodies/Login' }
       responses:
@@ -47,24 +47,24 @@ paths:
         '429': { $ref: '#/components/responses/RateLimited' }
   /api/auth/autologin:
     post:
-      tags: [Auth]
+      tags: [ Auth ]
       operationId: autoLogin
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       responses:
         '200': { $ref: '#/components/responses/Ok' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
   /api/auth/logout:
     post:
-      tags: [Auth]
+      tags: [ Auth ]
       operationId: logout
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       responses:
         '200': { $ref: '#/components/responses/Ok' }
         '401': { $ref: '#/components/responses/Unauthorized' }
   /api/auth/password/request-reset:
     post:
-      tags: [Auth]
+      tags: [ Auth ]
       operationId: requestPasswordReset
       requestBody: { $ref: '#/components/requestBodies/Email' }
       responses:
@@ -73,7 +73,7 @@ paths:
         '429': { $ref: '#/components/responses/RateLimited' }
   /api/auth/password/confirm-reset:
     post:
-      tags: [Auth]
+      tags: [ Auth ]
       operationId: confirmPasswordReset
       requestBody: { $ref: '#/components/requestBodies/PasswordReset' }
       responses:
@@ -82,9 +82,9 @@ paths:
         '429': { $ref: '#/components/responses/RateLimited' }
   /api/auth/verification/request:
     post:
-      tags: [Auth]
+      tags: [ Auth ]
       operationId: requestVerification
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       requestBody: { $ref: '#/components/requestBodies/VerificationType' }
       responses:
         '200': { $ref: '#/components/responses/Ok' }
@@ -93,9 +93,9 @@ paths:
         '429': { $ref: '#/components/responses/RateLimited' }
   /api/auth/verification/confirm:
     post:
-      tags: [Auth]
+      tags: [ Auth ]
       operationId: confirmVerification
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       requestBody: { $ref: '#/components/requestBodies/VerificationCode' }
       responses:
         '200': { $ref: '#/components/responses/Ok' }
@@ -103,26 +103,26 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
   /api/auth/verification/check:
     get:
-      tags: [Auth]
+      tags: [ Auth ]
       operationId: checkVerification
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       responses:
         '200': { $ref: '#/components/responses/Ok' }
         '401': { $ref: '#/components/responses/Unauthorized' }
   /api/auth/2fa/setup:
     post:
-      tags: [Auth]
+      tags: [ Auth ]
       operationId: setupTwoFactor
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       responses:
         '200': { $ref: '#/components/responses/Ok' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
   /api/auth/2fa/verify:
     post:
-      tags: [Auth]
+      tags: [ Auth ]
       operationId: verifyTwoFactorSetup
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       requestBody: { $ref: '#/components/requestBodies/Totp' }
       responses:
         '200': { $ref: '#/components/responses/Ok' }
@@ -130,9 +130,9 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
   /api/auth/2fa/disable:
     post:
-      tags: [Auth]
+      tags: [ Auth ]
       operationId: disableTwoFactor
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       requestBody: { $ref: '#/components/requestBodies/TwoFactorCode' }
       responses:
         '200': { $ref: '#/components/responses/Ok' }
@@ -140,15 +140,15 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
   /api/auth/2fa/status:
     post:
-      tags: [Auth]
+      tags: [ Auth ]
       operationId: getTwoFactorStatus
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       responses:
         '200': { $ref: '#/components/responses/Ok' }
         '401': { $ref: '#/components/responses/Unauthorized' }
   /api/auth/2fa/loginVerifyLastStep:
     post:
-      tags: [Auth]
+      tags: [ Auth ]
       operationId: completeTwoFactorLogin
       requestBody: { $ref: '#/components/requestBodies/TwoFactorLogin' }
       responses:
@@ -159,17 +159,17 @@ paths:
 
   /api/user:
     get:
-      tags: [Users]
+      tags: [ Users ]
       operationId: getOwnProfile
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       responses:
         '200': { $ref: '#/components/responses/Ok' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
     put:
-      tags: [Users]
+      tags: [ Users ]
       operationId: updateOwnProfile
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       requestBody: { $ref: '#/components/requestBodies/ProfileUpdate' }
       responses:
         '200': { $ref: '#/components/responses/Ok' }
@@ -177,18 +177,18 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '415': { $ref: '#/components/responses/UnsupportedMedia' }
     delete:
-      tags: [Users]
+      tags: [ Users ]
       operationId: deleteOwnAccount
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       responses:
         '200': { $ref: '#/components/responses/Ok' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
   /api/user/byId:
     post:
-      tags: [Users]
+      tags: [ Users ]
       operationId: getPublicProfileById
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       requestBody: { $ref: '#/components/requestBodies/UserId' }
       responses:
         '200': { $ref: '#/components/responses/Ok' }
@@ -197,9 +197,9 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
   /api/user/by-username/{username}:
     get:
-      tags: [Users]
+      tags: [ Users ]
       operationId: getPublicProfileByUsername
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - name: username
           in: path
@@ -211,9 +211,9 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
   /api/user/fcm:
     post:
-      tags: [Users]
+      tags: [ Users ]
       operationId: saveFcmToken
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       requestBody: { $ref: '#/components/requestBodies/Fcm' }
       responses:
         '200': { $ref: '#/components/responses/Ok' }
@@ -221,24 +221,24 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
   /api/user/location/history:
     get:
-      tags: [Users]
+      tags: [ Users ]
       operationId: getUserLocationHistory
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       responses:
         '200': { $ref: '#/components/responses/Ok' }
         '401': { $ref: '#/components/responses/Unauthorized' }
   /api/user/location/ping:
     post:
-      tags: [Users]
+      tags: [ Users ]
       operationId: pingUserLocation
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [latitude, longitude]
+              required: [ latitude, longitude ]
               properties:
                 latitude: { type: number, minimum: -90, maximum: 90 }
                 longitude: { type: number, minimum: -180, maximum: 180 }
@@ -250,9 +250,9 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
   /api/user/settings/search:
     put:
-      tags: [Users]
+      tags: [ Users ]
       operationId: updateSearchSettings
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       requestBody:
         required: true
         content:
@@ -263,18 +263,26 @@ paths:
                 search_radius_km: { type: integer, minimum: 10, maximum: 800 }
                 search_scope:
                   type: string
-                  enum: [radius_residence, radius_active, country, world, specific_country]
+                  enum: [ radius_residence, radius_active, country, world, specific_country ]
                 search_target_country_id: { type: string, format: uuid, nullable: true }
                 search_match_live_location: { type: boolean }
+                discovery_mode:
+                  type: string
+                  enum:
+                    - classic
+                    - capsule
+                  description: Omitido conserva el modo actual; registros anteriores classic.
       responses:
         '200': { $ref: '#/components/responses/Ok' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+      parameters:
+        - $ref: "#/components/parameters/CapsuleCapability"
   /api/user/photo/{position}:
     delete:
-      tags: [Photos]
+      tags: [ Photos ]
       operationId: deletePhotoByPosition
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: '#/components/parameters/PhotoPosition'
       responses:
@@ -284,9 +292,9 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
   /api/user/photos:
     get:
-      tags: [Photos]
+      tags: [ Photos ]
       operationId: getUserPhotos
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - name: userId
           in: query
@@ -297,9 +305,9 @@ paths:
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
     post:
-      tags: [Photos]
+      tags: [ Photos ]
       operationId: uploadUserPhoto
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       requestBody: { $ref: '#/components/requestBodies/SinglePhoto' }
       responses:
         '201': { $ref: '#/components/responses/Created' }
@@ -308,9 +316,9 @@ paths:
         '415': { $ref: '#/components/responses/UnsupportedMedia' }
   /api/user/photos/{photoId}:
     delete:
-      tags: [Photos]
+      tags: [ Photos ]
       operationId: deletePhotoById
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: '#/components/parameters/PhotoId'
       responses:
@@ -320,9 +328,9 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
   /api/users:
     get:
-      tags: [Users]
+      tags: [ Users ]
       operationId: listPublicProfiles
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Offset'
@@ -333,15 +341,19 @@ paths:
 
   /api/swipe/feed:
     get:
-      tags: [Discovery]
+      tags: [ Discovery ]
       operationId: getDiscoveryFeed
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Offset'
         - name: scope
           in: query
-          schema: { type: string, enum: [radius_residence, radius_active, country, world, specific_country] }
+          schema:
+            {
+              type: string,
+              enum: [ radius_residence, radius_active, country, world, specific_country ]
+            }
         - name: radius_km
           in: query
           schema: { type: integer, minimum: 10, maximum: 800 }
@@ -351,18 +363,20 @@ paths:
         - name: match_live_location
           in: query
           schema: { type: boolean }
+        - $ref: "#/components/parameters/CapsuleCapability"
       responses:
         '200': { $ref: '#/components/responses/Ok' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '422':
-          description: Falta la ubicacion, el pais de residencia o el pais objetivo requerido por el alcance
+          description: Falta la ubicacion, el pais de residencia o el pais objetivo
+            requerido por el alcance
           content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
   /api/swipe/likes-received:
     get:
-      tags: [Discovery]
+      tags: [ Discovery ]
       operationId: getReceivedLikes
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Offset'
@@ -371,37 +385,41 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
   /api/swipe/like:
     post:
-      tags: [Discovery]
+      tags: [ Discovery ]
       operationId: likeUser
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       requestBody: { $ref: '#/components/requestBodies/TargetUser' }
       responses:
         '200': { $ref: '#/components/responses/Ok' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '404': { $ref: '#/components/responses/NotFound' }
+      parameters:
+        - $ref: "#/components/parameters/CapsuleCapability"
   /api/swipe/dislike:
     post:
-      tags: [Discovery]
+      tags: [ Discovery ]
       operationId: dislikeUser
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       requestBody: { $ref: '#/components/requestBodies/TargetUser' }
       responses:
         '200': { $ref: '#/components/responses/Ok' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '404': { $ref: '#/components/responses/NotFound' }
+      parameters:
+        - $ref: "#/components/parameters/CapsuleCapability"
   /api/swipe/undo-quota:
     get:
-      tags: [Discovery]
+      tags: [ Discovery ]
       operationId: getUndoQuota
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       responses:
         '200': { $ref: '#/components/responses/Ok' }
         '401': { $ref: '#/components/responses/Unauthorized' }
   /api/swipe/undo:
     post:
-      tags: [Discovery]
+      tags: [ Discovery ]
       operationId: undoSwipe
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       requestBody:
         content:
           application/json:
@@ -417,17 +435,17 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
   /api/explore/categories:
     get:
-      tags: [Explore]
+      tags: [ Explore ]
       operationId: getExploreCategories
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       responses:
         '200': { $ref: '#/components/responses/Ok' }
         '401': { $ref: '#/components/responses/Unauthorized' }
   /api/explore/categories/{categoryId}/feed:
     get:
-      tags: [Explore]
+      tags: [ Explore ]
       operationId: getCategoryFeed
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - name: categoryId
           in: path
@@ -445,9 +463,9 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
   /api/explore/categories/{categoryId}/settings:
     get:
-      tags: [Explore]
+      tags: [ Explore ]
       operationId: getCategorySettings
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - name: categoryId
           in: path
@@ -458,9 +476,9 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
     put:
-      tags: [Explore]
+      tags: [ Explore ]
       operationId: updateCategorySettings
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - name: categoryId
           in: path
@@ -472,7 +490,7 @@ paths:
           application/json:
             schema:
               type: object
-              required: [radius_km]
+              required: [ radius_km ]
               properties:
                 radius_km: { type: integer, minimum: 10, maximum: 500 }
       responses:
@@ -482,25 +500,25 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
   /api/match:
     get:
-      tags: [Matches]
+      tags: [ Matches ]
       operationId: getMatches
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       responses:
         '200': { $ref: '#/components/responses/Ok' }
         '401': { $ref: '#/components/responses/Unauthorized' }
   /api/match/unseen:
     get:
-      tags: [Matches]
+      tags: [ Matches ]
       operationId: getUnseenMatches
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       responses:
         '200': { $ref: '#/components/responses/Ok' }
         '401': { $ref: '#/components/responses/Unauthorized' }
   /api/match/mark-seen:
     post:
-      tags: [Matches]
+      tags: [ Matches ]
       operationId: markMatchesSeen
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       requestBody: { $ref: '#/components/requestBodies/MatchIds' }
       responses:
         '200': { $ref: '#/components/responses/Ok' }
@@ -508,17 +526,17 @@ paths:
 
   /api/chats:
     get:
-      tags: [Chats]
+      tags: [ Chats ]
       operationId: getChats
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       responses:
         '200': { $ref: '#/components/responses/Ok' }
         '401': { $ref: '#/components/responses/Unauthorized' }
   /api/chats/{chatId}/messages:
     get:
-      tags: [Chats]
+      tags: [ Chats ]
       operationId: getChatMessages
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: '#/components/parameters/ChatId'
         - name: limit
@@ -535,9 +553,9 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
   /api/chats/{chatId}/members:
     get:
-      tags: [Chats]
+      tags: [ Chats ]
       operationId: getChatMembers
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: '#/components/parameters/ChatId'
       responses:
@@ -545,9 +563,9 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
   /api/chats/{chatId}/read:
     patch:
-      tags: [Chats]
+      tags: [ Chats ]
       operationId: markChatRead
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: '#/components/parameters/ChatId'
       responses:
@@ -555,9 +573,9 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
   /api/chats/private:
     post:
-      tags: [Chats]
+      tags: [ Chats ]
       operationId: createPrivateChat
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       requestBody: { $ref: '#/components/requestBodies/PrivateChat' }
       responses:
         '201': { $ref: '#/components/responses/Created' }
@@ -565,36 +583,42 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
   /api/chats/group:
     post:
-      tags: [Chats]
+      tags: [ Chats ]
       operationId: createGroupChat
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       requestBody: { $ref: '#/components/requestBodies/GroupChat' }
       responses:
         '201': { $ref: '#/components/responses/Created' }
         '400': { $ref: '#/components/responses/BadRequest' }
   /api/chats/send:
     post:
-      tags: [Chats]
+      tags: [ Chats ]
       operationId: sendChatMessage
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       requestBody: { $ref: '#/components/requestBodies/ChatMessage' }
       responses:
         '201': { $ref: '#/components/responses/Created' }
         '400': { $ref: '#/components/responses/BadRequest' }
   /api/chats/history/{userId}:
     get:
-      tags: [Chats]
+      tags: [ Chats ]
       operationId: getPrivateChatHistory
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: '#/components/parameters/UserId'
+        - in: query
+          name: include_capsule
+          schema:
+            type: boolean
+            default: false
+          description: true devuelve mensajes y cápsula juntos; omitido conserva el array.
       responses:
         '200': { $ref: '#/components/responses/Ok' }
         '400': { $ref: '#/components/responses/BadRequest' }
 
   /api/catalog/animes:
     get:
-      tags: [Catalog]
+      tags: [ Catalog ]
       operationId: listAnimes
       parameters:
         - name: Accept-Language
@@ -606,7 +630,7 @@ paths:
         '200': { $ref: '#/components/responses/Ok' }
   /api/catalog/games:
     get:
-      tags: [Catalog]
+      tags: [ Catalog ]
       operationId: listGames
       parameters:
         - name: Accept-Language
@@ -618,13 +642,13 @@ paths:
         '200': { $ref: '#/components/responses/Ok' }
   /api/catalog/geography/countries:
     get:
-      tags: [Catalog]
+      tags: [ Catalog ]
       operationId: getGeographyCountries
       responses:
         '200': { $ref: '#/components/responses/Ok' }
   /api/catalog/geography/countries/{countryId}/regions:
     get:
-      tags: [Catalog]
+      tags: [ Catalog ]
       operationId: getGeographyRegions
       parameters:
         - name: countryId
@@ -635,7 +659,7 @@ paths:
         '200': { $ref: '#/components/responses/Ok' }
   /api/catalog/geography/regions/{regionId}/cities:
     get:
-      tags: [Catalog]
+      tags: [ Catalog ]
       operationId: getGeographyCities
       parameters:
         - name: regionId
@@ -650,7 +674,7 @@ paths:
         '200': { $ref: '#/components/responses/Ok' }
   /api/catalog/profile-options:
     get:
-      tags: [Catalog]
+      tags: [ Catalog ]
       operationId: getProfileOptions
       parameters:
         - name: Accept-Language
@@ -662,9 +686,9 @@ paths:
         '200': { $ref: '#/components/responses/Ok' }
   /api/report:
     post:
-      tags: [Moderation]
+      tags: [ Moderation ]
       operationId: reportUser
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       requestBody: { $ref: '#/components/requestBodies/Report' }
       responses:
         '200': { $ref: '#/components/responses/Ok' }
@@ -673,9 +697,9 @@ paths:
         '429': { $ref: '#/components/responses/RateLimited' }
   /api/feedback:
     post:
-      tags: [Moderation]
+      tags: [ Moderation ]
       operationId: submitFeedback
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       requestBody: { $ref: '#/components/requestBodies/Feedback' }
       responses:
         '200': { $ref: '#/components/responses/Ok' }
@@ -684,24 +708,24 @@ paths:
         '429': { $ref: '#/components/responses/RateLimited' }
   /api/subscription/status:
     get:
-      tags: [Subscription]
+      tags: [ Subscription ]
       operationId: getSubscriptionStatus
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       responses:
         '200': { $ref: '#/components/responses/Ok' }
         '401': { $ref: '#/components/responses/Unauthorized' }
   /api/subscription/verify:
     post:
-      tags: [Subscription]
+      tags: [ Subscription ]
       operationId: verifySubscription
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [purchaseToken, productId]
+              required: [ purchaseToken, productId ]
               properties:
                 purchaseToken: { type: string }
                 productId: { type: string }
@@ -713,12 +737,93 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
   /api/subscription/cancel-intent:
     post:
-      tags: [Subscription]
+      tags: [ Subscription ]
       operationId: cancelSubscriptionIntent
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       responses:
         '200': { $ref: '#/components/responses/Ok' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/capsules/config:
+    get:
+      operationId: getCapsuleConfig
+      summary: Disponibilidad y catálogo de Cápsula de Cristal
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: enabled, rulesVersion, catalogVersion y 40 preguntas es/en
+  /api/capsules/{id}/actions:
+    post:
+      operationId: executeCapsuleAction
+      summary: Acción idempotente de un participante
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - actionId
+                - expectedRevision
+                - type
+              properties:
+                actionId:
+                  type: string
+                  format: uuid
+                expectedRevision:
+                  type: integer
+                  minimum: 0
+                type:
+                  type: string
+                  enum:
+                    - question
+                    - answer
+                    - pause
+                    - leave
+                    - resume
+                    - request_reveal
+                    - accept_reveal
+                    - decline_reveal
+                    - cancel_reveal
+                category:
+                  type: string
+                missionId:
+                  type: string
+                  format: uuid
+                text:
+                  type: string
+                  maxLength: 4000
+      responses:
+        "200":
+          description: Snapshot autoritativo y mensaje de respuesta opcional
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - capsule
+                properties:
+                  capsule:
+                    $ref: "#/components/schemas/CapsuleSnapshot"
+                  message:
+                    type:
+                      - object
+                      - "null"
+        "403":
+          description: No participante
+        "404":
+          description: Cápsula inexistente
+        "409":
+          description: Revisión o transición inválida
 
 components:
   securitySchemes:
@@ -730,23 +835,31 @@ components:
     Uuid: { type: string, format: uuid }
     Error:
       type: object
-      required: [code, message]
+      required: [ code, message ]
       properties:
         code: { type: string }
         message: { type: string }
         requestId: { type: string }
-        details: { type: array, items: { type: object } }
+        details:
+          oneOf:
+            - type: array
+              items:
+                type: object
+            - type: object
+              properties:
+                capsule:
+                  $ref: "#/components/schemas/CapsuleSnapshot"
     Register:
       type: object
-      required: [username, email, password]
+      required: [ username, email, password ]
       properties:
         username: { type: string, minLength: 3, maxLength: 30, pattern: '^[a-zA-Z0-9_.]+$' }
         email: { type: string, format: email, maxLength: 254 }
         password: { type: string, minLength: 8, maxLength: 128 }
     Login:
       type: object
-      required: [password]
-      anyOf: [{ required: [email] }, { required: [username] }]
+      required: [ password ]
+      anyOf: [ { required: [ email ] }, { required: [ username ] } ]
       properties:
         email: { type: string, format: email }
         username: { type: string, minLength: 3, maxLength: 30 }
@@ -756,7 +869,11 @@ components:
       properties:
         nickname: { type: string, maxLength: 30 }
         bio: { type: string, maxLength: 500 }
-        gender: { type: string, enum: [male, female, non_binary, other, prefer_not_to_say, ''] }
+        gender:
+          {
+            type: string,
+            enum: [ male, female, non_binary, other, prefer_not_to_say, '' ]
+          }
         birthdate: { type: string }
         animes: { type: string, maxLength: 20000 }
         games: { type: string, maxLength: 20000 }
@@ -765,47 +882,533 @@ components:
         photo_1: { type: string, format: binary }
         photo_2: { type: string, format: binary }
         photo_3: { type: string, format: binary }
+    PhotoPresentation:
+      type: object
+      required:
+        - level
+        - status
+        - revision
+        - veiled
+      properties:
+        capsuleId:
+          type:
+            - string
+            - "null"
+          format: uuid
+        level:
+          type: integer
+          minimum: 0
+          maximum: 4
+        status:
+          type: string
+        revision:
+          type: integer
+          minimum: 0
+        veiled:
+          type: boolean
+      description: Proyección opcional por pareja. Clientes sin crystal-capsule-v1
+        reciben placeholders si veiled=true.
+    CapsuleSnapshot:
+      type: object
+      required:
+        - id
+        - userIds
+        - status
+        - progress
+        - level
+        - revision
+      properties:
+        id:
+          type: string
+          format: uuid
+        userIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          minItems: 2
+          maxItems: 2
+        status:
+          type: string
+          enum:
+            - active
+            - paused
+            - left
+            - cancelled
+            - revealed
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 8
+        level:
+          type: integer
+          minimum: 0
+          maximum: 4
+        revision:
+          type: integer
+          minimum: 0
+        rulesVersion:
+          type: integer
+        resumeAccepted:
+          type: array
+          items:
+            type: string
+            format: uuid
+        revealRequestedBy:
+          type:
+            - string
+            - "null"
+          format: uuid
+        question:
+          type:
+            - object
+            - "null"
+      description: Snapshot confirmado sin textos de respuestas.
   parameters:
-    Limit: { name: limit, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
-    Offset: { name: offset, in: query, required: false, schema: { type: integer, minimum: 0, default: 0 } }
-    ChatId: { name: chatId, in: path, required: true, schema: { $ref: '#/components/schemas/Uuid' } }
-    UserId: { name: userId, in: path, required: true, schema: { $ref: '#/components/schemas/Uuid' } }
-    PhotoId: { name: photoId, in: path, required: true, schema: { $ref: '#/components/schemas/Uuid' } }
-    PhotoPosition: { name: position, in: path, required: true, schema: { type: integer, minimum: 1, maximum: 4 } }
+    Limit:
+      {
+        name: limit,
+        in: query,
+        required: false,
+        schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      }
+    Offset:
+      {
+        name: offset,
+        in: query,
+        required: false,
+        schema: { type: integer, minimum: 0, default: 0 }
+      }
+    ChatId:
+      {
+        name: chatId,
+        in: path,
+        required: true,
+        schema: { $ref: '#/components/schemas/Uuid' }
+      }
+    UserId:
+      {
+        name: userId,
+        in: path,
+        required: true,
+        schema: { $ref: '#/components/schemas/Uuid' }
+      }
+    PhotoId:
+      {
+        name: photoId,
+        in: path,
+        required: true,
+        schema: { $ref: '#/components/schemas/Uuid' }
+      }
+    PhotoPosition:
+      {
+        name: position,
+        in: path,
+        required: true,
+        schema: { type: integer, minimum: 1, maximum: 4 }
+      }
+    CapsuleCapability:
+      in: header
+      name: X-MiraiLink-Capabilities
+      required: false
+      schema:
+        type: string
+      example: crystal-capsule-v1
   requestBodies:
-    Register: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/Register' } } } }
-    Login: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/Login' } } } }
-    Email: { required: true, content: { application/json: { schema: { type: object, required: [email], properties: { email: { type: string, format: email } } } } } }
-    PasswordReset: { required: true, content: { application/json: { schema: { type: object, required: [email, token, newPassword], properties: { email: { type: string, format: email }, token: { type: string, minLength: 6, maxLength: 64 }, newPassword: { type: string, minLength: 8, maxLength: 128 } } } } } }
-    VerificationType: { required: true, content: { application/json: { schema: { type: object, required: [type], properties: { type: { type: string, enum: [email, sms] } } } } } }
-    VerificationCode: { required: true, content: { application/json: { schema: { type: object, required: [type, token], properties: { type: { type: string, enum: [email, sms] }, token: { type: string, minLength: 6, maxLength: 64 } } } } } }
-    Totp: { required: true, content: { application/json: { schema: { type: object, required: [token], properties: { token: { type: string, pattern: '^\d{6}$' } } } } } }
-    TwoFactorCode: { required: true, content: { application/json: { schema: { type: object, required: [code], properties: { code: { type: string, minLength: 6, maxLength: 64 } } } } } }
-    TwoFactorLogin: { required: true, content: { application/json: { schema: { type: object, required: [challengeToken, code], properties: { challengeToken: { type: string, minLength: 20, maxLength: 4096 }, code: { type: string, minLength: 6, maxLength: 64 } } } } } }
-    UserId: { required: true, content: { application/json: { schema: { type: object, required: [id], properties: { id: { $ref: '#/components/schemas/Uuid' } } } } } }
-    Fcm: { required: true, content: { application/json: { schema: { type: object, required: [fcm], properties: { fcm: { type: string, minLength: 20, maxLength: 4096 }, platform: { type: string, enum: [android, ios, web], default: android } } } } } }
-    ProfileUpdate: { required: true, content: { multipart/form-data: { schema: { $ref: '#/components/schemas/ProfileUpdate' } } } }
-    SinglePhoto: { required: true, content: { multipart/form-data: { schema: { type: object, required: [photo], properties: { photo: { type: string, format: binary }, position: { type: integer, minimum: 1, maximum: 4 } } } } } }
-    TargetUser: { required: true, content: { application/json: { schema: { type: object, required: [toUserId], properties: { toUserId: { $ref: '#/components/schemas/Uuid' } } } } } }
-    MatchIds: { required: true, content: { application/json: { schema: { type: object, required: [matchIds], properties: { matchIds: { type: array, minItems: 1, maxItems: 100, items: { $ref: '#/components/schemas/Uuid' } } } } } } }
-    PrivateChat: { required: true, content: { application/json: { schema: { type: object, required: [otherUserId], properties: { otherUserId: { $ref: '#/components/schemas/Uuid' } } } } } }
-    GroupChat: { required: true, content: { application/json: { schema: { type: object, required: [name, userIds], properties: { name: { type: string, minLength: 1, maxLength: 100 }, userIds: { type: array, minItems: 1, maxItems: 99, items: { $ref: '#/components/schemas/Uuid' } } } } } } }
-    ChatMessage: { required: true, content: { application/json: { schema: { type: object, required: [toUserId, text], properties: { toUserId: { $ref: '#/components/schemas/Uuid' }, text: { type: string, minLength: 1, maxLength: 4000 } } } } } }
-    Report: { required: true, content: { application/json: { schema: { type: object, required: [reportedUser, reason], properties: { reportedUser: { $ref: '#/components/schemas/Uuid' }, reason: { type: string, minLength: 5, maxLength: 2000 } } } } } }
-    Feedback: { required: true, content: { application/json: { schema: { type: object, required: [feedback], properties: { feedback: { type: string, minLength: 1, maxLength: 10000 } } } } } }
+    Register:
+      {
+        required: true,
+        content: { application/json: { schema: { $ref: '#/components/schemas/Register' } } }
+      }
+    Login:
+      {
+        required: true,
+        content: { application/json: { schema: { $ref: '#/components/schemas/Login' } } }
+      }
+    Email:
+      {
+        required: true,
+        content:
+          {
+            application/json:
+              {
+                schema:
+                  {
+                    type: object,
+                    required: [ email ],
+                    properties: { email: { type: string, format: email } }
+                  }
+              }
+          }
+      }
+    PasswordReset:
+      {
+        required: true,
+        content:
+          {
+            application/json:
+              {
+                schema:
+                  {
+                    type: object,
+                    required: [ email, token, newPassword ],
+                    properties:
+                      {
+                        email: { type: string, format: email },
+                        token: { type: string, minLength: 6, maxLength: 64 },
+                        newPassword: { type: string, minLength: 8, maxLength: 128 }
+                      }
+                  }
+              }
+          }
+      }
+    VerificationType:
+      {
+        required: true,
+        content:
+          {
+            application/json:
+              {
+                schema:
+                  {
+                    type: object,
+                    required: [ type ],
+                    properties: { type: { type: string, enum: [ email, sms ] } }
+                  }
+              }
+          }
+      }
+    VerificationCode:
+      {
+        required: true,
+        content:
+          {
+            application/json:
+              {
+                schema:
+                  {
+                    type: object,
+                    required: [ type, token ],
+                    properties:
+                      {
+                        type: { type: string, enum: [ email, sms ] },
+                        token: { type: string, minLength: 6, maxLength: 64 }
+                      }
+                  }
+              }
+          }
+      }
+    Totp:
+      {
+        required: true,
+        content:
+          {
+            application/json:
+              {
+                schema:
+                  {
+                    type: object,
+                    required: [ token ],
+                    properties: { token: { type: string, pattern: '^\d{6}$' } }
+                  }
+              }
+          }
+      }
+    TwoFactorCode:
+      {
+        required: true,
+        content:
+          {
+            application/json:
+              {
+                schema:
+                  {
+                    type: object,
+                    required: [ code ],
+                    properties: { code: { type: string, minLength: 6, maxLength: 64 } }
+                  }
+              }
+          }
+      }
+    TwoFactorLogin:
+      {
+        required: true,
+        content:
+          {
+            application/json:
+              {
+                schema:
+                  {
+                    type: object,
+                    required: [ challengeToken, code ],
+                    properties:
+                      {
+                        challengeToken: { type: string, minLength: 20, maxLength: 4096 },
+                        code: { type: string, minLength: 6, maxLength: 64 }
+                      }
+                  }
+              }
+          }
+      }
+    UserId:
+      {
+        required: true,
+        content:
+          {
+            application/json:
+              {
+                schema:
+                  {
+                    type: object,
+                    required: [ id ],
+                    properties: { id: { $ref: '#/components/schemas/Uuid' } }
+                  }
+              }
+          }
+      }
+    Fcm:
+      {
+        required: true,
+        content:
+          {
+            application/json:
+              {
+                schema:
+                  {
+                    type: object,
+                    required: [ fcm ],
+                    properties:
+                      {
+                        fcm: { type: string, minLength: 20, maxLength: 4096 },
+                        platform: { type: string, enum: [ android, ios, web ], default: android }
+                      }
+                  }
+              }
+          }
+      }
+    ProfileUpdate:
+      {
+        required: true,
+        content:
+          {
+            multipart/form-data: { schema: { $ref: '#/components/schemas/ProfileUpdate' } }
+          }
+      }
+    SinglePhoto:
+      {
+        required: true,
+        content:
+          {
+            multipart/form-data:
+              {
+                schema:
+                  {
+                    type: object,
+                    required: [ photo ],
+                    properties:
+                      {
+                        photo: { type: string, format: binary },
+                        position: { type: integer, minimum: 1, maximum: 4 }
+                      }
+                  }
+              }
+          }
+      }
+    TargetUser:
+      {
+        required: true,
+        content:
+          {
+            application/json:
+              {
+                schema:
+                  {
+                    type: object,
+                    required: [ toUserId ],
+                    properties:
+                      {
+                        toUserId: { $ref: '#/components/schemas/Uuid' },
+                        discoveryMode:
+                          {
+                            type: string,
+                            enum: [ classic, capsule ],
+                            description: Omitido conserva el modo actual; registros anteriores classic.
+                          }
+                      }
+                  }
+              }
+          }
+      }
+    MatchIds:
+      {
+        required: true,
+        content:
+          {
+            application/json:
+              {
+                schema:
+                  {
+                    type: object,
+                    required: [ matchIds ],
+                    properties:
+                      {
+                        matchIds:
+                          {
+                            type: array,
+                            minItems: 1,
+                            maxItems: 100,
+                            items: { $ref: '#/components/schemas/Uuid' }
+                          }
+                      }
+                  }
+              }
+          }
+      }
+    PrivateChat:
+      {
+        required: true,
+        content:
+          {
+            application/json:
+              {
+                schema:
+                  {
+                    type: object,
+                    required: [ otherUserId ],
+                    properties: { otherUserId: { $ref: '#/components/schemas/Uuid' } }
+                  }
+              }
+          }
+      }
+    GroupChat:
+      {
+        required: true,
+        content:
+          {
+            application/json:
+              {
+                schema:
+                  {
+                    type: object,
+                    required: [ name, userIds ],
+                    properties:
+                      {
+                        name: { type: string, minLength: 1, maxLength: 100 },
+                        userIds:
+                          {
+                            type: array,
+                            minItems: 1,
+                            maxItems: 99,
+                            items: { $ref: '#/components/schemas/Uuid' }
+                          }
+                      }
+                  }
+              }
+          }
+      }
+    ChatMessage:
+      {
+        required: true,
+        content:
+          {
+            application/json:
+              {
+                schema:
+                  {
+                    type: object,
+                    required: [ toUserId, text ],
+                    properties:
+                      {
+                        toUserId: { $ref: '#/components/schemas/Uuid' },
+                        text: { type: string, minLength: 1, maxLength: 4000 },
+                        clientMessageId:
+                          {
+                            type: string,
+                            format: uuid,
+                            description: Reintentos reutilizan este identificador.
+                          }
+                      }
+                  }
+              }
+          }
+      }
+    Report:
+      {
+        required: true,
+        content:
+          {
+            application/json:
+              {
+                schema:
+                  {
+                    type: object,
+                    required: [ reportedUser, reason ],
+                    properties:
+                      {
+                        reportedUser: { $ref: '#/components/schemas/Uuid' },
+                        reason: { type: string, minLength: 5, maxLength: 2000 }
+                      }
+                  }
+              }
+          }
+      }
+    Feedback:
+      {
+        required: true,
+        content:
+          {
+            application/json:
+              {
+                schema:
+                  {
+                    type: object,
+                    required: [ feedback ],
+                    properties: { feedback: { type: string, minLength: 1, maxLength: 10000 } }
+                  }
+              }
+          }
+      }
   headers:
     SubscriptionPlan:
       description: Nivel de membresía activo del usuario (free, plus o premium)
       schema:
         type: string
-        enum: [free, plus, premium]
+        enum: [ free, plus, premium ]
   responses:
     Ok: { description: Operación correcta }
     Created: { description: Recurso creado }
-    BadRequest: { description: Request inválido, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
-    Unauthorized: { description: Autenticación inválida, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
-    Forbidden: { description: Operación prohibida, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
-    NotFound: { description: Recurso no encontrado, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
-    Conflict: { description: Conflicto, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
-    UnsupportedMedia: { description: Archivo no permitido, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
-    RateLimited: { description: Demasiadas peticiones, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    BadRequest:
+      {
+        description: Request inválido,
+        content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+      }
+    Unauthorized:
+      {
+        description: Autenticación inválida,
+        content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+      }
+    Forbidden:
+      {
+        description: Operación prohibida,
+        content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+      }
+    NotFound:
+      {
+        description: Recurso no encontrado,
+        content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+      }
+    Conflict:
+      {
+        description: Conflicto,
+        content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+      }
+    UnsupportedMedia:
+      {
+        description: Archivo no permitido,
+        content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+      }
+    RateLimited:
+      {
+        description: Demasiadas peticiones,
+        content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+      }

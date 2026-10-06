@@ -242,3 +242,8 @@ Versión devuelve 404 si Android no está configurado.
 ## Endpoints retirados
 
 No existen `/api/user/byToken`, `/api/user/byEmailPassword` ni `/api/user/public/delete-account`. Los clientes obtienen `userId` en login/autologin y borran la cuenta con Bearer en `DELETE /api/user`.
+
+
+## Cápsula de Cristal
+
+Modo opcional de descubrimiento mutuo y fotos veladas con progreso compartido. [Spec SDMD](features/crystal_capsule/spec.md), [plan](features/crystal_capsule/plan.md). Activación: CRYSTAL_CAPSULE_ENABLED=true después de db:migrate y db:seed:capsules. API aditiva con X-MiraiLink-Capabilities: crystal-capsule-v1, discovery_mode, photoPresentation, clientMessageId e include_capsule. Acciones autenticadas: /api/capsules/config y /api/capsules/{id}/actions. Respuestas personales solo en messages; los eventos no contienen textos. No se garantiza anonimato ni protección de URLs conocidas.

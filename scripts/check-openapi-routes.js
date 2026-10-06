@@ -5,6 +5,7 @@ import YAML from 'yaml';
 
 const prefixes = {
     'app.routes.js': '/api/app', 'auth.routes.js': '/api/auth',
+    'capsule.routes.js': '/api/capsules',
     'catalog.routes.js': '/api/catalog', 'chat.routes.js': '/api/chats',
     'feedback.routes.js': '/api/feedback', 'match.routes.js': '/api/match',
     'report.routes.js': '/api/report', 'swipe.routes.js': '/api/swipe',

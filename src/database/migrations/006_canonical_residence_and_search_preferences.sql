@@ -77,7 +77,7 @@ ALTER TABLE users ADD COLUMN residence_country_id UUID REFERENCES countries(id) 
 ALTER TABLE users ADD COLUMN residence_region_id UUID REFERENCES regions(id) ON DELETE RESTRICT;
 ALTER TABLE users ADD COLUMN residence_city_id UUID REFERENCES cities(id) ON DELETE RESTRICT;
 
-CREATE TABLE user_search_preferences (
+CREATE TABLE IF NOT EXISTS user_search_preferences (
     user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
     search_radius_km INT NOT NULL DEFAULT 40 CHECK (search_radius_km BETWEEN 10 AND 800),
     search_scope VARCHAR(20) NOT NULL DEFAULT 'radius_residence' CHECK (search_scope IN ('radius_residence', 'radius_active', 'country', 'world', 'specific_country')),
@@ -86,6 +86,12 @@ CREATE TABLE user_search_preferences (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+DO $$ BEGIN
+ IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid='user_search_preferences'::regclass AND contype='f' AND confrelid='countries'::regclass) THEN
+  ALTER TABLE user_search_preferences ADD CONSTRAINT user_search_preferences_target_country_fk FOREIGN KEY(search_target_country_id) REFERENCES countries(id) ON DELETE SET NULL;
+ END IF;
+END $$;
 
 CREATE INDEX idx_users_residence_country_id ON users(residence_country_id) WHERE is_deleted = FALSE;
 CREATE INDEX idx_users_residence_region_id ON users(residence_region_id) WHERE is_deleted = FALSE;

@@ -23,8 +23,8 @@ export function invalidateUserCountCache(userId) {
     }
 }
 
-function getCachedCount(userId, categoryId, radiusKm, gender = 'default') {
-    const key = `${userId}:${categoryId}:${radiusKm}:${gender}`;
+function getCachedCount(userId, categoryId, radiusKm, gender = 'default', mode = 'classic') {
+    const key = `${userId}:${categoryId}:${radiusKm}:${gender}:${mode}`;
     const entry = countsCache.get(key);
     if (entry && entry.expiresAt > Date.now()) {
         return entry.count;
@@ -32,8 +32,8 @@ function getCachedCount(userId, categoryId, radiusKm, gender = 'default') {
     return null;
 }
 
-function setCachedCount(userId, categoryId, radiusKm, gender = 'default', count) {
-    const key = `${userId}:${categoryId}:${radiusKm}:${gender}`;
+function setCachedCount(userId, categoryId, radiusKm, gender = 'default', count, mode = 'classic') {
+    const key = `${userId}:${categoryId}:${radiusKm}:${gender}:${mode}`;
     countsCache.set(key, { count, expiresAt: Date.now() + COUNT_CACHE_TTL_MS });
 }
 
@@ -70,7 +70,7 @@ export async function getExploreSectionsWithCategories(userId, locale = 'es') {
     const userResult = await db.query(
         `SELECT u.id, u.gender, u.residence_latitude, u.residence_longitude,
                 u.current_latitude, u.current_longitude, u.last_location_updated_at,
-                p.search_radius_km, p.search_scope, p.search_match_live_location, p.search_gender,
+                p.search_radius_km, p.search_scope, p.search_match_live_location, p.search_gender, p.discovery_mode,
                 us.product_id AS subscription_product_id, us.status AS subscription_status, us.expires_at AS subscription_expires_at
          FROM users u
          LEFT JOIN user_search_preferences p ON p.user_id = u.id
@@ -119,7 +119,7 @@ export async function getExploreSectionsWithCategories(userId, locale = 'es') {
             : defaultGender;
 
         cat.user_effective_gender = effectiveGender;
-        const cached = getCachedCount(userId, cat.id, radius, effectiveGender);
+        const cached = getCachedCount(userId, cat.id, radius, effectiveGender, currentUser?.discovery_mode ?? 'classic');
         if (cached !== null) {
             cat.active_count = cached;
             continue;
@@ -151,7 +151,7 @@ export async function getExploreSectionsWithCategories(userId, locale = 'es') {
             const countQuery = `
                 SELECT COUNT(*)::int AS total
                 FROM users u
-                WHERE u.id != $1 AND u.is_deleted = FALSE
+                WHERE u.id != $1 AND u.is_deleted = FALSE AND COALESCE((SELECT discovery_mode FROM user_search_preferences WHERE user_id=u.id),'classic')=COALESCE((SELECT discovery_mode FROM user_search_preferences WHERE user_id=$1),'classic')
                   AND ${categoryFilter}
                   AND (
                       $2 = 'all' OR
@@ -167,7 +167,7 @@ export async function getExploreSectionsWithCategories(userId, locale = 'es') {
 
             const countRes = await db.query(countQuery, countParams);
             const total = countRes.rows[0]?.total ?? 0;
-            setCachedCount(userId, cat.id, radius, effectiveGender, total);
+            setCachedCount(userId, cat.id, radius, effectiveGender, total, currentUser?.discovery_mode ?? 'classic');
             cat.active_count = total;
         } catch {
             // Fallback ante entornos de test o geometrias incompletas
@@ -330,6 +330,7 @@ export async function getCategoryFeedUsers(userId, categoryId, { limit = 20, off
                    ), 0) AS common_interests
             FROM users u
             WHERE u.id != $1 AND u.is_deleted = FALSE
+              AND COALESCE((SELECT discovery_mode FROM user_search_preferences WHERE user_id=u.id),'classic')=COALESCE((SELECT discovery_mode FROM user_search_preferences WHERE user_id=$1),'classic')
               AND ${categoryFilter}
               AND ${genderFilterSql}
               AND u.id NOT IN (
