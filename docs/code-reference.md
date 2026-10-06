@@ -187,3 +187,8 @@ Los limiters se saltan si `app.locals.enableRateLimits === false`.
 ## Script de contrato
 
 `collectExpressRoutes(root)` extrae method y path de los once routers. `validateContract(root)` parsea OpenAPI, exige cobertura de cada ruta activa y operationIds no duplicados. El script se ejecuta directamente con `npm run check:routes` y también se importa desde tests.
+
+
+## Cápsula de Cristal
+
+Modo opcional de descubrimiento mutuo y fotos veladas con progreso compartido. [Spec SDMD](features/crystal_capsule/spec.md), [plan](features/crystal_capsule/plan.md). Activación: CRYSTAL_CAPSULE_ENABLED=true después de db:migrate y db:seed:capsules. API aditiva con X-MiraiLink-Capabilities: crystal-capsule-v1, discovery_mode, photoPresentation, clientMessageId e include_capsule. Acciones autenticadas: /api/capsules/config y /api/capsules/{id}/actions. Respuestas personales solo en messages; los eventos no contienen textos. No se garantiza anonimato ni protección de URLs conocidas.

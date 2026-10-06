@@ -1,5 +1,6 @@
 import { basename } from 'node:path';
 import db from '../models/db.js';
+import { capsuleTransaction, requireCapsulesEnabled } from '../services/capsule-service.js';
 import { decodeTokenExpiry } from '../services/tokenService.js';
 import { localizedInterestSql, resolveCatalogLanguage, toLocalizedCatalogItem } from '../utils/catalogLocalization.js';
 import { toPublicUser } from '../dto/user.dto.js';
@@ -157,7 +158,7 @@ export const getProfile = async (req, res, next) => {
                     COALESCE(p.search_scope, 'radius_residence') AS search_scope,
                     p.search_target_country_id,
                     COALESCE(p.search_match_live_location, FALSE) AS search_match_live_location,
-                    p.search_gender
+                    p.search_gender, COALESCE(p.discovery_mode, 'classic') AS discovery_mode
              FROM users u
              LEFT JOIN user_search_preferences p ON p.user_id = u.id
              ${localizedResidenceJoins('u', 2)}
@@ -250,6 +251,7 @@ export const deleteAccount = async (req, res, next) => {
             'INSERT INTO token_blacklist (token, expires_at) VALUES ($1, $2) ON CONFLICT DO NOTHING',
             [req.token, decodeTokenExpiry(req.token)],
         );
+        await db.query('DELETE FROM capsule_sessions WHERE user1_id=$1 OR user2_id=$1',[req.user.id]);
         return res.json({ message: 'Account deleted' });
     } catch (error) {
         return next(error);
@@ -532,7 +534,10 @@ export const updateSearchSettings = async (req, res, next) => {
             search_target_country_id = null,
             search_match_live_location = false,
             search_gender = null,
+            discovery_mode,
         } = req.body;
+
+        if (discovery_mode === 'capsule') requireCapsulesEnabled(req);
 
         // Validar suscripcion activa para caracteristicas Plus y Premium
         const subResult = await db.query(
@@ -573,19 +578,23 @@ export const updateSearchSettings = async (req, res, next) => {
             });
         }
 
-        await db.query(
+        await capsuleTransaction(async client => {
+        await client.query('SELECT id FROM users WHERE id=$1 FOR UPDATE',[req.user.id]);
+        await client.query(
             `INSERT INTO user_search_preferences (
-                user_id, search_radius_km, search_scope, search_target_country_id, search_match_live_location, search_gender, updated_at
-             ) VALUES ($1, $2, $3, $4, $5, $6, NOW())
+                user_id, search_radius_km, search_scope, search_target_country_id, search_match_live_location, search_gender, discovery_mode, updated_at
+             ) VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, 'classic'), NOW())
              ON CONFLICT (user_id) DO UPDATE SET
                 search_radius_km = EXCLUDED.search_radius_km,
                 search_scope = EXCLUDED.search_scope,
                 search_target_country_id = EXCLUDED.search_target_country_id,
                 search_match_live_location = EXCLUDED.search_match_live_location,
                 search_gender = COALESCE(EXCLUDED.search_gender, user_search_preferences.search_gender),
+                discovery_mode = CASE WHEN $7 IS NULL THEN user_search_preferences.discovery_mode ELSE $7 END,
                 updated_at = NOW()`,
-            [req.user.id, search_radius_km, search_scope, search_target_country_id, search_match_live_location, search_gender],
+            [req.user.id, search_radius_km, search_scope, search_target_country_id, search_match_live_location, search_gender, discovery_mode ?? null],
         );
+        });
         return res.json({ message: 'Search settings updated' });
     } catch (error) {
         return next(error);

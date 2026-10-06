@@ -1,4 +1,6 @@
 import db from '../models/db.js';
+import { getPairCapsule, creditChatMessage } from '../services/capsule-service.js';
+import { publicCapsule } from '../services/capsule-engine.js';
 import { sendChatMessageNotification } from '../services/notificationService.js';
 
 async function withTransaction(work) {
@@ -98,11 +100,15 @@ export const createPrivateChat = async (req, res, next) => {
                  WHERE c.type = 'private' LIMIT 1`,
                 [req.user.id, req.body.otherUserId],
             );
-            if (existing.rows[0]) return existing.rows[0].id;
+            if (existing.rows[0]) {
+                await client.query('UPDATE capsule_sessions SET chat_id=$3 WHERE user1_id=LEAST($1::uuid,$2::uuid) AND user2_id=GREATEST($1::uuid,$2::uuid)',[req.user.id,req.body.otherUserId,existing.rows[0].id]);
+                return existing.rows[0].id;
+            }
             const target = await client.query('SELECT 1 FROM users WHERE id = $1 AND is_deleted = FALSE', [req.body.otherUserId]);
             if (target.rowCount === 0) throw Object.assign(new Error('User not found'), { status: 404 });
             const created = await client.query("INSERT INTO chats (type, created_by) VALUES ('private', $1) RETURNING id", [req.user.id]);
             await client.query("INSERT INTO chat_members (chat_id, user_id, role) VALUES ($1, $2, 'admin'), ($1, $3, 'member')", [created.rows[0].id, req.user.id, req.body.otherUserId]);
+            await client.query('UPDATE capsule_sessions SET chat_id=$3 WHERE user1_id=LEAST($1::uuid,$2::uuid) AND user2_id=GREATEST($1::uuid,$2::uuid)',[req.user.id,req.body.otherUserId,created.rows[0].id]);
             return created.rows[0].id;
         });
         return res.status(201).json({ chatId, message: 'Private chat ready' });
@@ -165,7 +171,7 @@ export const sendMessage = async (req, res, next) => {
         if (req.user.id === req.body.toUserId) {
             return res.status(400).json({ code: 'SELF_CHAT', message: 'Cannot message yourself' });
         }
-        const chatId = await withTransaction(async client => {
+        const confirmed = await withTransaction(async client => {
             await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [[req.user.id, req.body.toUserId].sort().join(':')]);
             const existing = await client.query(
                 `SELECT c.id FROM chats c
@@ -180,14 +186,22 @@ export const sendMessage = async (req, res, next) => {
                 id = created.rows[0].id;
                 await client.query('INSERT INTO chat_members (chat_id, user_id) VALUES ($1, $2), ($1, $3)', [id, req.user.id, req.body.toUserId]);
             }
-            await client.query('INSERT INTO messages (chat_id, sender_id, text) VALUES ($1, $2, $3)', [id, req.user.id, req.body.text]);
-            return id;
+            let message;
+            if(req.body.clientMessageId) message=(await client.query('SELECT id,text,sent_at FROM messages WHERE chat_id=$1 AND sender_id=$2 AND client_message_id=$3',[id,req.user.id,req.body.clientMessageId])).rows[0];
+            const replayed=!!message;
+            if(!message) {
+                message=(await client.query('INSERT INTO messages(chat_id,sender_id,text,client_message_id) VALUES($1,$2,$3,$4) RETURNING id,text,sent_at',[id,req.user.id,req.body.text,req.body.clientMessageId ?? null])).rows[0];
+                await creditChatMessage(client,req.user.id,req.body.toUserId,req.body.text,id);
+            }
+            return {replayed,chatId:id,id:message.id,content:message.text,timestamp:new Date(message.sent_at).getTime()};
         });
-        res.status(201).json({ message: 'Message sent', chatId });
+        const {replayed,...payload}=confirmed;
+        res.status(201).json({ message: 'Message sent', ...payload });
+        if(replayed) return;
         void sendChatMessageNotification({
             toUserId: req.body.toUserId,
             fromUserId: req.user.id,
-            chatId,
+            chatId: confirmed.chatId,
             text: req.body.text,
         }).catch(error => console.error('Notification failed:', error.message));
     } catch (error) {
@@ -214,13 +228,18 @@ export const getChatHistory = async (req, res, next) => {
              WHERE c.type = 'private' ORDER BY m.sent_at ASC`,
             [req.user.id, req.params.userId],
         );
-        return res.json(result.rows.map(row => ({
+        const messages=result.rows.map(row => ({
             id: row.id,
             content: row.content,
             timestamp: new Date(row.timestamp).getTime(),
             sender: { id: row.sender_id, nickname: row.sender_nickname, gender: row.sender_gender, birthdate: row.sender_birthdate },
             receiver: { id: row.receiver_id, nickname: row.receiver_nickname, gender: row.receiver_gender, birthdate: row.receiver_birthdate },
-        })));
+        }));
+        if(req.query.include_capsule === 'true') {
+            const capsule=await getPairCapsule(req.user.id,req.params.userId);
+            return res.json({messages,capsule:capsule?publicCapsule(capsule.snapshot):null});
+        }
+        return res.json(messages);
     } catch (error) {
         return next(error);
     }

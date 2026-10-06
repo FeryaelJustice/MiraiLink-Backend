@@ -17,4 +17,5 @@ export const groupChatSchema = z.object({
 export const sendMessageSchema = z.object({
     toUserId: uuid,
     text: z.string().trim().min(1).max(4000),
+    clientMessageId: z.uuid().optional(),
 });

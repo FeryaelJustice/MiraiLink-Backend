@@ -1,0 +1,245 @@
+{
+  "version": 1,
+  "questions": [
+    {
+      "id": "q01",
+      "category": "anime",
+      "textEs": "¿En qué mundo de anime pasarías un día?",
+      "textEn": "Which anime world would you spend a day in?"
+    },
+    {
+      "id": "q02",
+      "category": "anime",
+      "textEs": "¿Qué personaje te inspira y por qué?",
+      "textEn": "Which character inspires you, and why?"
+    },
+    {
+      "id": "q03",
+      "category": "anime",
+      "textEs": "¿Qué anime recomendarías para ver juntos?",
+      "textEn": "Which anime would you recommend watching together?"
+    },
+    {
+      "id": "q04",
+      "category": "anime",
+      "textEs": "¿Qué banda sonora te pone de buen humor?",
+      "textEn": "Which soundtrack puts you in a good mood?"
+    },
+    {
+      "id": "q05",
+      "category": "anime",
+      "textEs": "¿Qué historia te emocionó sin esperar spoilers?",
+      "textEn": "Which story moved you? No spoilers!"
+    },
+    {
+      "id": "q06",
+      "category": "gaming",
+      "textEs": "¿Cuál sería nuestro juego cooperativo ideal?",
+      "textEn": "What would be our ideal co-op game?"
+    },
+    {
+      "id": "q07",
+      "category": "gaming",
+      "textEs": "¿Prefieres explorar, competir o construir?",
+      "textEn": "Do you prefer exploring, competing or building?"
+    },
+    {
+      "id": "q08",
+      "category": "gaming",
+      "textEs": "¿Qué partida recuerdas con cariño?",
+      "textEn": "Which gaming session is a fond memory?"
+    },
+    {
+      "id": "q09",
+      "category": "gaming",
+      "textEs": "¿Qué rol disfrutas en una party?",
+      "textEn": "Which role do you enjoy in a party?"
+    },
+    {
+      "id": "q10",
+      "category": "gaming",
+      "textEs": "¿Qué videojuego compartirías con alguien nuevo?",
+      "textEn": "Which game would you share with someone new?"
+    },
+    {
+      "id": "q11",
+      "category": "hobbies",
+      "textEs": "¿Qué afición te gustaría enseñarme?",
+      "textEn": "Which hobby would you like to teach me?"
+    },
+    {
+      "id": "q12",
+      "category": "hobbies",
+      "textEs": "¿Qué te gustaría aprender este año?",
+      "textEn": "What would you like to learn this year?"
+    },
+    {
+      "id": "q13",
+      "category": "hobbies",
+      "textEs": "¿Cuál es tu pequeño proyecto creativo?",
+      "textEn": "What is your little creative project?"
+    },
+    {
+      "id": "q14",
+      "category": "hobbies",
+      "textEs": "¿Qué plan disfrutas fuera de una pantalla?",
+      "textEn": "What do you enjoy away from a screen?"
+    },
+    {
+      "id": "q15",
+      "category": "hobbies",
+      "textEs": "¿Qué canción pondrías para presentarte?",
+      "textEn": "Which song would introduce you?"
+    },
+    {
+      "id": "q16",
+      "category": "everyday",
+      "textEs": "¿Qué te ayuda a desconectar después de un día largo?",
+      "textEn": "What helps you unwind after a long day?"
+    },
+    {
+      "id": "q17",
+      "category": "everyday",
+      "textEs": "¿Cómo sería tu domingo tranquilo?",
+      "textEn": "What would your relaxed Sunday look like?"
+    },
+    {
+      "id": "q18",
+      "category": "everyday",
+      "textEs": "¿Qué detalle pequeño te alegra el día?",
+      "textEn": "Which small thing brightens your day?"
+    },
+    {
+      "id": "q19",
+      "category": "everyday",
+      "textEs": "¿Prefieres planes espontáneos o preparados?",
+      "textEn": "Do you prefer spontaneous or planned outings?"
+    },
+    {
+      "id": "q20",
+      "category": "everyday",
+      "textEs": "¿Qué comida te apetece compartir?",
+      "textEn": "Which food would you like to share?"
+    },
+    {
+      "id": "q21",
+      "category": "ideal_date",
+      "textEs": "¿Cómo sería una primera cita cómoda para ti?",
+      "textEn": "What would a comfortable first date look like?"
+    },
+    {
+      "id": "q22",
+      "category": "ideal_date",
+      "textEs": "¿Arcade, paseo, café o un plan distinto?",
+      "textEn": "Arcade, walk, coffee or a different plan?"
+    },
+    {
+      "id": "q23",
+      "category": "ideal_date",
+      "textEs": "¿Qué te ayuda a sentirte a gusto al conocer a alguien?",
+      "textEn": "What helps you feel comfortable meeting someone?"
+    },
+    {
+      "id": "q24",
+      "category": "ideal_date",
+      "textEs": "¿Qué plan sencillo repetirías encantado?",
+      "textEn": "Which simple outing would you happily repeat?"
+    },
+    {
+      "id": "q25",
+      "category": "ideal_date",
+      "textEs": "¿Qué lugar te gustaría descubrir acompañado?",
+      "textEn": "Which place would you like to discover together?"
+    },
+    {
+      "id": "q26",
+      "category": "projects",
+      "textEs": "¿Qué ilusión personal te gustaría compartir?",
+      "textEn": "Which personal dream would you like to share?"
+    },
+    {
+      "id": "q27",
+      "category": "projects",
+      "textEs": "¿Qué logro pequeño te ha hecho sentir orgullo?",
+      "textEn": "Which small achievement made you proud?"
+    },
+    {
+      "id": "q28",
+      "category": "projects",
+      "textEs": "¿Cómo te gustaría que te apoyaran en tus proyectos?",
+      "textEn": "How would you like support for your projects?"
+    },
+    {
+      "id": "q29",
+      "category": "projects",
+      "textEs": "¿Qué experiencia te gustaría vivir algún día?",
+      "textEn": "Which experience would you like to have someday?"
+    },
+    {
+      "id": "q30",
+      "category": "projects",
+      "textEs": "¿Qué significa para ti una vida equilibrada?",
+      "textEn": "What does a balanced life mean to you?"
+    },
+    {
+      "id": "q31",
+      "category": "relationships",
+      "textEs": "¿Qué buscas al conocer personas en MiraiLink?",
+      "textEn": "What are you looking for when meeting people on MiraiLink?"
+    },
+    {
+      "id": "q32",
+      "category": "relationships",
+      "textEs": "¿Qué valoras en una conexión cercana?",
+      "textEn": "What do you value in a close connection?"
+    },
+    {
+      "id": "q33",
+      "category": "relationships",
+      "textEs": "¿Cómo prefieres comunicar lo que necesitas?",
+      "textEn": "How do you prefer to communicate your needs?"
+    },
+    {
+      "id": "q34",
+      "category": "relationships",
+      "textEs": "¿Qué gesto de cuidado aprecias?",
+      "textEn": "Which caring gesture do you appreciate?"
+    },
+    {
+      "id": "q35",
+      "category": "relationships",
+      "textEs": "¿Qué ritmo te resulta cómodo para conocernos?",
+      "textEn": "What pace feels comfortable for getting to know each other?"
+    },
+    {
+      "id": "q36",
+      "category": "family",
+      "textEs": "Si te apetece contarlo, ¿qué significa familia para ti?",
+      "textEn": "If you would like to share, what does family mean to you?"
+    },
+    {
+      "id": "q37",
+      "category": "family",
+      "textEs": "¿Qué tradición de tu entorno te gusta?",
+      "textEn": "Which tradition from your circle do you enjoy?"
+    },
+    {
+      "id": "q38",
+      "category": "family",
+      "textEs": "¿Cómo imaginas compartir tiempo con las personas importantes?",
+      "textEn": "How do you imagine sharing time with important people?"
+    },
+    {
+      "id": "q39",
+      "category": "family",
+      "textEs": "¿Qué límites te ayudan a cuidar tu espacio personal?",
+      "textEn": "Which boundaries help protect your personal space?"
+    },
+    {
+      "id": "q40",
+      "category": "family",
+      "textEs": "Si quieres hablarlo, ¿qué expectativas familiares te gustaría compartir?",
+      "textEn": "If you want to discuss it, which family expectations would you like to share?"
+    }
+  ]
+}

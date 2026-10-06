@@ -1,4 +1,6 @@
 import db from '../models/db.js';
+import { capsuleTransaction, createMatchCapsule, cancelMatchCapsule, requireCapsulesEnabled } from '../services/capsule-service.js';
+import { likeWithMode, verifySwipeMode } from '../services/capsule-matching.js';
 import { PUBLIC_USER_SQL_COLUMNS, toPublicUser, toPublicUsers } from '../dto/user.dto.js';
 import { AppError } from '../errors/AppError.js';
 import { localizedInterestSql, resolveCatalogLanguage, toLocalizedCatalogItem } from '../utils/catalogLocalization.js';
@@ -24,7 +26,7 @@ export const getFeed = async (req, res, next) => {
             `SELECT u.gender, u.residence_country_id, u.residence_latitude, u.residence_longitude,
                     u.current_latitude, u.current_longitude, u.last_location_updated_at,
                     p.search_radius_km, p.search_scope, p.search_target_country_id, p.search_match_live_location,
-                    p.search_gender,
+                    p.search_gender, p.discovery_mode,
                     s.product_id AS subscription_product_id, s.status AS subscription_status, s.expires_at AS subscription_expires_at
              FROM users u
              LEFT JOIN user_search_preferences p ON p.user_id = u.id
@@ -163,6 +165,7 @@ export const getFeed = async (req, res, next) => {
                    ), 0) AS common_interests
             FROM users u
             WHERE u.id != $1 AND u.is_deleted = FALSE
+              AND COALESCE((SELECT discovery_mode FROM user_search_preferences WHERE user_id=u.id),'classic') = COALESCE((SELECT discovery_mode FROM user_search_preferences WHERE user_id=$1),'classic')
               AND ${genderFilterSql}
               AND u.id NOT IN (
                   SELECT to_user_id FROM likes WHERE from_user_id = $1
@@ -311,14 +314,11 @@ export const likeUser = async (req, res, next) => {
             }
         }
 
-        await db.query('INSERT INTO likes (from_user_id, to_user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [fromUserId, toUserId]);
+        const mode=req.body.discoveryMode ?? 'classic';
+        if(mode==='capsule') requireCapsulesEnabled(req);
+        const matched=await capsuleTransaction(client=>likeWithMode(client,fromUserId,toUserId,mode,createMatchCapsule));
         invalidateUserCountCache(fromUserId);
-        const reciprocal = await db.query('SELECT 1 FROM likes WHERE from_user_id = $1 AND to_user_id = $2', [toUserId, fromUserId]);
-        if (reciprocal.rowCount > 0) {
-            const [user1, user2] = [fromUserId, toUserId].sort();
-            await db.query('INSERT INTO matches (user1_id, user2_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [user1, user2]);
-        }
-        return res.json({ message: 'Liked', match: reciprocal.rowCount > 0 });
+        return res.json({ message: 'Liked', match: matched });
     } catch (error) {
         return next(error);
     }
@@ -334,7 +334,12 @@ export const dislikeUser = async (req, res, next) => {
         if (!await targetExists(toUserId)) {
             return res.status(404).json({ code: 'USER_NOT_FOUND', message: 'User not found' });
         }
-        await db.query('INSERT INTO dislikes (from_user_id, to_user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [fromUserId, toUserId]);
+        const mode=req.body.discoveryMode ?? 'classic';
+        if(mode==='capsule') requireCapsulesEnabled(req);
+        await capsuleTransaction(async client=>{
+            await verifySwipeMode(client,fromUserId,toUserId,mode);
+            await client.query('INSERT INTO dislikes (from_user_id,to_user_id,discovery_mode) VALUES($1,$2,$3) ON CONFLICT DO NOTHING',[fromUserId,toUserId,mode]);
+        });
         invalidateUserCountCache(fromUserId);
         return res.json({ message: 'Disliked' });
     } catch (error) {
@@ -357,6 +362,8 @@ export const getReceivedLikes = async (req, res, next) => {
             ${localizedResidenceJoins('u', 4)}
             WHERE l.to_user_id = $1
               AND u.is_deleted = FALSE
+              AND l.discovery_mode=COALESCE((SELECT discovery_mode FROM user_search_preferences WHERE user_id=$1),'classic')
+              AND COALESCE((SELECT discovery_mode FROM user_search_preferences WHERE user_id=u.id),'classic')=l.discovery_mode
               AND NOT EXISTS (
                   SELECT 1 FROM likes reciprocal
                   WHERE reciprocal.from_user_id = $1 AND reciprocal.to_user_id = l.from_user_id
@@ -571,6 +578,7 @@ export const undoSwipe = async (req, res, next) => {
         await client.query('BEGIN');
 
         if (action === 'like') {
+            await cancelMatchCapsule(client, fromUserId, undoneUserId);
             await client.query(
                 'DELETE FROM likes WHERE from_user_id = $1 AND to_user_id = $2',
                 [fromUserId, undoneUserId],

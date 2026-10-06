@@ -59,6 +59,7 @@ const searchSettingsSchema = z.object({
     search_target_country_id: optionalUuid,
     search_match_live_location: z.boolean().default(false),
     search_gender: z.enum(['male', 'female', 'all']).nullable().optional(),
+    discovery_mode: z.enum(['classic','capsule']).optional(),
 });
 
 const locationPingSchema = z.object({

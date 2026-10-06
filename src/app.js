@@ -12,6 +12,8 @@ import appRoutes from './routes/app.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import catalogRoutes from './routes/catalog.routes.js';
 import chatRoutes from './routes/chat.routes.js';
+import capsuleRoutes from './routes/capsule.routes.js';
+import { capsulePresentationMiddleware } from './middleware/capsulePresentation.middleware.js';
 import feedbackRoutes from './routes/feedback.routes.js';
 import matchRoutes from './routes/match.routes.js';
 import reportRoutes from './routes/report.routes.js';
@@ -96,6 +98,8 @@ export function createApp({ uploadRoot, enableRateLimits = true, trustProxy = 'l
     app.get('/', (_req, res) => res.json({ service: 'mirailink-backend' }));
     app.get('/healthz', (_req, res) => res.json({ status: 'ok' }));
     app.use(API_PREFIX, globalApiLimiter());
+    app.use(API_PREFIX, capsulePresentationMiddleware);
+    app.use(`${API_PREFIX}/capsules`, capsuleRoutes);
     app.use(`${API_PREFIX}/app`, appRoutes);
     app.use(`${API_PREFIX}/auth`, authRoutes);
     app.use(`${API_PREFIX}/user/photos`, userPhotoRoutes);
