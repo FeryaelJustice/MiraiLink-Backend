@@ -1,0 +1,11 @@
+[Unit]
+Description=MiraiLink billing timer
+
+[Timer]
+OnBootSec=2min
+OnUnitInactiveSec=1h
+Unit=mirailink-affinity@billing.service
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1,4 +1,5 @@
 import db from '../models/db.js';
+import { ensureContact, requireMatch } from '../services/affinity-service.js';
 import { getPairCapsule, creditChatMessage } from '../services/capsule-service.js';
 import { publicCapsule } from '../services/capsule-engine.js';
 import { sendChatMessageNotification } from '../services/notificationService.js';
@@ -21,7 +22,7 @@ async function withTransaction(work) {
 export const getChatsFromUser = async (req, res, next) => {
     try {
         const result = await db.query(
-            `SELECT c.id AS chat_id, c.type, c.name, c.created_by, c.created_at,
+            `SELECT c.id AS chat_id, c.origin, c.type, c.name, c.created_by, c.created_at,
                     cm.joined_at, cm.role, m.id AS last_message_id,
                     m.text AS last_message_text, m.sender_id AS last_message_sender_id,
                     m.sent_at AS last_message_sent_at,
@@ -93,6 +94,7 @@ export const createPrivateChat = async (req, res, next) => {
         }
         const chatId = await withTransaction(async client => {
             await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [[req.user.id, req.body.otherUserId].sort().join(':')]);
+            await ensureContact(client, req.user.id, req.body.otherUserId);
             const existing = await client.query(
                 `SELECT c.id FROM chats c
                  JOIN chat_members a ON a.chat_id = c.id AND a.user_id = $1
@@ -104,9 +106,10 @@ export const createPrivateChat = async (req, res, next) => {
                 await client.query('UPDATE capsule_sessions SET chat_id=$3 WHERE user1_id=LEAST($1::uuid,$2::uuid) AND user2_id=GREATEST($1::uuid,$2::uuid)',[req.user.id,req.body.otherUserId,existing.rows[0].id]);
                 return existing.rows[0].id;
             }
+            await requireMatch(client, req.user.id, req.body.otherUserId);
             const target = await client.query('SELECT 1 FROM users WHERE id = $1 AND is_deleted = FALSE', [req.body.otherUserId]);
             if (target.rowCount === 0) throw Object.assign(new Error('User not found'), { status: 404 });
-            const created = await client.query("INSERT INTO chats (type, created_by) VALUES ('private', $1) RETURNING id", [req.user.id]);
+            const created = await client.query("INSERT INTO chats (type, created_by, origin) VALUES ('private', $1, 'match') RETURNING id", [req.user.id]);
             await client.query("INSERT INTO chat_members (chat_id, user_id, role) VALUES ($1, $2, 'admin'), ($1, $3, 'member')", [created.rows[0].id, req.user.id, req.body.otherUserId]);
             await client.query('UPDATE capsule_sessions SET chat_id=$3 WHERE user1_id=LEAST($1::uuid,$2::uuid) AND user2_id=GREATEST($1::uuid,$2::uuid)',[req.user.id,req.body.otherUserId,created.rows[0].id]);
             return created.rows[0].id;
@@ -173,6 +176,7 @@ export const sendMessage = async (req, res, next) => {
         }
         const confirmed = await withTransaction(async client => {
             await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [[req.user.id, req.body.toUserId].sort().join(':')]);
+            await ensureContact(client, req.user.id, req.body.toUserId);
             const existing = await client.query(
                 `SELECT c.id FROM chats c
                  JOIN chat_members a ON a.chat_id = c.id AND a.user_id = $1
@@ -182,7 +186,8 @@ export const sendMessage = async (req, res, next) => {
             );
             let id = existing.rows[0]?.id;
             if (!id) {
-                const created = await client.query("INSERT INTO chats (type, created_by) VALUES ('private', $1) RETURNING id", [req.user.id]);
+                await requireMatch(client, req.user.id, req.body.toUserId);
+                const created = await client.query("INSERT INTO chats (type, created_by, origin) VALUES ('private', $1, 'match') RETURNING id", [req.user.id]);
                 id = created.rows[0].id;
                 await client.query('INSERT INTO chat_members (chat_id, user_id) VALUES ($1, $2), ($1, $3)', [id, req.user.id, req.body.toUserId]);
             }
@@ -211,6 +216,7 @@ export const sendMessage = async (req, res, next) => {
 
 export const getChatHistory = async (req, res, next) => {
     try {
+        await ensureContact(db, req.user.id, req.params.userId);
         const result = await db.query(
             `SELECT m.id, m.text AS content, m.sent_at AS timestamp,
                     s.id AS sender_id,

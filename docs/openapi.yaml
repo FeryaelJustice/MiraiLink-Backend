@@ -2,10 +2,12 @@ openapi: 3.1.0
 info:
   title: MiraiLink Backend API
   version: 2.0.0
-  description: Contrato vigente de las 63 operaciones REST de MiraiLink.
+  description: Contrato REST vigente de MiraiLink, incluyendo Afinidades y verificación de Google Play.
 servers:
   - url: http://localhost:3000
 tags:
+  - name: Affinities
+  - name: Subscription
   - name: App
   - name: Auth
   - name: Users
@@ -824,6 +826,213 @@ paths:
           description: Cápsula inexistente
         "409":
           description: Revisión o transición inválida
+
+  /api/affinities/activity:
+    post:
+      tags: [ Affinities ]
+      operationId: recordAffinityActivity
+      security: [ { bearerAuth: [] } ]
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '401': { description: Bearer access token required }
+        '403': { description: Plus required for sending or revealing, or blocked contact }
+        '409': { description: Expired recommendation or request, or an invitation already exists }
+        '429': { description: Three new invitations per sliding seven day window }
+
+  /api/affinities:
+    get:
+      tags: [ Affinities ]
+      operationId: getAffinityRecommendations
+      security: [ { bearerAuth: [] } ]
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '401': { description: Bearer access token required }
+        '403': { description: Plus required for sending or revealing, or blocked contact }
+        '409': { description: Expired recommendation or request, or an invitation already exists }
+        '429': { description: Three new invitations per sliding seven day window }
+
+  /api/affinities/preferences:
+    put:
+      tags: [ Affinities ]
+      operationId: setAffinityParticipation
+      security: [ { bearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ enabled ]
+              properties:
+                enabled: { type: boolean }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '401': { description: Bearer access token required }
+        '403': { description: Plus required for sending or revealing, or blocked contact }
+        '409': { description: Expired recommendation or request, or an invitation already exists }
+        '429': { description: Three new invitations per sliding seven day window }
+
+  /api/affinities/likes:
+    get:
+      tags: [ Affinities ]
+      operationId: getAffinityLikes
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - { in: query, name: limit, schema: { type: integer, default: 20, minimum: 1, maximum: 100 } }
+        - { in: query, name: offset, schema: { type: integer, default: 0, minimum: 0 } }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '401': { description: Bearer access token required }
+        '403': { description: Plus required for sending or revealing, or blocked contact }
+        '409': { description: Expired recommendation or request, or an invitation already exists }
+        '429': { description: Three new invitations per sliding seven day window }
+
+  /api/affinities/likes/{id}/return:
+    post:
+      tags: [ Affinities ]
+      operationId: returnAffinityLike
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '401': { description: Bearer access token required }
+        '403': { description: Plus required for sending or revealing, or blocked contact }
+        '409': { description: Expired recommendation or request, or an invitation already exists }
+        '429': { description: Three new invitations per sliding seven day window }
+
+  /api/affinities/requests:
+    get:
+      tags: [ Affinities ]
+      operationId: getAffinityRequests
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - { in: query, name: limit, schema: { type: integer, default: 20, minimum: 1, maximum: 100 } }
+        - { in: query, name: offset, schema: { type: integer, default: 0, minimum: 0 } }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '401': { description: Bearer access token required }
+        '403': { description: Plus required for sending or revealing, or blocked contact }
+        '409': { description: Expired recommendation or request, or an invitation already exists }
+        '429': { description: Three new invitations per sliding seven day window }
+
+  /api/affinities/requests/{id}/accept:
+    post:
+      tags: [ Affinities ]
+      operationId: acceptAffinityRequest
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '401': { description: Bearer access token required }
+        '403': { description: Plus required for sending or revealing, or blocked contact }
+        '409': { description: Expired recommendation or request, or an invitation already exists }
+        '429': { description: Three new invitations per sliding seven day window }
+
+  /api/affinities/requests/{id}/reject:
+    post:
+      tags: [ Affinities ]
+      operationId: rejectAffinityRequest
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '401': { description: Bearer access token required }
+        '403': { description: Plus required for sending or revealing, or blocked contact }
+        '409': { description: Expired recommendation or request, or an invitation already exists }
+        '429': { description: Three new invitations per sliding seven day window }
+
+  /api/affinities/recommendations/{id}/dismiss:
+    post:
+      tags: [ Affinities ]
+      operationId: dismissAffinityRecommendation
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '401': { description: Bearer access token required }
+        '403': { description: Plus required for sending or revealing, or blocked contact }
+        '409': { description: Expired recommendation or request, or an invitation already exists }
+        '429': { description: Three new invitations per sliding seven day window }
+
+  /api/affinities/recommendations/{id}/like:
+    post:
+      tags: [ Affinities ]
+      operationId: likeAffinityRecommendation
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '401': { description: Bearer access token required }
+        '403': { description: Plus required for sending or revealing, or blocked contact }
+        '409': { description: Expired recommendation or request, or an invitation already exists }
+        '429': { description: Three new invitations per sliding seven day window }
+
+  /api/affinities/recommendations/{id}/request:
+    post:
+      tags: [ Affinities ]
+      operationId: sendAffinityRequest
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ clientId, text ]
+              properties:
+                clientId: { type: string, format: uuid }
+                text: { type: string, minLength: 1, maxLength: 4000 }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '401': { description: Bearer access token required }
+        '403': { description: Plus required for sending or revealing, or blocked contact }
+        '409': { description: Expired recommendation or request, or an invitation already exists }
+        '429': { description: Three new invitations per sliding seven day window }
+
+  /api/affinities/blocks/{id}:
+    post:
+      tags: [ Affinities ]
+      operationId: blockAffinityPeer
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '401': { description: Bearer access token required }
+        '403': { description: Plus required for sending or revealing, or blocked contact }
+        '409': { description: Expired recommendation or request, or an invitation already exists }
+        '429': { description: Three new invitations per sliding seven day window }
+
+  /api/affinities/contact/{id}:
+    get:
+      tags: [ Affinities ]
+      operationId: getAffinityContact
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '401': { description: Bearer access token required }
+        '403': { description: Plus required for sending or revealing, or blocked contact }
+        '409': { description: Expired recommendation or request, or an invitation already exists }
+        '429': { description: Three new invitations per sliding seven day window }
+
+  /api/subscription/google-play-notifications:
+    post:
+      tags: [ Subscription ]
+      operationId: receiveGooglePlayRtdn
+      description: Google Pub/Sub push with verified OIDC audience and service account email. Purchase token is reverified with subscriptionsv2.
+      responses:
+        '204': { description: Notification processed or unbound token ignored }
+        '401': { description: Invalid Google OIDC token }
+        '503': { description: Play service unavailable or not configured }
 
 components:
   securitySchemes:

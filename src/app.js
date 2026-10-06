@@ -1,6 +1,7 @@
 import compression from 'compression';
 import cors from 'cors';
 import express from 'express';
+import affinityRoutes from './routes/affinity.routes.js';
 import helmet from 'helmet';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -113,6 +114,7 @@ export function createApp({ uploadRoot, enableRateLimits = true, trustProxy = 'l
     app.use(`${API_PREFIX}/report`, reportRoutes);
     app.use(`${API_PREFIX}/feedback`, feedbackRoutes);
     app.use(`${API_PREFIX}/subscription`, subscriptionRoutes);
+    app.use(`${API_PREFIX}/affinities`, affinityRoutes);
     app.use((_req, res) => res.status(404).json({ code: 'NOT_FOUND', message: 'Resource not found' }));
     app.use(errorHandler);
     return app;

@@ -1,0 +1,11 @@
+[Unit]
+Description=MiraiLink generate timer
+
+[Timer]
+OnBootSec=2min
+OnUnitInactiveSec=1h
+Unit=mirailink-affinity@generate.service
+Persistent=true
+
+[Install]
+WantedBy=timers.target
