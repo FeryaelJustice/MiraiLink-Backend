@@ -13,8 +13,7 @@ export function complete(profile,now=new Date()) {
 export function eligible(profile,now=new Date()) {
     return complete(profile,now) && Date.parse(profile.last_active_at)>=now.getTime()-WEEK
         && Date.parse(profile.observed_since)<=now.getTime()-WEEK
-        && (!profile.last_like_at || Date.parse(profile.last_like_at)<=now.getTime()-WEEK)
-        && (!profile.last_match_at || Date.parse(profile.last_match_at)<=now.getTime()-WEEK);
+        && (!profile.last_like_at || Date.parse(profile.last_like_at)<=now.getTime()-WEEK);
 }
 export function goalsCompatible(a,b) {
     const normalize=g=>g==='marriage'?'relationship':g;

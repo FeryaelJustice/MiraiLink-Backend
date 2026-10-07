@@ -7,7 +7,7 @@ const base={id:'a',is_verified:true,is_deleted:false,birthdate:'2000-01-01',avat
 describe('Affinity eligibility and ranking',()=>{
     it('uses a complete seven day observation and outcome window',()=>{
         expect(eligible(base,now)).toBe(true);
-        for(const extra of [{observed_since:'2026-10-01'},{last_like_at:'2026-10-03'},{last_match_at:'2026-10-03'},{last_active_at:null},{bio:''},{enabled:false}])expect(eligible({...base,...extra},now)).toBe(false);
+        for(const extra of [{observed_since:'2026-10-01'},{last_like_at:'2026-10-03'},{last_active_at:null},{bio:''},{enabled:false}])expect(eligible({...base,...extra},now)).toBe(false);
     });
     it('requires adulthood and preserves capsule privacy',()=>{
         expect(adult({...base,birthdate:'2008-10-07'},now)).toBe(false);

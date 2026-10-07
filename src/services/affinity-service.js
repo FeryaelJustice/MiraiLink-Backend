@@ -56,14 +56,16 @@ export async function recommendations(user,plus,locale) {
     if(!enabled()||!complete(pref??{}))return response;
     response.eligible=eligible(pref);
     const rows=await db.query(`SELECT r.*,b.expires_at FROM affinity_recommendations r JOIN affinity_batches b ON b.id=r.batch_id
-        WHERE r.user_id=$1 AND b.expires_at>NOW() AND r.state IN('available','liked') ORDER BY r.score DESC,r.id`,[user]);
+        WHERE r.user_id=$1 AND b.expires_at>NOW() AND r.state='available' ORDER BY r.score DESC,r.id`,[user]);
     for(const row of rows.rows){
         const candidate=await profile(db,row.target_id,locale);
         if(!candidate||!rankCandidate(pref,candidate))continue;
         const denied=await db.query(`SELECT 1 FROM user_blocks WHERE (user_id=$1 AND target_id=$2) OR (user_id=$2 AND target_id=$1)
             UNION ALL SELECT 1 FROM reports WHERE (reported_by=$1 AND reported_user=$2) OR (reported_by=$2 AND reported_user=$1)
             UNION ALL SELECT 1 FROM matches WHERE user1_id=LEAST($1::uuid,$2::uuid) AND user2_id=GREATEST($1::uuid,$2::uuid)
-            UNION ALL SELECT 1 FROM dislikes WHERE (from_user_id=$1 AND to_user_id=$2) OR (from_user_id=$2 AND to_user_id=$1)`,[user,row.target_id]);
+            UNION ALL SELECT 1 FROM dislikes WHERE (from_user_id=$1 AND to_user_id=$2) OR (from_user_id=$2 AND to_user_id=$1)
+            UNION ALL SELECT 1 FROM likes WHERE (from_user_id=$1 AND to_user_id=$2) OR (from_user_id=$2 AND to_user_id=$1)
+            UNION ALL SELECT 1 FROM affinity_requests WHERE ((from_user_id=$1 AND to_user_id=$2) OR (from_user_id=$2 AND to_user_id=$1)) AND state IN('pending','accepted','rejected','blocked')`,[user,row.target_id]);
         if(denied.rows.length||await existingChat(db,user,row.target_id))continue;
         response.items.push({id:row.id,expiresAt:row.expires_at,state:row.state,
             commonInterests:candidate.interests.filter(i=>row.common_keys.includes(i.key)).map(i=>i.title),person:plus?publicPerson(candidate):null});
@@ -79,7 +81,9 @@ export async function recommendation(client,user,id) {
     const a=await profile(client,user);const b=await profile(client,row.target_id);
     if(!(a?.provider_verified && a.subscription_status==='active' && Date.parse(a.expires_at)>Date.now()))throw fail('PLUS_REQUIRED');
     if(!complete(a)||!b||!rankCandidate(a,b))throw fail('RECOMMENDATION_UNAVAILABLE',409);
-    const rejected=await client.query(`SELECT 1 FROM affinity_requests WHERE ((from_user_id=$1 AND to_user_id=$2) OR (from_user_id=$2 AND to_user_id=$1)) AND state IN('rejected','blocked')
+    const rejected=await client.query(`SELECT 1 FROM affinity_requests WHERE ((from_user_id=$1 AND to_user_id=$2) OR (from_user_id=$2 AND to_user_id=$1)) AND state IN('pending','accepted','rejected','blocked')
+        UNION ALL SELECT 1 FROM likes WHERE (from_user_id=$1 AND to_user_id=$2) OR (from_user_id=$2 AND to_user_id=$1)
+        UNION ALL SELECT 1 FROM matches WHERE user1_id=LEAST($1::uuid,$2::uuid) AND user2_id=GREATEST($1::uuid,$2::uuid)
         UNION ALL SELECT 1 FROM dislikes WHERE (from_user_id=$1 AND to_user_id=$2) OR (from_user_id=$2 AND to_user_id=$1)
         UNION ALL SELECT 1 FROM reports WHERE (reported_by=$1 AND reported_user=$2) OR (reported_by=$2 AND reported_user=$1)`,[user,row.target_id]);
     if(rejected.rows.length||await existingChat(client,user,row.target_id))throw fail('RECOMMENDATION_UNAVAILABLE',409);
@@ -133,7 +137,6 @@ export async function generateAffinities() {
         await client.query("UPDATE affinity_requests SET state='expired' WHERE state='pending' AND expires_at<=NOW()");
         const users=await client.query(`SELECT ap.user_id FROM affinity_preferences ap WHERE ap.enabled=TRUE AND ap.last_active_at>NOW()-INTERVAL '7 days'
             AND ap.observed_since<=NOW()-INTERVAL '7 days' AND (ap.last_like_at IS NULL OR ap.last_like_at<=NOW()-INTERVAL '7 days')
-            AND (ap.last_match_at IS NULL OR ap.last_match_at<=NOW()-INTERVAL '7 days')
             AND NOT EXISTS(SELECT 1 FROM affinity_batches b WHERE b.user_id=ap.user_id AND b.created_at>NOW()-INTERVAL '7 days')
             AND (ap.last_evaluated_at IS NULL OR ap.last_evaluated_at<NOW()-INTERVAL '1 hour')
             ORDER BY ap.last_evaluated_at NULLS FIRST,ap.user_id LIMIT 100`);
