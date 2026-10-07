@@ -796,12 +796,22 @@ paths:
                     - cancel_reveal
                 category:
                   type: string
+                questionId:
+                  type: string
+                isCustom:
+                  type: boolean
+                customQuestion:
+                  type: string
+                  maxLength: 120
+                answer:
+                  type: string
+                  maxLength: 300
                 missionId:
                   type: string
                   format: uuid
                 text:
                   type: string
-                  maxLength: 4000
+                  maxLength: 300
       responses:
         "200":
           description: Snapshot autoritativo y mensaje de respuesta opcional
@@ -939,7 +949,7 @@ components:
         progress:
           type: integer
           minimum: 0
-          maximum: 8
+          maximum: 4
         level:
           type: integer
           minimum: 0
@@ -963,7 +973,43 @@ components:
           type:
             - object
             - "null"
-      description: Snapshot confirmado sin textos de respuestas.
+        completedQuestions:
+          type: array
+          items:
+            type: object
+            required:
+              - questionId
+              - instanceId
+              - category
+              - authorId
+              - authorAnswer
+              - peerAnswer
+              - completedAt
+            properties:
+              questionId:
+                type: string
+              instanceId:
+                type: string
+                format: uuid
+              category:
+                type: string
+              isCustom:
+                type: boolean
+              text:
+                oneOf:
+                  - type: string
+                  - type: object
+              authorId:
+                type: string
+                format: uuid
+              authorAnswer:
+                type: string
+              peerAnswer:
+                type: string
+              completedAt:
+                type: string
+                format: date-time
+      description: Snapshot autoritativo con histórico bilateral de preguntas completadas.
   parameters:
     Limit:
       {

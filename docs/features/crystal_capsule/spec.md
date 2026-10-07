@@ -12,17 +12,22 @@ Especificación y plan aprobados por el usuario el 2026-10-06 mediante `PLEASE I
 
 ## Progreso y consentimiento
 
-| Progreso | Presentación |
-| --- | --- |
-| 0 | Cápsula sellada |
-| 2 | Primera chispa |
-| 4 | Resonancia |
-| 6 | Casi cristal |
-| 8 | Conexión revelada |
+| Progreso | Nivel | Presentación |
+| --- | --- | --- |
+| 0 | 0 | Cápsula sellada |
+| 1 | 1 | Primera chispa |
+| 2 | 2 | Resonancia |
+| 3 | 3 | Casi cristal |
+| 4 | 4 | Conexión revelada |
 
-Un intercambio bilateral aporta una unidad. Una ráfaga consecutiva equivale a una intervención, incluso entre consultas de historial. Solo contar mensajes confirmados posteriores al inicio y enviados durante estado activo. Excluir duplicados, reintentos, mensajes de sistema y Ruleta de Gestos. Una misión respondida por ambos aporta dos unidades una sola vez; sus respuestas no suman además como conversación.
+En v2, los mensajes convencionales de chat no otorgan puntos y permanecen estrictamente bloqueados hasta que la cápsula alcanza el estado `revealed` (progreso 4). El progreso avanza de forma bilateral y exclusiva respondiendo preguntas (1 punto compartido por cada pregunta respondida por ambos participantes). Al alcanzar 4 puntos compartidos, la cápsula transiciona automáticamente a `status = 'revealed'`.
 
-Estados: `active`, `paused`, `left`, `cancelled`, `revealed`. Pausar o salir permite seguir chateando sin revelar. Reanudación y revelación anticipada requieren acuerdo bilateral. Revelar es irreversible. Deshacer cancela el vínculo y conserva historial/progreso; un reencuentro necesita nuevo acuerdo y no reinicia ni revela automáticamente.
+Gestión de turnos e histórico:
+- Solo puede existir 1 pregunta activa simultáneamente por cápsula. Si se intenta proponer una nueva pregunta mientras existe una activa pendiente de respuesta, se devuelve error 400 (`TURN_BUSY`).
+- La acción de proponer pregunta incluye obligatoriamente la respuesta del proponente (`answer`, máx 300 caracteres). Si es personalizada (`isCustom: true`), se admite texto libre (`customQuestion`, máx 120 caracteres).
+- Al responder el interlocutor, la pregunta se archiva en `completedQuestions` del snapshot con `questionId`, `instanceId`, `category`, texto, `authorId`, `authorAnswer`, `peerAnswer` y `completedAt`, desocupando el turno activo (`question = null`).
+
+Estados: `active`, `paused`, `left`, `cancelled`, `revealed`. Reanudación y revelación anticipada requieren acuerdo bilateral. Revelar es irreversible. Deshacer cancela el vínculo y conserva historial/progreso; un reencuentro necesita nuevo acuerdo y no reinicia ni revela automáticamente.
 
 ## Catálogo, privacidad y estadísticas
 

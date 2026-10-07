@@ -2,6 +2,7 @@ import db from '../models/db.js';
 import { getPairCapsule, creditChatMessage } from '../services/capsule-service.js';
 import { publicCapsule } from '../services/capsule-engine.js';
 import { sendChatMessageNotification } from '../services/notificationService.js';
+import { AppError } from '../errors/AppError.js';
 
 async function withTransaction(work) {
     const client = await db.connect();
@@ -173,6 +174,14 @@ export const sendMessage = async (req, res, next) => {
         }
         const confirmed = await withTransaction(async client => {
             await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [[req.user.id, req.body.toUserId].sort().join(':')]);
+            const capsule = await getPairCapsule(req.user.id, req.body.toUserId, client, true);
+            if (capsule && capsule.status !== 'revealed') {
+                throw new AppError({
+                    status: 403,
+                    code: 'CAPSULE_CHAT_LOCKED',
+                    message: 'Chat is locked until the Crystal Capsule is revealed',
+                });
+            }
             const existing = await client.query(
                 `SELECT c.id FROM chats c
                  JOIN chat_members a ON a.chat_id = c.id AND a.user_id = $1
@@ -235,9 +244,9 @@ export const getChatHistory = async (req, res, next) => {
             sender: { id: row.sender_id, nickname: row.sender_nickname, gender: row.sender_gender, birthdate: row.sender_birthdate },
             receiver: { id: row.receiver_id, nickname: row.receiver_nickname, gender: row.receiver_gender, birthdate: row.receiver_birthdate },
         }));
-        if(req.query.include_capsule === 'true') {
-            const capsule=await getPairCapsule(req.user.id,req.params.userId);
-            return res.json({messages,capsule:capsule?publicCapsule(capsule.snapshot):null});
+        if (req.query.include_capsule === 'true') {
+            const capsule = await getPairCapsule(req.user.id, req.params.userId);
+            return res.json({ messages, capsule: capsule ? publicCapsule(capsule.snapshot, req.user.id) : null });
         }
         return res.json(messages);
     } catch (error) {
