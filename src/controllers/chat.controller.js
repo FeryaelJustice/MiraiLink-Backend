@@ -178,6 +178,14 @@ export const sendMessage = async (req, res, next) => {
         const confirmed = await withTransaction(async client => {
             await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [[req.user.id, req.body.toUserId].sort().join(':')]);
             await ensureContact(client, req.user.id, req.body.toUserId);
+            const capsule = await getPairCapsule(req.user.id, req.body.toUserId, client, true);
+            if (capsule && capsule.status !== 'revealed') {
+                throw new AppError({
+                    status: 403,
+                    code: 'CAPSULE_CHAT_LOCKED',
+                    message: 'Chat is locked until the Crystal Capsule is revealed',
+                });
+            }
             const existing = await client.query(
                 `SELECT c.id FROM chats c
                  JOIN chat_members a ON a.chat_id = c.id AND a.user_id = $1

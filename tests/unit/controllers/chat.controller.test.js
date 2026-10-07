@@ -45,6 +45,8 @@ describe('chat.controller - crystal capsule message lock', () => {
         clientQuery
             .mockResolvedValueOnce({ rows: [] }) // BEGIN
             .mockResolvedValueOnce({ rows: [] }) // pg_advisory_xact_lock
+            .mockResolvedValueOnce({ rows: [] }) // ensureContact: user_blocks
+            .mockResolvedValueOnce({ rows: [{ id: toUserId }] }) // ensureContact: users target exists
             .mockResolvedValueOnce({ rows: [{ id: 'capsule-1', status: 'active' }] }) // getPairCapsule
             .mockResolvedValueOnce({ rows: [] }); // ROLLBACK
 
@@ -65,6 +67,8 @@ describe('chat.controller - crystal capsule message lock', () => {
         clientQuery
             .mockResolvedValueOnce({ rows: [] }) // BEGIN
             .mockResolvedValueOnce({ rows: [] }) // pg_advisory_xact_lock
+            .mockResolvedValueOnce({ rows: [] }) // ensureContact: user_blocks
+            .mockResolvedValueOnce({ rows: [{ id: toUserId }] }) // ensureContact: users target exists
             .mockResolvedValueOnce({ rows: [{ id: 'capsule-1', status: 'revealed' }] }) // getPairCapsule
             .mockResolvedValueOnce({ rows: [{ id: chatId }] }) // existing chat
             .mockResolvedValueOnce({ rows: [{ id: messageId, text: 'Hello world', sent_at: new Date().toISOString() }] }) // insert message
@@ -91,6 +95,8 @@ describe('chat.controller - crystal capsule message lock', () => {
         clientQuery
             .mockResolvedValueOnce({ rows: [] }) // BEGIN
             .mockResolvedValueOnce({ rows: [] }) // pg_advisory_xact_lock
+            .mockResolvedValueOnce({ rows: [] }) // ensureContact: user_blocks
+            .mockResolvedValueOnce({ rows: [{ id: toUserId }] }) // ensureContact: users target exists
             .mockResolvedValueOnce({ rows: [] }) // getPairCapsule -> null
             .mockResolvedValueOnce({ rows: [{ id: chatId }] }) // existing chat
             .mockResolvedValueOnce({ rows: [{ id: messageId, text: 'Hello world', sent_at: new Date().toISOString() }] }) // insert message
