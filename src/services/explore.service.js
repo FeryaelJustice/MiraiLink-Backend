@@ -74,7 +74,7 @@ export async function getExploreSectionsWithCategories(userId, locale = 'es') {
                 us.product_id AS subscription_product_id, us.status AS subscription_status, us.expires_at AS subscription_expires_at
          FROM users u
          LEFT JOIN user_search_preferences p ON p.user_id = u.id
-         LEFT JOIN user_subscriptions us ON us.user_id = u.id AND us.status = 'active'
+         LEFT JOIN user_subscriptions us ON us.user_id = u.id AND us.provider_verified = TRUE AND us.status = 'active'
          WHERE u.id = $1`,
         [userId],
     );
@@ -257,7 +257,7 @@ export async function getCategoryFeedUsers(userId, categoryId, { limit = 20, off
                 s.product_id AS subscription_product_id, s.status AS subscription_status, s.expires_at AS subscription_expires_at
          FROM users u
          LEFT JOIN user_search_preferences p ON p.user_id = u.id
-         LEFT JOIN user_subscriptions s ON s.user_id = u.id
+         LEFT JOIN user_subscriptions s ON s.user_id = u.id AND s.provider_verified = TRUE
          WHERE u.id = $1`,
         [userId],
     );
@@ -476,7 +476,7 @@ export async function updateCategorySettings(userId, categoryId, settingsOrRadiu
         const subResult = await db.query(
             `SELECT product_id, status, expires_at
              FROM user_subscriptions
-             WHERE user_id = $1
+             WHERE user_id = $1 AND provider_verified = TRUE
              LIMIT 1`,
             [userId],
         );

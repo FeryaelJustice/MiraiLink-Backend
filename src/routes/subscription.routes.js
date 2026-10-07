@@ -3,6 +3,7 @@
  * El prefijo /api lo monta createApp; consultar docs/estudio/flujos y OpenAPI al cambiar contratos.
  */
 import express from 'express';
+import { googlePlayNotification } from '../services/play-billing.js';
 import {
     cancelSubscriptionIntent,
     getSubscriptionStatus,
@@ -17,6 +18,7 @@ import {
 
 const router = express.Router();
 
+router.post('/google-play-notifications', googlePlayNotification);
 router.use(authenticateToken());
 
 router.get('/status', getSubscriptionStatus);

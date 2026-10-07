@@ -15,7 +15,7 @@ export async function likeWithMode(client,fromId,toId,mode,createCapsule) {
     const reverse=await client.query('SELECT discovery_mode FROM likes WHERE from_user_id=$1 AND to_user_id=$2',[toId,fromId]);
     if(reverse.rows[0] && reverse.rows[0].discovery_mode!==mode) throw new AppError({status:409,code:'CAPSULE_LIKE_MODE_CONFLICT'});
     if(!prior.rows.length) {
-        const entitlement=await client.query("SELECT 1 FROM user_subscriptions WHERE user_id=$1 AND status='active' AND product_id IN ('mirailink_plus','mirailink_premium') AND (expires_at IS NULL OR expires_at>NOW())",[fromId]);
+        const entitlement=await client.query("SELECT 1 FROM user_subscriptions WHERE user_id=$1 AND provider_verified=TRUE AND status='active' AND product_id IN ('mirailink_plus','mirailink_premium') AND (expires_at IS NULL OR expires_at>NOW())",[fromId]);
         // Cuota compartida bajo bloqueo de usuario, incluso con likes simultáneos.
         if(!entitlement.rowCount) {
             const usage=await client.query("SELECT COUNT(*)::int AS count FROM likes WHERE from_user_id=$1 AND created_at>=NOW()-INTERVAL '24 hours'",[fromId]);

@@ -34,7 +34,7 @@ export const authenticateToken = (allowUnverified = false) => async (req, res, n
                     s.status AS subscription_status,
                     s.expires_at AS subscription_expires_at
              FROM users u
-             LEFT JOIN user_subscriptions s ON s.user_id = u.id
+             LEFT JOIN user_subscriptions s ON s.user_id = u.id AND s.provider_verified = TRUE
              WHERE u.id = $1`,
             [userId],
         );

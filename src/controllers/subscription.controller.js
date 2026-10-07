@@ -1,8 +1,7 @@
+import { verifyAndSavePurchase } from '../services/play-billing.js';
 import db from '../models/db.js';
 import {
     SUBSCRIPTION_PRODUCTS,
-    BASE_PLANS,
-    resolvePlanInterval,
     PLAY_STORE_URLS,
 } from '../consts/subscriptionConsts.js';
 
@@ -11,7 +10,7 @@ export const getSubscriptionStatus = async (req, res, next) => {
         const userId = req.user.id;
 
         const queryText = `
-            SELECT id, product_id, base_plan_id, status, auto_renewing, expires_at, created_at
+            SELECT id, provider_verified, product_id, base_plan_id, status, auto_renewing, expires_at, created_at
             FROM user_subscriptions
             WHERE user_id = $1
             LIMIT 1
@@ -33,7 +32,7 @@ export const getSubscriptionStatus = async (req, res, next) => {
 
         const sub = result.rows[0];
         const isNotExpired = !sub.expires_at || new Date(sub.expires_at) > new Date();
-        const isActive = sub.status === 'active' && isNotExpired;
+        const isActive = sub.provider_verified === true && sub.status === 'active' && isNotExpired;
         const isPremium = isActive && sub.product_id === SUBSCRIPTION_PRODUCTS.PREMIUM;
         const isPlus = isActive && (sub.product_id === SUBSCRIPTION_PRODUCTS.PLUS || isPremium);
 
@@ -52,67 +51,16 @@ export const getSubscriptionStatus = async (req, res, next) => {
     }
 };
 
-/**
- * Registra purchaseToken y calcula expiración por base plan en la base local.
- * No consulta Google Play Developer API. Repetir el request recalcula vencimiento desde NOW().
- */
 export const verifySubscription = async (req, res, next) => {
     try {
-        const userId = req.user.id;
-        const { purchaseToken, productId, basePlanId = BASE_PLANS.MONTHLY, orderId } = req.body;
-
-        const interval = resolvePlanInterval(basePlanId);
-
-        const upsertQuery = `
-            INSERT INTO user_subscriptions (
-                user_id, product_id, base_plan_id, purchase_token, order_id,
-                status, auto_renewing, expires_at, last_verified_at, updated_at
-            ) VALUES (
-                $1, $2, $3, $4, $5,
-                'active', TRUE, NOW() + $6::INTERVAL, NOW(), NOW()
-            )
-            ON CONFLICT (user_id) DO UPDATE SET
-                product_id = EXCLUDED.product_id,
-                base_plan_id = EXCLUDED.base_plan_id,
-                purchase_token = EXCLUDED.purchase_token,
-                order_id = COALESCE(EXCLUDED.order_id, user_subscriptions.order_id),
-                status = 'active',
-                auto_renewing = TRUE,
-                expires_at = NOW() + $6::INTERVAL,
-                last_verified_at = NOW(),
-                updated_at = NOW()
-            RETURNING id, product_id, base_plan_id, status, auto_renewing, expires_at
-        `;
-
-        const result = await db.query(upsertQuery, [
-            userId,
-            productId,
-            basePlanId,
-            purchaseToken,
-            orderId || null,
-            interval,
-        ]);
-
-        const savedSub = result.rows[0];
-        const isPremium = savedSub.product_id === SUBSCRIPTION_PRODUCTS.PREMIUM;
-        const isPlus = savedSub.product_id === SUBSCRIPTION_PRODUCTS.PLUS || isPremium;
-        const currentPlan = isPremium ? 'premium' : 'plus';
-
-        res.setHeader('X-Subscription-Plan', currentPlan);
-
-        return res.json({
-            isPremium,
-            isPlus,
-            plan: currentPlan,
-            status: savedSub.status,
-            productId: savedSub.product_id,
-            basePlanId: savedSub.base_plan_id,
-            expiresAt: savedSub.expires_at ? new Date(savedSub.expires_at).toISOString() : null,
-            autoRenewing: Boolean(savedSub.auto_renewing),
-        });
-    } catch (error) {
-        return next(error);
-    }
+        const sub = await verifyAndSavePurchase(req.user.id, req.body.purchaseToken, req.body.productId);
+        const active = sub.provider_verified && sub.status === 'active' && new Date(sub.expires_at) > new Date();
+        const isPremium = active && sub.product_id === SUBSCRIPTION_PRODUCTS.PREMIUM;
+        const isPlus = active && (isPremium || sub.product_id === SUBSCRIPTION_PRODUCTS.PLUS);
+        res.setHeader('X-Subscription-Plan', isPremium ? 'premium' : isPlus ? 'plus' : 'free');
+        return res.json({ isPremium, isPlus, plan: isPremium ? 'premium' : isPlus ? 'plus' : 'free', status: sub.status,
+            productId: sub.product_id, basePlanId: sub.base_plan_id, expiresAt: new Date(sub.expires_at).toISOString(), autoRenewing: sub.auto_renewing });
+    } catch (error) { return next(error); }
 };
 
 /**

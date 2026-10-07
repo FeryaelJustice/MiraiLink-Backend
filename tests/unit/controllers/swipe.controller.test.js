@@ -10,6 +10,8 @@ const mockClient = {
 const connect = vi.fn().mockResolvedValue(mockClient);
 vi.mock('../../../src/models/db.js', () => ({ default: { query, connect } }));
 
+vi.mock('../../../src/services/affinity-service.js', () => ({ ensureContact: vi.fn().mockResolvedValue(undefined), pairLock: vi.fn().mockResolvedValue(undefined) }));
+
 const { getFeed, likeUser, getUndoQuota, undoSwipe } = await import('../../../src/controllers/swipe.controller.js');
 const userId = '00000000-0000-4000-8000-000000000001';
 

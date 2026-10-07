@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import db from '../models/db.js';
+import { ensureContact } from './affinity-service.js';
 import { AppError } from '../errors/AppError.js';
 import { newCapsule, creditMessage, applyCapsuleAction, publicCapsule } from './capsule-engine.js';
 
@@ -171,16 +172,22 @@ export async function cancelMatchCapsule(client, userId, peerId) {
     };
     await saveCapsule(client, state, 'cancelled');
 }
-
-export async function executeCapsuleAction(userId, capsuleId, action, preferredLocale = 'es') {
-    return capsuleTransaction(async client => {
-        const row = (await client.query('SELECT * FROM capsule_sessions WHERE id=$1 FOR UPDATE', [capsuleId])).rows[0];
-        if (!row) throw new AppError({ status: 404, code: 'CAPSULE_NOT_FOUND' });
-        if (!row.snapshot.userIds.includes(userId)) throw new AppError({ status: 403, code: 'CAPSULE_FORBIDDEN' });
-        const saved = (await client.query('SELECT response FROM capsule_actions WHERE capsule_id=$1 AND actor_id=$2 AND action_id=$3', [capsuleId, userId, action.actionId])).rows[0];
-        if (saved) return saved.response;
-        if (!row.match_id && !['request_reveal', 'accept_reveal', 'decline_reveal', 'cancel_reveal'].includes(action.type)) {
-            throw new AppError({ status: 409, code: 'CAPSULE_CANCELLED' });
+export async function executeCapsuleAction(userId, capsuleId, action) {
+    return capsuleTransaction(async client=>{
+        const row=(await client.query('SELECT * FROM capsule_sessions WHERE id=$1 FOR UPDATE',[capsuleId])).rows[0];
+        if(!row) throw new AppError({status:404,code:'CAPSULE_NOT_FOUND'});
+        if(!row.snapshot.userIds.includes(userId)) throw new AppError({status:403,code:'CAPSULE_FORBIDDEN'});
+        await ensureContact(client,userId,row.snapshot.userIds.find(id=>id!==userId));
+        const saved=(await client.query('SELECT response FROM capsule_actions WHERE capsule_id=$1 AND actor_id=$2 AND action_id=$3',[capsuleId,userId,action.actionId])).rows[0];
+        if(saved) return saved.response;
+        if(!row.match_id && !['request_reveal','accept_reveal','decline_reveal','cancel_reveal'].includes(action.type)) throw new AppError({status:409,code:'CAPSULE_CANCELLED'});
+        let state=row.snapshot;
+        let message=null;
+        if(action.type==='question') {
+            if(!capsulesEnabled()) throw new AppError({status:409,code:'CAPSULE_UNAVAILABLE'});
+            const pool=capsuleCatalog.questions.filter(q=>q.category===action.category);
+            const question=pool.find(q=>!state.seenQuestionIds.includes(q.id)) ?? pool[0];
+            action={...action,question:{...question,questionId:question.id,instanceId:randomUUID(),answeredBy:[],completed:false}};
         }
 
         const userLang = await resolveLanguage(client, action.language || preferredLocale);

@@ -543,7 +543,7 @@ export const updateSearchSettings = async (req, res, next) => {
         const subResult = await db.query(
             `SELECT product_id, status, expires_at
              FROM user_subscriptions
-             WHERE user_id = $1
+             WHERE user_id = $1 AND provider_verified = TRUE
              LIMIT 1`,
             [req.user.id],
         );
