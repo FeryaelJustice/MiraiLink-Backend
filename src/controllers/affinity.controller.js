@@ -38,6 +38,8 @@ export const getRequests=handle(async req=>{
         AND NOT EXISTS(SELECT 1 FROM matches WHERE user1_id=LEAST($1::uuid,l.to_user_id) AND user2_id=GREATEST($1::uuid,l.to_user_id))
         AND NOT EXISTS(SELECT 1 FROM dislikes WHERE (from_user_id=$1 AND to_user_id=l.to_user_id) OR (from_user_id=l.to_user_id AND to_user_id=$1))
         AND NOT EXISTS(SELECT 1 FROM user_blocks b WHERE (b.user_id=$1 AND b.target_id=l.to_user_id) OR (b.user_id=l.to_user_id AND b.target_id=$1))
+        AND NOT EXISTS(SELECT 1 FROM reports r WHERE (r.reported_by=$1 AND r.reported_user=l.to_user_id) OR (r.reported_by=l.to_user_id AND r.reported_user=$1))
+        AND NOT EXISTS(SELECT 1 FROM affinity_requests ar WHERE (ar.from_user_id=$1 AND ar.to_user_id=l.to_user_id) OR (ar.from_user_id=l.to_user_id AND ar.to_user_id=$1))
     ) q ORDER BY created_at DESC,id LIMIT $2 OFFSET $3`,[req.user.id,req.query.limit,req.query.offset]);
     const items=[];
     for(const row of rows.rows){
