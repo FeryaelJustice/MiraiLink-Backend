@@ -27,10 +27,20 @@ export const requestConversation=handle(req=>sendRequest(req.user.id,req.params.
 export const acceptConversation=handle(req=>respondRequest(req.user.id,req.params.id,true));
 export const rejectConversation=handle(req=>respondRequest(req.user.id,req.params.id,false));
 export const getRequests=handle(async req=>{
-    const rows=await db.query(`SELECT r.id,r.from_user_id,r.to_user_id,r.state,r.text,r.expires_at,r.chat_id,r.created_at FROM affinity_requests r
+    const rows=await db.query(`SELECT id,from_user_id,to_user_id,state,text,expires_at,chat_id,created_at FROM (
+        SELECT r.id,r.from_user_id,r.to_user_id,r.state,r.text,r.expires_at,r.chat_id,r.created_at FROM affinity_requests r
         WHERE (r.from_user_id=$1 OR r.to_user_id=$1) AND r.state='pending' AND r.expires_at>NOW() AND NOT EXISTS(SELECT 1 FROM reports WHERE (reported_by=r.from_user_id AND reported_user=r.to_user_id) OR (reported_by=r.to_user_id AND reported_user=r.from_user_id)) AND NOT EXISTS(SELECT 1 FROM user_blocks b WHERE
         (b.user_id=r.from_user_id AND b.target_id=r.to_user_id) OR (b.user_id=r.to_user_id AND b.target_id=r.from_user_id))
-        ORDER BY r.created_at DESC,r.id LIMIT $2 OFFSET $3`,[req.user.id,req.query.limit,req.query.offset]);
+        UNION ALL
+        SELECT l.id,l.from_user_id,l.to_user_id,'pending' AS state,'' AS text,(l.created_at + INTERVAL '7 days') AS expires_at,NULL::uuid AS chat_id,l.created_at
+        FROM likes l
+        WHERE l.from_user_id=$1 AND l.origin='affinity' AND (l.created_at + INTERVAL '7 days') > NOW()
+        AND NOT EXISTS(SELECT 1 FROM matches WHERE user1_id=LEAST($1::uuid,l.to_user_id) AND user2_id=GREATEST($1::uuid,l.to_user_id))
+        AND NOT EXISTS(SELECT 1 FROM dislikes WHERE (from_user_id=$1 AND to_user_id=l.to_user_id) OR (from_user_id=l.to_user_id AND to_user_id=$1))
+        AND NOT EXISTS(SELECT 1 FROM user_blocks b WHERE (b.user_id=$1 AND b.target_id=l.to_user_id) OR (b.user_id=l.to_user_id AND b.target_id=$1))
+        AND NOT EXISTS(SELECT 1 FROM reports r WHERE (r.reported_by=$1 AND r.reported_user=l.to_user_id) OR (r.reported_by=l.to_user_id AND r.reported_user=$1))
+        AND NOT EXISTS(SELECT 1 FROM affinity_requests ar WHERE (ar.from_user_id=$1 AND ar.to_user_id=l.to_user_id) OR (ar.from_user_id=l.to_user_id AND ar.to_user_id=$1))
+    ) q ORDER BY created_at DESC,id LIMIT $2 OFFSET $3`,[req.user.id,req.query.limit,req.query.offset]);
     const items=[];
     for(const row of rows.rows){
         const incoming=row.to_user_id===req.user.id;const peer=await profile(db,incoming?row.from_user_id:row.to_user_id,locale(req));

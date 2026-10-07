@@ -173,6 +173,22 @@ export const getFeed = async (req, res, next) => {
                   SELECT to_user_id FROM likes WHERE from_user_id = $1
                   UNION SELECT to_user_id FROM dislikes WHERE from_user_id = $1
               )
+              AND NOT EXISTS (
+                  SELECT 1 FROM likes l_aff
+                  WHERE ((l_aff.from_user_id = $1 AND l_aff.to_user_id = u.id)
+                     OR (l_aff.from_user_id = u.id AND l_aff.to_user_id = $1))
+                    AND l_aff.origin = 'affinity'
+              )
+              AND NOT EXISTS (
+                  SELECT 1 FROM affinity_requests ar
+                  WHERE ((ar.from_user_id = $1 AND ar.to_user_id = u.id)
+                     OR (ar.from_user_id = u.id AND ar.to_user_id = $1))
+                    AND ar.state IN ('pending', 'accepted', 'rejected', 'blocked')
+              )
+              AND NOT EXISTS (
+                  SELECT 1 FROM matches m
+                  WHERE m.user1_id = LEAST($1::uuid, u.id) AND m.user2_id = GREATEST($1::uuid, u.id)
+              )
             ), scored_candidates AS (
                 SELECT *, ${distanceSql} AS distance_km
                 FROM candidate_geo
@@ -367,8 +383,13 @@ export const getReceivedLikes = async (req, res, next) => {
               AND l.origin <> 'affinity'
               AND NOT EXISTS (SELECT 1 FROM user_blocks b WHERE (b.user_id=$1 AND b.target_id=l.from_user_id) OR (b.user_id=l.from_user_id AND b.target_id=$1))
               AND u.is_deleted = FALSE
-              AND l.discovery_mode=COALESCE((SELECT discovery_mode FROM user_search_preferences WHERE user_id=$1),'classic')
-              AND COALESCE((SELECT discovery_mode FROM user_search_preferences WHERE user_id=u.id),'classic')=l.discovery_mode
+              AND COALESCE(l.discovery_mode, 'classic') = 'classic'
+              AND NOT EXISTS (
+                  SELECT 1 FROM affinity_requests ar
+                  WHERE ((ar.from_user_id = $1 AND ar.to_user_id = l.from_user_id)
+                     OR (ar.from_user_id = l.from_user_id AND ar.to_user_id = $1))
+                    AND ar.state IN ('pending', 'accepted')
+              )
               AND NOT EXISTS (
                   SELECT 1 FROM likes reciprocal
                   WHERE reciprocal.from_user_id = $1 AND reciprocal.to_user_id = l.from_user_id
