@@ -14,18 +14,24 @@ Autorizado el 2026-10-06. Rama `codex/crystal-capsule` en Android desde `master`
 
 ## Backend y API
 
-Migración aditiva `014_crystal_capsule.sql` y esquema inicial: sesiones por pareja ordenada, participación, preguntas/traducciones, misiones, respuestas referenciando mensajes, acciones y eventos sin contenido. Versionar reglas y revisión. Sembrado específico idempotente `db:seed:capsules`, sin reinicializar datos.
+Migración aditiva `014_crystal_capsule.sql` (esquema base) y migración `015_crystal_capsule_v2.sql` (regla de 4 puntos compartidos, preguntas personalizadas y desacople del chat ordinario). Versionar reglas (`rulesVersion = 2`) y revisión.
 
-Bloqueos de pareja/preferencias y transacciones evitan matches simultáneos duplicados y modos desactualizados. Cuotas compartidas con Normal. Mensaje, misión, progreso y evento se confirman juntos. UUID evita dobles créditos tras timeout. Deshacer cancela vínculo; reencuentro conserva progreso y exige acuerdo.
+Reglas del motor v2:
+- Progreso 0..4, level = progress (0..4).
+- Los mensajes convencionales de chat no otorgan progreso y se bloquean con 403 (`CAPSULE_CHAT_LOCKED`) mientras `status != 'revealed'`.
+- 1 punto bilateral exacto al completar ambos usuarios la misma pregunta. Al llegar a 4 puntos, transición automática a `revealed`.
+- Máximo 1 pregunta activa simultánea; intento concurrente devuelve 400 (`TURN_BUSY`).
+- Proponer pregunta requiere respuesta del proponente (`answer`, máx 300 caracteres); si `isCustom: true`, texto libre (`customQuestion`, máx 120 caracteres).
+- Archivo en `completedQuestions` con texto, respuestas y timestamp, desocupando `question = null`.
 
 | Contrato | Ampliación compatible |
 | --- | --- |
 | Preferencias y swipes | `discovery_mode`; omisión conserva preferencia existente |
 | Feed, likes, perfiles y fotos | `photoPresentation` por pareja |
-| Envío de mensajes | `clientMessageId` idempotente y mensaje confirmado |
-| Historial | `include_capsule=true` devuelve envelope; omisión conserva array |
-| `GET /capsules/config` | Disponibilidad, reglas y catálogo |
-| `POST /capsules/{id}/actions` | UUID, revisión esperada, transición y snapshot |
+| Envío de mensajes | Bloqueado (`CAPSULE_CHAT_LOCKED`) hasta revelar conexión |
+| Historial | `include_capsule=true` devuelve envelope con snapshot v2 |
+| `GET /capsules/config` | Disponibilidad, rulesVersion: 2 y catálogo |
+| `POST /capsules/{id}/actions` | UUID, revisión esperada, preguntas activas/personalizadas y respuestas bilaterales |
 
 Android declara capacidad `crystal-capsule-v1`. Clientes antiguos reciben proyecciones sin fotografías veladas. Conflictos de revisión incluyen estado actualizado. Android acepta historial/confirmaciones antiguos durante despliegue escalonado.
 
