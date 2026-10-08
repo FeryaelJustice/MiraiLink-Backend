@@ -18,7 +18,6 @@
         "db:reset": "node scripts/reset-db.js",
         "db:reset-interactions": "node scripts/reset-interactions.js",
         "db:test-affinities": "node --env-file=.env scripts/seed-affinities-test.js",
-        "db:test-normal-likes": "node --env-file=.env scripts/seed-normal-likes-test.js",
         "db:migrate": "node scripts/migrate-db.js",
         "db:seed": "node scripts/import-geography.js && node scripts/seed.js",
         "sync:catalog": "node scripts/sync-catalog.js",
