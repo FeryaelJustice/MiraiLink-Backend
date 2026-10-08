@@ -17,7 +17,6 @@
         "check:routes": "node scripts/check-openapi-routes.js",
         "db:reset": "node scripts/reset-db.js",
         "db:reset-interactions": "node scripts/reset-interactions.js",
-        "db:affinity-regenerate": "node --env-file=.env scripts/affinity-worker.js generate",
         "db:test-affinities": "node --env-file=.env scripts/seed-affinities-test.js",
         "db:test-normal-likes": "node --env-file=.env scripts/seed-normal-likes-test.js",
         "db:migrate": "node scripts/migrate-db.js",
