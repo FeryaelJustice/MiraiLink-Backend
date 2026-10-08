@@ -91,26 +91,9 @@ async function seedAffinitiesTest() {
 
             if (ranked.length === 0) continue;
 
-            // 1. Crear un lote de recomendaciones "Por descubrir" (hasta 3)
-            const batchRes = await client.query(
-                'INSERT INTO affinity_batches(user_id, created_at, expires_at) VALUES($1, NOW(), NOW() + INTERVAL \'7 days\') RETURNING id',
-                [user.id]
-            );
-            const batchId = batchRes.rows[0].id;
-
-            for (const r of ranked.slice(0, 3)) {
-                await client.query(`
-                    INSERT INTO affinity_recommendations(batch_id, user_id, target_id, common_keys, score, state)
-                    VALUES($1, $2, $3, $4, $5, 'available')
-                    ON CONFLICT(batch_id, target_id) DO NOTHING
-                `, [batchId, user.id, r.targetId, JSON.stringify(r.commonKeys), r.score]);
-                totalRecommendations++;
-            }
-
-            // 2. Si hay más candidatos compatibles, generar "Interés recibido":
-            // - Un like desde afinidades hacia el usuario
-            if (ranked.length > 3) {
-                const likePeer = ranked[3];
+            // 1. Si hay al menos un candidato, generar "Interés recibido" con Like desde afinidades
+            if (ranked.length >= 1) {
+                const likePeer = ranked[0];
                 const likeRes = await client.query(`
                     INSERT INTO likes(from_user_id, to_user_id, origin, created_at)
                     VALUES($1, $2, 'affinity', NOW())
@@ -119,10 +102,9 @@ async function seedAffinitiesTest() {
                 if (likeRes.rowCount > 0) totalAffinityLikes++;
             }
 
-            // - Una invitación a conversar con mensaje hacia el usuario
-            if (ranked.length > 4) {
-                const reqPeer = ranked[4];
-                // Primero necesitamos una recommendation para asociarla a la solicitud
+            // 2. Si hay al menos dos candidatos, generar "Interés recibido" con Invitación a conversar (Mensaje)
+            if (ranked.length >= 2) {
+                const reqPeer = ranked[1];
                 const dummyBatch = await client.query(
                     'INSERT INTO affinity_batches(user_id, created_at, expires_at) VALUES($1, NOW(), NOW() + INTERVAL \'7 days\') RETURNING id',
                     [reqPeer.targetId]
@@ -147,6 +129,25 @@ async function seedAffinitiesTest() {
                         ON CONFLICT DO NOTHING RETURNING id
                     `, [reqPeer.targetId, user.id, reqId, msg]);
                     if (insReq.rowCount > 0) totalConversationRequests++;
+                }
+            }
+
+            // 3. Los candidatos restantes (o a partir del 3º) van al carrusel "Por descubrir"
+            const discoverCandidates = ranked.length > 2 ? ranked.slice(2, 5) : ranked.slice(0, 1);
+            if (discoverCandidates.length > 0) {
+                const batchRes = await client.query(
+                    'INSERT INTO affinity_batches(user_id, created_at, expires_at) VALUES($1, NOW(), NOW() + INTERVAL \'7 days\') RETURNING id',
+                    [user.id]
+                );
+                const batchId = batchRes.rows[0].id;
+
+                for (const r of discoverCandidates) {
+                    await client.query(`
+                        INSERT INTO affinity_recommendations(batch_id, user_id, target_id, common_keys, score, state)
+                        VALUES($1, $2, $3, $4, $5, 'available')
+                        ON CONFLICT(batch_id, target_id) DO NOTHING
+                    `, [batchId, user.id, r.targetId, JSON.stringify(r.commonKeys), r.score]);
+                    totalRecommendations++;
                 }
             }
         }
