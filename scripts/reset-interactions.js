@@ -36,6 +36,12 @@ export async function resetInteractions(pool) {
         const likesRes = await client.query('DELETE FROM likes;');
         const dislikesRes = await client.query('DELETE FROM dislikes;');
 
+        console.log('🧹 Limpiando afinidades (solicitudes, recomendaciones y lotes)...');
+        const affinityRequestsRes = await client.query('DELETE FROM affinity_requests;');
+        const affinityRecommendationsRes = await client.query('DELETE FROM affinity_recommendations;');
+        const affinityBatchesRes = await client.query('DELETE FROM affinity_batches;');
+        const affinityOutboxRes = await client.query('DELETE FROM affinity_outbox;');
+
         await client.query('COMMIT');
 
         console.log('✅ Interacciones restablecidas correctamente:');
@@ -45,6 +51,10 @@ export async function resetInteractions(pool) {
         console.log(`   - Matches eliminados: ${matchesRes.rowCount ?? 0}`);
         console.log(`   - Likes eliminados: ${likesRes.rowCount ?? 0}`);
         console.log(`   - Dislikes eliminados: ${dislikesRes.rowCount ?? 0}`);
+        console.log(`   - Solicitudes de afinidad eliminadas: ${affinityRequestsRes.rowCount ?? 0}`);
+        console.log(`   - Recomendaciones de afinidad eliminadas: ${affinityRecommendationsRes.rowCount ?? 0}`);
+        console.log(`   - Lotes de afinidad eliminados: ${affinityBatchesRes.rowCount ?? 0}`);
+        console.log(`   - Notificaciones outbox de afinidad eliminadas: ${affinityOutboxRes.rowCount ?? 0}`);
         console.log('ℹ️ Perfiles, fotos, intereses, ubicaciones y cuentas se han conservado intactos.');
     } catch (error) {
         await client.query('ROLLBACK');
