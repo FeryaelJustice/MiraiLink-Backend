@@ -1,6 +1,7 @@
 import db from '../models/db.js';
 import { AppError } from '../errors/AppError.js';
 import { eligible,rankCandidate,complete,adult } from './affinity-engine.js';
+import { DEFAULT_AVATAR_URL } from '../consts/photosConsts.js';
 export const enabled=()=>process.env.AFFINITIES_ENABLED==='true';
 const fail=(code,status=403)=>new AppError({code,status,message:code});
 export async function transaction(work) {
@@ -30,7 +31,7 @@ export async function profile(client,id,locale='es') {
         p.discovery_mode,p.search_scope,p.search_radius_km,p.search_gender,p.search_target_country_id,p.search_match_live_location,
         ap.enabled,ap.observed_since,ap.last_active_at,ap.last_like_at,ap.last_match_at,
         s.product_id,s.status AS subscription_status,s.expires_at,s.provider_verified,
-        (SELECT url FROM user_photos WHERE user_id=u.id ORDER BY position LIMIT 1) AS avatar_url,
+        COALESCE((SELECT url FROM user_photos WHERE user_id=u.id ORDER BY position LIMIT 1), 'assets/img/profiles/Goku.webp') AS avatar_url,
         COALESCE((SELECT json_agg(g.code) FROM user_relationship_goals i JOIN relationship_goals g ON g.id=i.goal_id WHERE i.user_id=u.id),'[]') AS goals,
         COALESCE((SELECT json_agg(item) FROM (
             SELECT 'anime:'||a.id AS key,COALESCE(t.name,a.name) AS title FROM user_anime_interests i JOIN animes a ON a.id=i.anime_id
@@ -43,7 +44,7 @@ export async function profile(client,id,locale='es') {
         LEFT JOIN user_subscriptions s ON s.user_id=u.id WHERE u.id=$1`,[id,locale]);
     return result.rows[0];
 }
-export function publicPerson(p) {return {id:p.id,username:p.username,nickname:p.nickname,avatarUrl:p.avatar_url};}
+export function publicPerson(p) {return {id:p.id,username:p.username,nickname:p.nickname,avatarUrl:p.avatar_url || DEFAULT_AVATAR_URL};}
 export async function outbox(client,user,type,resource) {
     await client.query('INSERT INTO affinity_outbox(user_id,type,resource_id) VALUES($1,$2,$3) ON CONFLICT DO NOTHING',[user,type,resource]);
 }
@@ -118,6 +119,10 @@ export async function respondRequest(user,id,accept) {
         await ensureContact(client,user,request.from_user_id);
         const a=await profile(client,user);const b=await profile(client,request.from_user_id);
         if(!a||!b||!a.is_verified||!b.is_verified||!adult(a)||!adult(b)||a.is_deleted||b.is_deleted)throw fail('RECOMMENDATION_UNAVAILABLE',409);
+        await client.query(
+            'INSERT INTO matches(user1_id,user2_id) VALUES($1,$2) ON CONFLICT(user1_id,user2_id) DO NOTHING',
+            [user, request.from_user_id].sort()
+        );
         let chat=await existingChat(client,user,request.from_user_id);
         if(!chat){
             const result=await client.query("INSERT INTO chats(type,created_by,origin) VALUES('private',$1,'affinity') RETURNING id",[request.from_user_id]);chat=result.rows[0];
