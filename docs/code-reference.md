@@ -196,3 +196,5 @@ Modo opcional de descubrimiento mutuo y fotos veladas con progreso compartido. [
 `seedUsers` en scripts/seed-users.js conserva las definiciones originales de usuarios del seed. Los scripts test-affinities y test-capsules actuan sobre cuentas existentes sin crear perfiles ni generar notificaciones. [Alcance y evidencia](affinity-capsule-restoration.md).
 
 `scenarioUsers` y `peerAt` (scripts/test-scenarios.js) comparten el reparto por ID de cuentas existentes entre test-affinities, test-likes y test-capsules. `resetCapsules(client)` limpia el grafo Capsule antes de borrar chats o matches. `cleanupLegacyTestUsers(client)` solo elimina las cuentas del generador auxiliar erroneo con firma exacta.
+
+Capsule matching: verifySwipeMode(client, fromId, toId, mode, receivedLikeId = null) bloquea la pareja y comprueba el modo del actor, o el like entrante autenticado al devolverlo. likeWithMode(client, fromId, toId, mode, createCapsule, receivedLikeId = null) crea reciprocidad solo de Discovery, preserva el interes de Afinidades y crea sesion solo para un match capsule. requireMatch tambien autoriza solicitudes de Afinidades accepted con chat_id, sin insertar matches.

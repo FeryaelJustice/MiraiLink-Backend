@@ -28,3 +28,7 @@ La limpieza del generador erroneo tambien se incluye en reset-interactions y en 
 Cliente relacionado: ../MiraiLink/docs/affinity-capsule-restoration.md.
 
 Evidencia permanente: revision estatica y sintaxis. No se han ejecutado los scripts ni consultado/modificado PostgreSQL desde este trabajo. Sin tests, compilacion Android ni aceptacion en dispositivo. No se confirma la limpieza de cuentas existentes hasta ejecutar el comando en la base correspondiente.
+
+Correcciones de revision: aceptar una conversacion de Afinidades no inserta match. Test recommendations omite compatibilidad, pero mantiene verificacion, edad, no eliminado, participacion y modo classic. Discovery admite perfiles presentes en Afinidades; excluye matches, bloqueos, votos propios de Discovery y likes entrantes de Discovery. Ambos modos aparecen en Likes recibidos y se aceptan por likeId con el modo guardado. Los contactos classic solo consideran solicitudes pending vigentes o accepted y recomendaciones con lote vigente.
+
+Migracion 020: permite un interes de Afinidades y un like de Discovery independientes para la misma pareja mediante UNIQUE(from_user_id,to_user_id,origin). Ejecutar db:migrate antes de desplegar el backend o regenerar escenarios; no se ha ejecutado aqui. Undo solo selecciona/elimina votos de Discovery.

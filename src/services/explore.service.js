@@ -151,7 +151,7 @@ export async function getExploreSectionsWithCategories(userId, locale = 'es') {
             const countQuery = `
                 SELECT COUNT(*)::int AS total
                 FROM users u
-                WHERE u.id != $1 AND u.is_deleted = FALSE AND COALESCE((SELECT discovery_mode FROM user_search_preferences WHERE user_id=u.id),'classic')=COALESCE((SELECT discovery_mode FROM user_search_preferences WHERE user_id=$1),'classic')
+                WHERE u.id != $1 AND u.is_deleted = FALSE
                   AND ${categoryFilter}
                   AND (
                       $2 = 'all' OR
@@ -159,8 +159,11 @@ export async function getExploreSectionsWithCategories(userId, locale = 'es') {
                       ($2 = 'male' AND u.gender = 'male')
                   )
                   AND ${distanceFilter}
+                  AND NOT EXISTS(SELECT 1 FROM user_blocks b WHERE (b.user_id=$1 AND b.target_id=u.id) OR (b.user_id=u.id AND b.target_id=$1))
+                  AND NOT EXISTS(SELECT 1 FROM matches m WHERE m.user1_id=LEAST($1::uuid,u.id) AND m.user2_id=GREATEST($1::uuid,u.id))
+                  AND NOT EXISTS(SELECT 1 FROM likes l WHERE l.from_user_id=u.id AND l.to_user_id=$1 AND l.origin='discovery')
                   AND u.id NOT IN (
-                      SELECT to_user_id FROM likes WHERE from_user_id = $1
+                      SELECT to_user_id FROM likes WHERE from_user_id = $1 AND origin = 'discovery'
                       UNION SELECT to_user_id FROM dislikes WHERE from_user_id = $1
                   )
             `;
@@ -330,11 +333,14 @@ export async function getCategoryFeedUsers(userId, categoryId, { limit = 20, off
                    ), 0) AS common_interests
             FROM users u
             WHERE u.id != $1 AND u.is_deleted = FALSE
-              AND COALESCE((SELECT discovery_mode FROM user_search_preferences WHERE user_id=u.id),'classic')=COALESCE((SELECT discovery_mode FROM user_search_preferences WHERE user_id=$1),'classic')
+
               AND ${categoryFilter}
               AND ${genderFilterSql}
+              AND NOT EXISTS(SELECT 1 FROM user_blocks b WHERE (b.user_id=$1 AND b.target_id=u.id) OR (b.user_id=u.id AND b.target_id=$1))
+              AND NOT EXISTS(SELECT 1 FROM matches m WHERE m.user1_id=LEAST($1::uuid,u.id) AND m.user2_id=GREATEST($1::uuid,u.id))
+              AND NOT EXISTS(SELECT 1 FROM likes l WHERE l.from_user_id=u.id AND l.to_user_id=$1 AND l.origin='discovery')
               AND u.id NOT IN (
-                  SELECT to_user_id FROM likes WHERE from_user_id = $1
+                  SELECT to_user_id FROM likes WHERE from_user_id = $1 AND origin = 'discovery'
                   UNION SELECT to_user_id FROM dislikes WHERE from_user_id = $1
               )
         ), scored_candidates AS (

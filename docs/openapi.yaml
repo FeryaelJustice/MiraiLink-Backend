@@ -377,6 +377,7 @@ paths:
   /api/swipe/likes-received:
     get:
       tags: [ Discovery ]
+      description: Likes de Discovery classic y capsule pendientes; cada entrada incluye likeId, likedAt, discoveryMode y user con photoPresentation.
       operationId: getReceivedLikes
       security: [ { bearerAuth: [] } ]
       parameters:
@@ -1487,7 +1488,14 @@ components:
                           {
                             type: string,
                             enum: [ classic, capsule ],
-                            description: Omitido conserva el modo actual; registros anteriores classic.
+                            description: Modo del voto de Discovery; por defecto classic. receivedLikeId hace que el servidor use el modo original del like entrante.
+                          },
+                        receivedLikeId:
+                          {
+                            type: string,
+                            format: uuid,
+                            nullable: true,
+                            description: Solo para devolver un like de Discovery recibido por el usuario autenticado.
                           }
                       }
                   }

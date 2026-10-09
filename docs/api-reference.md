@@ -186,7 +186,7 @@ Bearer. Body:
 | Operación | Request | Success |
 | --- | --- | --- |
 | `GET /api/swipe/feed` | Bearer; `limit` 1-100 y `offset` >= 0 | Candidatos públicos con photos, animes y games |
-| `POST /api/swipe/like` | Bearer; `{toUserId: UUID}` | `{message, match}` |
+| `POST /api/swipe/like` | Bearer; `{toUserId: UUID, discoveryMode?: classic|capsule, receivedLikeId?: UUID}` | `{message, match}` |
 | `POST /api/swipe/dislike` | Bearer; `{toUserId: UUID}` | Mensaje |
 | `GET /api/match` | Bearer | Usuarios matched públicos con extras |
 | `GET /api/match/unseen` | Bearer | `{id, user1_id, user2_id}[]` |
@@ -251,3 +251,5 @@ Modo opcional de descubrimiento mutuo y fotos veladas con progreso compartido v2
 Campos opcionales de acciones Capsule admiten `null`; `answer` sigue siendo obligatorio al proponer una pregunta. Los snapshots exponen `text` como cadena localizada. El estado de contacto mantiene origen `affinity` tambien tras un like. [Notas de reparacion](affinity-capsule-restoration.md).
 
 Las recomendaciones marcadas `is_test` por los scripts usan el reparto de desarrollo en lugar del ranking real. En produccion se conserva el ranking habitual. El campo de base de datos no se expone en las respuestas publicas. [Comandos y reparto](affinity-capsule-restoration.md).
+
+Afinidades: aceptar una solicitud de conversacion abre el chat con origen affinity sin crear match. Devolver el like es una accion distinta. Discovery no excluye perfiles por recomendaciones ni solicitudes de Afinidades. Likes recibidos incluye ambos modos y su discoveryMode; receivedLikeId valida el remitente/destinatario y conserva el modo original al crear el match, aunque la preferencia actual haya cambiado.

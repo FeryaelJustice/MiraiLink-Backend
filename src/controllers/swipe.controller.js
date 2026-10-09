@@ -167,23 +167,14 @@ export const getFeed = async (req, res, next) => {
             FROM users u
             WHERE u.id != $1 AND u.is_deleted = FALSE
               AND NOT EXISTS(SELECT 1 FROM user_blocks b WHERE (b.user_id=$1 AND b.target_id=u.id) OR (b.user_id=u.id AND b.target_id=$1))
-              AND COALESCE((SELECT discovery_mode FROM user_search_preferences WHERE user_id=u.id),'classic') = COALESCE((SELECT discovery_mode FROM user_search_preferences WHERE user_id=$1),'classic')
               AND ${genderFilterSql}
               AND u.id NOT IN (
-                  SELECT to_user_id FROM likes WHERE from_user_id = $1
+                  SELECT to_user_id FROM likes WHERE from_user_id = $1 AND origin = 'discovery'
                   UNION SELECT to_user_id FROM dislikes WHERE from_user_id = $1
               )
               AND NOT EXISTS (
-                  SELECT 1 FROM likes l_aff
-                  WHERE ((l_aff.from_user_id = $1 AND l_aff.to_user_id = u.id)
-                     OR (l_aff.from_user_id = u.id AND l_aff.to_user_id = $1))
-                    AND l_aff.origin = 'affinity'
-              )
-              AND NOT EXISTS (
-                  SELECT 1 FROM affinity_requests ar
-                  WHERE ((ar.from_user_id = $1 AND ar.to_user_id = u.id)
-                     OR (ar.from_user_id = u.id AND ar.to_user_id = $1))
-                    AND ar.state IN ('pending', 'accepted', 'rejected', 'blocked')
+                  SELECT 1 FROM likes incoming
+                  WHERE incoming.from_user_id=u.id AND incoming.to_user_id=$1 AND incoming.origin='discovery'
               )
               AND NOT EXISTS (
                   SELECT 1 FROM matches m
@@ -332,9 +323,19 @@ export const likeUser = async (req, res, next) => {
             }
         }
 
-        const mode=req.body.discoveryMode ?? 'classic';
-        if(mode==='capsule') requireCapsulesEnabled(req);
-        const matched=await capsuleTransaction(async client=>{ await pairLock(client,fromUserId,toUserId); await ensureContact(client,fromUserId,toUserId); return likeWithMode(client,fromUserId,toUserId,mode,createMatchCapsule); });
+        const matched=await capsuleTransaction(async client=>{
+            await pairLock(client,fromUserId,toUserId);
+            await ensureContact(client,fromUserId,toUserId);
+            let mode=req.body.discoveryMode ?? 'classic';
+            const receivedLikeId=req.body.receivedLikeId ?? null;
+            if(receivedLikeId) {
+                const incoming=await client.query("SELECT discovery_mode FROM likes WHERE id=$1 AND from_user_id=$2 AND to_user_id=$3 AND origin='discovery'",[receivedLikeId,toUserId,fromUserId]);
+                if(!incoming.rows.length) throw new AppError({status:404,code:'LIKE_NOT_FOUND'});
+                mode=incoming.rows[0].discovery_mode ?? 'classic';
+            }
+            if(mode==='capsule') requireCapsulesEnabled(req);
+            return likeWithMode(client,fromUserId,toUserId,mode,createMatchCapsule,receivedLikeId);
+        });
         invalidateUserCountCache(fromUserId);
         return res.json({ message: 'Liked', match: matched });
     } catch (error) {
@@ -372,7 +373,7 @@ export const getReceivedLikes = async (req, res, next) => {
         const locale = resolveCatalogLanguage(req.get('accept-language'));
 
         const queryText = `
-            SELECT l.id AS like_id, l.created_at AS liked_at,
+            SELECT l.id AS like_id, l.created_at AS liked_at, l.discovery_mode,
                    u.id, u.username, u.nickname, u.bio, u.gender,
                    TO_CHAR(u.birthdate, 'YYYY-MM-DD') AS birthdate,
                    ${localizedResidenceColumns('u')}
@@ -380,19 +381,13 @@ export const getReceivedLikes = async (req, res, next) => {
             JOIN users u ON u.id = l.from_user_id
             ${localizedResidenceJoins('u', 4)}
             WHERE l.to_user_id = $1
-              AND l.origin <> 'affinity'
+              AND l.origin = 'discovery'
+              AND NOT EXISTS (SELECT 1 FROM matches m WHERE m.user1_id=LEAST($1::uuid,l.from_user_id) AND m.user2_id=GREATEST($1::uuid,l.from_user_id))
               AND NOT EXISTS (SELECT 1 FROM user_blocks b WHERE (b.user_id=$1 AND b.target_id=l.from_user_id) OR (b.user_id=l.from_user_id AND b.target_id=$1))
               AND u.is_deleted = FALSE
-              AND COALESCE(l.discovery_mode, 'classic') = 'classic'
-              AND NOT EXISTS (
-                  SELECT 1 FROM affinity_requests ar
-                  WHERE ((ar.from_user_id = $1 AND ar.to_user_id = l.from_user_id)
-                     OR (ar.from_user_id = l.from_user_id AND ar.to_user_id = $1))
-                    AND ar.state IN ('pending', 'accepted')
-              )
               AND NOT EXISTS (
                   SELECT 1 FROM likes reciprocal
-                  WHERE reciprocal.from_user_id = $1 AND reciprocal.to_user_id = l.from_user_id
+                  WHERE reciprocal.from_user_id = $1 AND reciprocal.to_user_id = l.from_user_id AND reciprocal.origin = 'discovery'
               )
               AND NOT EXISTS (
                   SELECT 1 FROM dislikes d
@@ -416,6 +411,7 @@ export const getReceivedLikes = async (req, res, next) => {
 
         const likes = result.rows.map(row => ({
             likeId: row.like_id,
+            discoveryMode: row.discovery_mode ?? 'classic',
             likedAt: row.liked_at,
             user: {
                 ...toPublicUser(row),
@@ -500,7 +496,7 @@ export const getUndoQuota = async (req, res, next) => {
             : null;
 
         const undoableCheck = await db.query(
-            `SELECT 1 FROM likes WHERE from_user_id = $1
+            `SELECT 1 FROM likes WHERE from_user_id = $1 AND origin = 'discovery'
              UNION ALL
              SELECT 1 FROM dislikes WHERE from_user_id = $1
              LIMIT 1`,
@@ -575,7 +571,7 @@ export const undoSwipe = async (req, res, next) => {
         let swipeResult;
         if (targetUserId) {
             swipeResult = await db.query(
-                `SELECT 'like' AS action, to_user_id, created_at FROM likes WHERE from_user_id = $1 AND to_user_id = $2
+                `SELECT 'like' AS action, to_user_id, created_at FROM likes WHERE origin = 'discovery' AND from_user_id = $1 AND to_user_id = $2
                  UNION ALL
                  SELECT 'dislike' AS action, to_user_id, created_at FROM dislikes WHERE from_user_id = $1 AND to_user_id = $2
                  ORDER BY created_at DESC LIMIT 1`,
@@ -583,7 +579,7 @@ export const undoSwipe = async (req, res, next) => {
             );
         } else {
             swipeResult = await db.query(
-                `SELECT 'like' AS action, to_user_id, created_at FROM likes WHERE from_user_id = $1
+                `SELECT 'like' AS action, to_user_id, created_at FROM likes WHERE origin = 'discovery' AND from_user_id = $1
                  UNION ALL
                  SELECT 'dislike' AS action, to_user_id, created_at FROM dislikes WHERE from_user_id = $1
                  ORDER BY created_at DESC LIMIT 1`,
@@ -606,7 +602,7 @@ export const undoSwipe = async (req, res, next) => {
         if (action === 'like') {
             await cancelMatchCapsule(client, fromUserId, undoneUserId);
             await client.query(
-                'DELETE FROM likes WHERE from_user_id = $1 AND to_user_id = $2',
+                "DELETE FROM likes WHERE origin='discovery' AND from_user_id = $1 AND to_user_id = $2",
                 [fromUserId, undoneUserId],
             );
             await client.query(
@@ -655,7 +651,7 @@ export const undoSwipe = async (req, res, next) => {
         const calculatedResetsAt = resetsAt || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
         const remainingCheck = await db.query(
-            `SELECT 1 FROM likes WHERE from_user_id = $1
+            `SELECT 1 FROM likes WHERE from_user_id = $1 AND origin = 'discovery'
              UNION ALL
              SELECT 1 FROM dislikes WHERE from_user_id = $1
              LIMIT 1`,

@@ -29,7 +29,7 @@ await runScenario(async (client, users) => {
         }
         const likePeer = peerAt(users, index, 3);
         await client.query(`INSERT INTO likes(from_user_id,to_user_id,origin,discovery_mode) VALUES($1,$2,'affinity','classic')
-            ON CONFLICT(from_user_id,to_user_id) DO UPDATE SET origin='affinity',discovery_mode='classic',created_at=NOW()`, [user.id,likePeer.id]);
+            ON CONFLICT(from_user_id,to_user_id,origin) DO UPDATE SET origin='affinity',discovery_mode='classic',created_at=NOW()`, [user.id,likePeer.id]);
     }
     console.log(`Afinidades para ${users.length} cuentas existentes: 3 recomendaciones, 1 like entrante y 1 invitacion entrante por cuenta.`);
 });
