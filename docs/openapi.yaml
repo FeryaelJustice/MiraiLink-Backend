@@ -929,6 +929,7 @@ paths:
 
   /api/affinities/requests/{id}/accept:
     post:
+      description: Requiere suscripcion Plus activa; de lo contrario responde PLUS_REQUIRED.
       tags: [ Affinities ]
       operationId: acceptAffinityRequest
       security: [ { bearerAuth: [] } ]
@@ -943,6 +944,7 @@ paths:
 
   /api/affinities/requests/{id}/reject:
     post:
+      description: Requiere suscripcion Plus activa; de lo contrario responde PLUS_REQUIRED.
       tags: [ Affinities ]
       operationId: rejectAffinityRequest
       security: [ { bearerAuth: [] } ]

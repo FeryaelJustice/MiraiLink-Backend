@@ -3,7 +3,7 @@ import { getFcm } from '../config/firebaseAdmin.js';
 const text={
     affinity_like:['Nuevo like de Afinidades','Alguien te ha dado un like desde Afinidades. Descubre quien con Plus.'],
     affinity_available:['Afinidades para ti','Hay personas con gustos como los tuyos. Descubre tus afinidades.'],
-    affinity_request:['Nueva solicitud','Alguien quiere conversar contigo por Afinidades. Puedes aceptar gratis.'],
+    affinity_request:['Nueva solicitud','Alguien quiere conversar contigo por Afinidades. Descubre quien y responde con Plus.'],
     affinity_accepted:['Solicitud aceptada','Tu invitacion de Afinidades ha sido aceptada.'],
 };
 export async function drainAffinityOutbox(){

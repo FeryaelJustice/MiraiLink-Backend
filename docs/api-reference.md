@@ -253,3 +253,5 @@ Campos opcionales de acciones Capsule admiten `null`; `answer` sigue siendo obli
 Las recomendaciones marcadas `is_test` por los scripts usan el reparto de desarrollo en lugar del ranking real. En produccion se conserva el ranking habitual. El campo de base de datos no se expone en las respuestas publicas. [Comandos y reparto](affinity-capsule-restoration.md).
 
 Afinidades: aceptar una solicitud de conversacion abre el chat con origen affinity sin crear match. Devolver el like es una accion distinta. Discovery no excluye perfiles por recomendaciones ni solicitudes de Afinidades. Likes recibidos incluye ambos modos y su discoveryMode; receivedLikeId valida el remitente/destinatario y conserva el modo original al crear el match, aunque la preferencia actual haya cambiado.
+
+Las rutas de aceptar y rechazar invitaciones entrantes de Afinidades requieren Plus (PLUS_REQUIRED si no hay suscripcion). Aceptar sigue creando solo chat, sin match.

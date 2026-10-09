@@ -13,8 +13,8 @@ router.put('/preferences',validate({body:z.object({enabled:z.boolean()})}),contr
 router.get('/likes',validate({query:pagination}),controller.getAffinityLikes);
 router.post('/likes/:id/return',id,controller.plusOnly,controller.returnAffinityLike);
 router.get('/requests',validate({query:pagination}),controller.getRequests);
-router.post('/requests/:id/accept',id,controller.acceptConversation);
-router.post('/requests/:id/reject',id,controller.rejectConversation);
+router.post('/requests/:id/accept',id,controller.plusOnly,controller.acceptConversation);
+router.post('/requests/:id/reject',id,controller.plusOnly,controller.rejectConversation);
 router.post('/recommendations/:id/dismiss',id,controller.dismissRecommendation);
 router.post('/recommendations/:id/like',id,controller.plusOnly,controller.likeRecommendation);
 router.post('/recommendations/:id/request',id,controller.plusOnly,validate({body:z.object({clientId:uuid,text:z.string().trim().min(1).max(4000)})}),controller.requestConversation);

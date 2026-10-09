@@ -32,3 +32,5 @@ Evidencia permanente: revision estatica y sintaxis. No se han ejecutado los scri
 Correcciones de revision: aceptar una conversacion de Afinidades no inserta match. Test recommendations omite compatibilidad, pero mantiene verificacion, edad, no eliminado, participacion y modo classic. Discovery admite perfiles presentes en Afinidades; excluye matches, bloqueos, votos propios de Discovery y likes entrantes de Discovery. Ambos modos aparecen en Likes recibidos y se aceptan por likeId con el modo guardado. Los contactos classic solo consideran solicitudes pending vigentes o accepted y recomendaciones con lote vigente.
 
 Migracion 020: permite un interes de Afinidades y un like de Discovery independientes para la misma pareja mediante UNIQUE(from_user_id,to_user_id,origin). Ejecutar db:migrate antes de desplegar el backend o regenerar escenarios; no se ha ejecutado aqui. Undo solo selecciona/elimina votos de Discovery.
+
+Las rutas de aceptar y rechazar invitaciones entrantes de Afinidades requieren Plus (PLUS_REQUIRED si no hay suscripcion). Aceptar sigue creando solo chat, sin match.
