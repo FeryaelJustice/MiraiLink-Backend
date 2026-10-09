@@ -377,6 +377,7 @@ paths:
   /api/swipe/likes-received:
     get:
       tags: [ Discovery ]
+      description: Likes de Discovery classic y capsule pendientes; cada entrada incluye likeId, likedAt, discoveryMode y user con photoPresentation.
       operationId: getReceivedLikes
       security: [ { bearerAuth: [] } ]
       parameters:
@@ -799,20 +800,20 @@ paths:
                 category:
                   type: string
                 questionId:
-                  type: string
+                  type: [string, "null"]
                 isCustom:
-                  type: boolean
+                  type: [boolean, "null"]
                 customQuestion:
-                  type: string
+                  type: [string, "null"]
                   maxLength: 120
                 answer:
                   type: string
                   maxLength: 300
                 missionId:
-                  type: string
+                  type: [string, "null"]
                   format: uuid
                 text:
-                  type: string
+                  type: [string, "null"]
                   maxLength: 300
       responses:
         "200":
@@ -928,6 +929,7 @@ paths:
 
   /api/affinities/requests/{id}/accept:
     post:
+      description: Requiere suscripcion Plus activa; de lo contrario responde PLUS_REQUIRED.
       tags: [ Affinities ]
       operationId: acceptAffinityRequest
       security: [ { bearerAuth: [] } ]
@@ -942,6 +944,7 @@ paths:
 
   /api/affinities/requests/{id}/reject:
     post:
+      description: Requiere suscripcion Plus activa; de lo contrario responde PLUS_REQUIRED.
       tags: [ Affinities ]
       operationId: rejectAffinityRequest
       security: [ { bearerAuth: [] } ]
@@ -1487,7 +1490,14 @@ components:
                           {
                             type: string,
                             enum: [ classic, capsule ],
-                            description: Omitido conserva el modo actual; registros anteriores classic.
+                            description: Modo del voto de Discovery; por defecto classic. receivedLikeId hace que el servidor use el modo original del like entrante.
+                          },
+                        receivedLikeId:
+                          {
+                            type: string,
+                            format: uuid,
+                            nullable: true,
+                            description: Solo para devolver un like de Discovery recibido por el usuario autenticado.
                           }
                       }
                   }

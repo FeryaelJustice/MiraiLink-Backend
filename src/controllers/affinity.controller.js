@@ -51,7 +51,7 @@ export const getRequests=handle(async req=>{
 });
 export const getAffinityLikes=handle(async req=>{
     const rows=await db.query(`SELECT l.id,l.from_user_id,l.created_at FROM likes l JOIN users u ON u.id=l.from_user_id
-        WHERE l.to_user_id=$1 AND l.origin='affinity' AND u.is_deleted=FALSE
+        WHERE l.to_user_id=$1 AND l.origin='affinity' AND l.discovery_mode='classic' AND u.is_deleted=FALSE
         AND NOT EXISTS(SELECT 1 FROM likes WHERE from_user_id=$1 AND to_user_id=l.from_user_id)
         AND NOT EXISTS(SELECT 1 FROM dislikes WHERE from_user_id=$1 AND to_user_id=l.from_user_id)
         AND NOT EXISTS(SELECT 1 FROM user_blocks WHERE (user_id=$1 AND target_id=l.from_user_id) OR (user_id=l.from_user_id AND target_id=$1))
@@ -81,5 +81,7 @@ export const getContactStatus=handle(async req=>{
     await ensureContact(db,user,target);
     const chat=await db.query(`SELECT c.origin FROM chats c JOIN chat_members a ON a.chat_id=c.id AND a.user_id=$1 JOIN chat_members b ON b.chat_id=c.id AND b.user_id=$2 WHERE c.type='private' LIMIT 1`,[user,target]);
     const match=await db.query('SELECT 1 FROM matches WHERE user1_id=LEAST($1::uuid,$2::uuid) AND user2_id=GREATEST($1::uuid,$2::uuid)',[user,target]);
-    return {origin:chat.rows[0]?.origin??'match',matched:Boolean(match.rows.length),enabled:enabled()};
+    const affinity=await db.query(`SELECT 1 FROM likes WHERE origin='affinity' AND ((from_user_id=$1 AND to_user_id=$2) OR (from_user_id=$2 AND to_user_id=$1))
+        UNION ALL SELECT 1 FROM affinity_requests WHERE state='accepted' AND ((from_user_id=$1 AND to_user_id=$2) OR (from_user_id=$2 AND to_user_id=$1))`,[user,target]);
+    return {origin:affinity.rows.length?'affinity':chat.rows[0]?.origin??'match',matched:Boolean(match.rows.length),enabled:enabled()};
 });

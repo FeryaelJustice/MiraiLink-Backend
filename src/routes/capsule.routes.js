@@ -13,11 +13,11 @@ const questionSchema = z.object({
     ...base,
     type: z.literal('question'),
     category: z.enum(['anime', 'gaming', 'hobbies', 'everyday', 'ideal_date', 'projects', 'relationships', 'family']),
-    questionId: z.string().trim().min(1).max(50).optional(),
-    isCustom: z.boolean().optional(),
-    customQuestion: z.string().trim().min(1).max(120).optional(),
+    questionId: z.string().trim().min(1).max(50).nullish(),
+    isCustom: z.boolean().nullish(),
+    customQuestion: z.string().trim().min(1).max(120).nullish(),
     answer: z.string().trim().min(1).max(300),
-    language: z.string().trim().min(2).max(35).optional(),
+    language: z.string().trim().min(2).max(35).nullish(),
 }).superRefine((val, ctx) => {
     if (val.isCustom && !val.customQuestion) {
         ctx.addIssue({
@@ -32,9 +32,9 @@ const answerSchema = z.object({
     ...base,
     type: z.literal('answer'),
     missionId: z.uuid(),
-    answer: z.string().trim().min(1).max(300).optional(),
-    text: z.string().trim().min(1).max(300).optional(),
-    language: z.string().trim().min(2).max(35).optional(),
+    answer: z.string().trim().min(1).max(300).nullish(),
+    text: z.string().trim().min(1).max(300).nullish(),
+    language: z.string().trim().min(2).max(35).nullish(),
 }).superRefine((val, ctx) => {
     if (!val.answer && !val.text) {
         ctx.addIssue({

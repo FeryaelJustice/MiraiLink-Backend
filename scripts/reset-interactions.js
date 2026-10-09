@@ -1,3 +1,5 @@
+import { resetCapsules } from './reset-capsules.js';
+import { cleanupLegacyTestUsers } from './test-scenarios.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -25,7 +27,14 @@ export async function resetInteractions(pool) {
     try {
         await client.query('BEGIN');
 
-        console.log('🧹 Limpiando mensajes y chats...');
+        await resetCapsules(client);
+        // Requests reference chats, so remove them before deleting conversations.
+        const affinityRequestsRes = await client.query('DELETE FROM affinity_requests;');
+        await client.query('DELETE FROM user_swipe_undos');
+        await client.query('DELETE FROM user_blocks');
+        await client.query('DELETE FROM reports');
+        await client.query('UPDATE affinity_preferences SET last_like_at=NULL,last_match_at=NULL,last_evaluated_at=NULL');
+        console.log('Limpiando mensajes y chats...');
         // Limpiar mensajes y chats (chat_members se elimina en cascada o con chats)
         const messagesRes = await client.query('DELETE FROM messages;');
         const chatMembersRes = await client.query('DELETE FROM chat_members;');
@@ -37,12 +46,13 @@ export async function resetInteractions(pool) {
         const dislikesRes = await client.query('DELETE FROM dislikes;');
 
         console.log('🧹 Limpiando afinidades (solicitudes, recomendaciones y lotes)...');
-        const affinityRequestsRes = await client.query('DELETE FROM affinity_requests;');
         const affinityRecommendationsRes = await client.query('DELETE FROM affinity_recommendations;');
         const affinityBatchesRes = await client.query('DELETE FROM affinity_batches;');
         const affinityOutboxRes = await client.query('DELETE FROM affinity_outbox;');
 
+        const removedLegacyUsers = await cleanupLegacyTestUsers(client);
         await client.query('COMMIT');
+        console.log(`Cuentas auxiliares erroneas eliminadas: ${removedLegacyUsers}`);
 
         console.log('✅ Interacciones restablecidas correctamente:');
         console.log(`   - Mensajes eliminados: ${messagesRes.rowCount ?? 0}`);
@@ -55,7 +65,7 @@ export async function resetInteractions(pool) {
         console.log(`   - Recomendaciones de afinidad eliminadas: ${affinityRecommendationsRes.rowCount ?? 0}`);
         console.log(`   - Lotes de afinidad eliminados: ${affinityBatchesRes.rowCount ?? 0}`);
         console.log(`   - Notificaciones outbox de afinidad eliminadas: ${affinityOutboxRes.rowCount ?? 0}`);
-        console.log('ℹ️ Perfiles, fotos, intereses, ubicaciones y cuentas se han conservado intactos.');
+        console.log('ℹ️ Perfiles, fotos, intereses, ubicaciones y cuentas originales conservados. Solo se eliminan las cuentas auxiliares erroneas identificadas.');
     } catch (error) {
         await client.query('ROLLBACK');
         console.error('❌ Error al resetear las interacciones:', error.message);
