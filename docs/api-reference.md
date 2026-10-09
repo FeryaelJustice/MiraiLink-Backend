@@ -247,3 +247,7 @@ No existen `/api/user/byToken`, `/api/user/byEmailPassword` ni `/api/user/public
 ## Cápsula de Cristal
 
 Modo opcional de descubrimiento mutuo y fotos veladas con progreso compartido v2 (4 puntos bilaterales, reglasVersion: 2). [Spec SDMD](features/crystal_capsule/spec.md), [plan](features/crystal_capsule/plan.md). Activación: CRYSTAL_CAPSULE_ENABLED=true después de db:migrate (migraciones 014 y 015) y db:seed:capsules. API aditiva con X-MiraiLink-Capabilities: crystal-capsule-v1, discovery_mode, photoPresentation e include_capsule. Chat bloqueado (403 CAPSULE_CHAT_LOCKED) hasta status = revealed. Acciones autenticadas: /api/capsules/config y /api/capsules/{id}/actions (con 1 sola pregunta activa, error 400 TURN_BUSY, respuesta obligatoria y preguntas personalizadas). No se garantiza anonimato ni protección de URLs conocidas.
+
+Campos opcionales de acciones Capsule admiten `null`; `answer` sigue siendo obligatorio al proponer una pregunta. Los snapshots exponen `text` como cadena localizada. El estado de contacto mantiene origen `affinity` tambien tras un like. [Notas de reparacion](affinity-capsule-restoration.md).
+
+Las recomendaciones marcadas `is_test` por los scripts usan el reparto de desarrollo en lugar del ranking real. En produccion se conserva el ranking habitual. El campo de base de datos no se expone en las respuestas publicas. [Comandos y reparto](affinity-capsule-restoration.md).

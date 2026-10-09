@@ -13,7 +13,7 @@ export async function presentCapsulePhotos(body, req) {
     if(!users.length) return body;
     const ids=[...new Set(users.map(u=>u.id))];
     const result=await db.query(
-        "SELECT u.id,COALESCE(p.discovery_mode,'classic') AS mode,c.id AS capsule_id,c.status,c.snapshot,c.revision,EXISTS(SELECT 1 FROM matches m WHERE (m.user1_id=$1 AND m.user2_id=u.id) OR (m.user2_id=$1 AND m.user1_id=u.id)) AS has_match " +
+        "SELECT u.id,COALESCE(p.discovery_mode,'classic') AS mode,c.id AS capsule_id,c.status,c.snapshot,c.revision,EXISTS(SELECT 1 FROM matches m WHERE (m.user1_id=$1 AND m.user2_id=u.id) OR (m.user2_id=$1 AND m.user1_id=u.id)) AS has_match,EXISTS(SELECT 1 FROM likes l WHERE l.discovery_mode='classic' AND ((l.from_user_id=$1 AND l.to_user_id=u.id) OR (l.from_user_id=u.id AND l.to_user_id=$1))) OR EXISTS(SELECT 1 FROM affinity_requests ar WHERE ((ar.from_user_id=$1 AND ar.to_user_id=u.id) OR (ar.from_user_id=u.id AND ar.to_user_id=$1))) OR EXISTS(SELECT 1 FROM affinity_recommendations r WHERE r.user_id=$1 AND r.target_id=u.id AND r.state='available') AS has_classic_contact " +
         'FROM users u LEFT JOIN user_search_preferences p ON p.user_id=u.id ' +
         'LEFT JOIN capsule_sessions c ON (c.user1_id=$1 AND c.user2_id=u.id) OR (c.user2_id=$1 AND c.user1_id=u.id) ' +
         'WHERE u.id=ANY($2::uuid[])',[req.user.id,ids]);
@@ -22,7 +22,7 @@ export async function presentCapsulePhotos(body, req) {
     for(const user of users) {
         const row=byId.get(user.id); if(!row) continue;
         const state=row.snapshot;
-        const veiled=state ? state.status!=='revealed' : row.mode==='capsule' && !row.has_match;
+        const veiled=state ? state.status!=='revealed' : row.mode==='capsule' && !row.has_match && !row.has_classic_contact;
         user.photoPresentation={capsuleId:row.capsule_id ?? null,level:state?.level ?? (veiled?0:4),status:state?.status ?? (veiled?'discovery':'classic'),revision:row.revision ?? 0,veiled};
         if(veiled && !capable) {
             if('photos' in user) user.photos=[];

@@ -44,6 +44,14 @@ export function publicCapsule(state, forUserId = null, preferredLocale = null) {
             }
         }
     }
+    // Android consumes text as a string, including when the catalog stores localized maps.
+    for (const q of [snapshot.question, ...(snapshot.completedQuestions ?? [])]) {
+        if (q && q.text && typeof q.text === 'object') {
+            q.textEs = q.text.es ?? '';
+            q.textEn = q.text.en ?? '';
+            q.text = q.localizedText || q.text[preferredLocale] || q.text.es || q.text.en || '';
+        }
+    }
     return snapshot;
 }
 

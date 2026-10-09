@@ -799,20 +799,20 @@ paths:
                 category:
                   type: string
                 questionId:
-                  type: string
+                  type: [string, "null"]
                 isCustom:
-                  type: boolean
+                  type: [boolean, "null"]
                 customQuestion:
-                  type: string
+                  type: [string, "null"]
                   maxLength: 120
                 answer:
                   type: string
                   maxLength: 300
                 missionId:
-                  type: string
+                  type: [string, "null"]
                   format: uuid
                 text:
-                  type: string
+                  type: [string, "null"]
                   maxLength: 300
       responses:
         "200":

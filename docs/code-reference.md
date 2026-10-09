@@ -192,3 +192,7 @@ Los limiters se saltan si `app.locals.enableRateLimits === false`.
 ## Cápsula de Cristal
 
 Modo opcional de descubrimiento mutuo y fotos veladas con progreso compartido. [Spec SDMD](features/crystal_capsule/spec.md), [plan](features/crystal_capsule/plan.md). Activación: CRYSTAL_CAPSULE_ENABLED=true después de db:migrate y db:seed:capsules. API aditiva con X-MiraiLink-Capabilities: crystal-capsule-v1, discovery_mode, photoPresentation, clientMessageId e include_capsule. Acciones autenticadas: /api/capsules/config y /api/capsules/{id}/actions. Respuestas personales solo en messages; los eventos no contienen textos. No se garantiza anonimato ni protección de URLs conocidas.
+
+`seedUsers` en scripts/seed-users.js conserva las definiciones originales de usuarios del seed. Los scripts test-affinities y test-capsules actuan sobre cuentas existentes sin crear perfiles ni generar notificaciones. [Alcance y evidencia](affinity-capsule-restoration.md).
+
+`scenarioUsers` y `peerAt` (scripts/test-scenarios.js) comparten el reparto por ID de cuentas existentes entre test-affinities, test-likes y test-capsules. `resetCapsules(client)` limpia el grafo Capsule antes de borrar chats o matches. `cleanupLegacyTestUsers(client)` solo elimina las cuentas del generador auxiliar erroneo con firma exacta.
