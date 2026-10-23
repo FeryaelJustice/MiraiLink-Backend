@@ -65,9 +65,11 @@ describe.skipIf(!enabled)('Affinity isolated PostgreSQL transactions',()=>{
     });
     it('ignores an obsolete purchase token after a real upgrade',async()=>{
         const user=users[0];const purchase=(linked)=>({subscriptionState:'SUBSCRIPTION_STATE_ACTIVE',externalAccountIdentifiers:{obfuscatedExternalAccountId:billing.accountHash(user)},linkedPurchaseToken:linked,lineItems:[{productId:'mirailink_plus',expiryTime:'2027-01-01T00:00:00Z'}]});
-        await billing.verifyAndSavePurchase(user,'old',null,{queryPurchase:async()=>purchase()});
+        await billing.verifyAndSavePurchase(user,'old',null,{queryPurchase:async()=>purchase('test-token')});
         await billing.verifyAndSavePurchase(user,'new',null,{queryPurchase:async()=>purchase('old')});
         await billing.verifyAndSavePurchase(user,'old',null,{queryPurchase:async()=>({...purchase(),subscriptionState:'SUBSCRIPTION_STATE_EXPIRED'})});
         const current=(await db.query('SELECT purchase_token,status FROM user_subscriptions WHERE user_id=$1',[user])).rows[0];expect(current).toEqual({purchase_token:'new',status:'active'});
     });
+
+
 });

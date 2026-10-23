@@ -255,3 +255,25 @@ Las recomendaciones marcadas `is_test` por los scripts usan el reparto de desarr
 Afinidades: aceptar una solicitud de conversacion abre el chat con origen affinity sin crear match. Devolver el like es una accion distinta. Discovery no excluye perfiles por recomendaciones ni solicitudes de Afinidades. Likes recibidos incluye ambos modos y su discoveryMode; receivedLikeId valida el remitente/destinatario y conserva el modo original al crear el match, aunque la preferencia actual haya cambiado.
 
 Las rutas de aceptar y rechazar invitaciones entrantes de Afinidades requieren Plus (PLUS_REQUIRED si no hay suscripcion). Aceptar sigue creando solo chat, sin match.
+
+
+## Suscripciones Google Play
+
+Cada usuario tiene una fila en `user_subscriptions` y un único plan: Free, Plus o Premium. Premium incluye los permisos Plus, pero al vencer no recupera compras anteriores: el acceso pasa a Free.
+
+`GET /api/subscription/status` y `POST /api/subscription/verify` conservan `isPremium`, `isPlus`, `plan`, `status`, `productId`, `basePlanId`, `expiresAt`, `autoRenewing`. Añaden `providerState`, `hasAccess`, `acknowledgementPending`. Ambas rutas actualizan `X-Subscription-Plan`. No hay `verifiedPurchase` ni selección entre planes simultáneos.
+
+Una compra verificada y guardada devuelve HTTP 200 aunque falle acknowledge. El pendiente queda en la misma fila para reintento. Un pago pendiente no concede acceso. Una cancelación confirmada por Google mantiene acceso hasta el vencimiento pagado; pausa y suspensión no lo conceden.
+
+Un token diferente no sobrescribe una suscripción vigente sin `linkedPurchaseToken` que confirme su sustitución en Google: devuelve HTTP 409 `PURCHASE_REPLACEMENT_REQUIRED`. El cliente debe usar el flujo de cambio de plan de Play. Al aceptar una nueva compra tras finalizar la anterior, el token antiguo queda sustituido y no puede restaurar el plan previo.
+
+`POST /api/subscription/cancel-intent` guarda `cancellation_intent_at` en la misma fila y devuelve `message` y `playStoreUrl`. No modifica renovación: `autoRenewing` procede de Google.
+
+### Recuperacion automatica de compras Google Play
+
+Las notificaciones autenticadas de tokens aun no registrados consultan Google Play y resuelven la cuenta mediante el SHA-256 de su UUID, contrastado con `obfuscatedExternalAccountId`. Despues pasan por la verificacion, vinculacion y reconocimiento habituales. Si Google no responde o no puede identificarse la cuenta, la ruta devuelve error para permitir reentregas de Pub/Sub; no confirma la notificacion con 204 ni concede acceso. No se admiten identificadores de cuenta enviados libremente en la notificacion.
+
+Flujo completo y diagnóstico operativo de pagos: [Google Play y suscripciones](payments-google-play.md).
+
+
+- [Flujo completo de pagos y operación](pagos-y-suscripciones.md).

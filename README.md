@@ -419,3 +419,13 @@ Licencia bajo los términos de la [Licencia ISC](LICENSE).
 Modo opcional de descubrimiento mutuo y fotos veladas con progreso compartido. [Spec SDMD](docs/features/crystal_capsule/spec.md), [plan](docs/features/crystal_capsule/plan.md). Activación: CRYSTAL_CAPSULE_ENABLED=true después de db:migrate y db:seed:capsules. API aditiva con X-MiraiLink-Capabilities: crystal-capsule-v1, discovery_mode, photoPresentation, clientMessageId e include_capsule. Acciones autenticadas: /api/capsules/config y /api/capsules/{id}/actions. Respuestas personales solo en messages; los eventos no contienen textos. No se garantiza anonimato ni protección de URLs conocidas.
 
 Reconstruir escenarios sobre usuarios existentes: `npm run db:reset-interactions` y `npm run db:test-all`. Comandos separados: `db:test-affinities`, `db:test-likes`, `db:test-capsules`; reinicio Capsule: `db:reinit-capsules`. [Requisitos y limites](docs/affinity-capsule-restoration.md).
+
+
+## Fiabilidad de compras Google Play
+
+Cada usuario tiene un solo plan vigente en `user_subscriptions`. Premium incluye las ventajas de Plus; al vencer pasa a Free. Estado Google, confirmaciones pendientes, reintentos e intención de cancelación se guardan en esa misma fila. Antes de arrancar, aplicar `021_subscription_confirmation.sql` con `npm run db:migrate`. [Contrato](docs/api-reference.md#suscripciones-google-play), [operación](docs/runtime-and-configuration.md#operación-de-suscripciones-google-play) y [verificación](docs/features/play_billing_reliability/verification.md).
+
+Guía completa del flujo Android/Google/backend, cambios y diagnóstico de permisos: [Pagos con Google Play](docs/payments-google-play.md).
+
+
+- [Guía completa de pagos: Android, Google Play y backend](docs/pagos-y-suscripciones.md).
