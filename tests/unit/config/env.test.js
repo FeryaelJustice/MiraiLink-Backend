@@ -26,6 +26,7 @@ describe('parseEnv', () => {
             max: 1000,
             windowMs: 15 * 60 * 1000,
         });
+        expect(config.storage.driver).toBe('local');
     });
 
     it('accepts ORIGIN_REGEX and custom rate limits', () => {
@@ -41,6 +42,35 @@ describe('parseEnv', () => {
             max: 500,
             windowMs: 60000,
         });
+    });
+
+    it('configures Cloudflare R2 when STORAGE_DRIVER is r2 with required fields', () => {
+        const config = parseEnv({
+            ...validEnv,
+            STORAGE_DRIVER: 'r2',
+            R2_ENDPOINT: 'https://account-id.r2.cloudflarestorage.com',
+            R2_ACCESS_KEY_ID: 'access-key',
+            R2_SECRET_ACCESS_KEY: 'secret-key',
+            R2_BUCKET_NAME: 'mirailink-bucket',
+            R2_PUBLIC_URL: 'https://pub-photos.r2.dev',
+        });
+
+        expect(config.storage).toEqual({
+            driver: 'r2',
+            r2Endpoint: 'https://account-id.r2.cloudflarestorage.com',
+            r2AccessKeyId: 'access-key',
+            r2SecretAccessKey: 'secret-key',
+            r2BucketName: 'mirailink-bucket',
+            r2PublicUrl: 'https://pub-photos.r2.dev',
+        });
+    });
+
+    it('rejects STORAGE_DRIVER=r2 when required fields are missing', () => {
+        expect(() => parseEnv({
+            ...validEnv,
+            STORAGE_DRIVER: 'r2',
+            R2_BUCKET_NAME: 'mirailink-bucket',
+        })).toThrow(/required when STORAGE_DRIVER is r2/);
     });
 
     it('rejects a short JWT secret', () => {

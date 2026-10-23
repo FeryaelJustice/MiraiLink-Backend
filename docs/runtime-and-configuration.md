@@ -27,6 +27,12 @@ Los scripts usan `cross-env` y `node --env-file`, por lo que funcionan en Window
 | `SALT_ROUNDS` | No | Entero 4-15; default 12 |
 | `UPLOAD_MAX_BYTES` | No | 1 KiB-20 MiB; default 5 MiB |
 | `UPLOAD_ROOT` | No | Directorio persistente de perfiles fuera del checkout en producción |
+| `STORAGE_DRIVER` | No | `local` (default) o `r2` para Cloudflare R2 |
+| `R2_ENDPOINT` | Para R2 | URL del endpoint S3 de Cloudflare R2 |
+| `R2_ACCESS_KEY_ID` | Para R2 | Access Key ID para R2 |
+| `R2_SECRET_ACCESS_KEY` | Para R2 | Secret Access Key para R2 |
+| `R2_BUCKET_NAME` | Para R2 | Nombre del bucket en Cloudflare R2 |
+| `R2_PUBLIC_URL` | Para R2 | URL publica o CDN del bucket R2 |
 | `SECRET_2FA_KEY` | Sí | 64 caracteres hex, 32 bytes para AES-256-GCM |
 | `SECRET_2FA_IV` | Solo legado | 32 hex, necesario para descifrar secretos AES-CBC antiguos |
 | `EMAIL_HOST` | Para correo | Host SMTP; default `smtp.hostinger.com` en la utilidad |

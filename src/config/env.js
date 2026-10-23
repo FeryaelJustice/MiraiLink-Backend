@@ -1,19 +1,19 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 const hex = (length) => new RegExp(`^[a-fA-F0-9]{${length}}$`);
 
 function commaSeparatedOrigins(value) {
-    if (value === "*") {
-        return ["*"];
+    if (value === '*') {
+        return ['*'];
     }
     const origins = value
-        .split(",")
+        .split(',')
         .map((origin) => origin.trim())
         .filter(Boolean);
     for (const origin of origins) {
         const url = new URL(origin);
         if (
-            !["http:", "https:"].includes(url.protocol) ||
+            !['http:', 'https:'].includes(url.protocol) ||
             url.origin !== origin
         ) {
             throw new Error(`Invalid origin: ${origin}`);
@@ -22,13 +22,31 @@ function commaSeparatedOrigins(value) {
     return origins;
 }
 
+const optionalString = z
+    .string()
+    .optional()
+    .transform((val) => (val && val.trim().length > 0 ? val.trim() : undefined));
+
+const optionalUrl = optionalString.refine(
+    (val) => {
+        if (!val) return true;
+        try {
+            const parsed = new URL(val);
+            return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+        } catch {
+            return false;
+        }
+    },
+    { message: 'Must be a valid HTTP or HTTPS URL' },
+);
+
 const environmentSchema = z.object({
     NODE_ENV: z
-        .enum(["development", "test", "production"])
-        .default("development"),
+        .enum(['development', 'test', 'production'])
+        .default('development'),
     PORT: z.coerce.number().int().min(1).max(65_535).default(3000),
     TRUST_PROXY: z.enum(['loopback', 'linklocal', 'uniquelocal']).default('loopback'),
-    DB_URL: z.url().startsWith("postgres"),
+    DB_URL: z.url().startsWith('postgres'),
     JWT_SECRET: z.string().min(32),
     ORIGIN: z.string().min(1),
     ORIGIN_REGEX: z.string().optional(),
@@ -42,11 +60,17 @@ const environmentSchema = z.object({
         .max(20 * 1024 * 1024)
         .default(5 * 1024 * 1024),
     UPLOAD_ROOT: z.string().optional(),
+    STORAGE_DRIVER: z.enum(['local', 'r2']).optional(),
+    R2_ENDPOINT: optionalUrl,
+    R2_ACCESS_KEY_ID: optionalString,
+    R2_SECRET_ACCESS_KEY: optionalString,
+    R2_BUCKET_NAME: optionalString,
+    R2_PUBLIC_URL: optionalUrl,
     SECRET_2FA_KEY: z.string().regex(hex(64)),
     SECRET_2FA_IV: z.string().regex(hex(32)).optional(),
     EMAIL_HOST: z.string().optional(),
     EMAIL_PORT: z.coerce.number().int().min(1).max(65_535).default(587),
-    EMAIL_SECURE: z.enum(["true", "false"]).default("false"),
+    EMAIL_SECURE: z.enum(['true', 'false']).default('false'),
     EMAIL_USER: z.string().optional(),
     EMAIL_PASSWORD: z.string().optional(),
     FIREBASE_SERVICE_ACCOUNT_FILE_NAME: z.string().optional(),
@@ -55,15 +79,15 @@ const environmentSchema = z.object({
 });
 
 /**
- * Valida configuración del arranque y devuelve un objeto normalizado.
+ * Valida configuracion del arranque y devuelve un objeto normalizado.
  * Los defaults no se escriben en process.env; los consumidores directos mantienen sus propios fallbacks.
  */
 export function parseEnv(input = process.env) {
     const result = environmentSchema.safeParse(input);
     if (!result.success) {
         const details = result.error.issues
-            .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
-            .join("; ");
+            .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+            .join('; ');
         throw new Error(`Invalid environment configuration: ${details}`);
     }
     let corsOrigins;
@@ -74,6 +98,22 @@ export function parseEnv(input = process.env) {
             `Invalid environment configuration: ORIGIN: ${error.message}`,
         );
     }
+
+    const resolvedStorageDriver = result.data.STORAGE_DRIVER ??
+        (result.data.R2_BUCKET_NAME && result.data.R2_ENDPOINT ? 'r2' : 'local');
+
+    if (resolvedStorageDriver === 'r2') {
+        const missing = [];
+        if (!result.data.R2_ENDPOINT) missing.push('R2_ENDPOINT');
+        if (!result.data.R2_ACCESS_KEY_ID) missing.push('R2_ACCESS_KEY_ID');
+        if (!result.data.R2_SECRET_ACCESS_KEY) missing.push('R2_SECRET_ACCESS_KEY');
+        if (!result.data.R2_BUCKET_NAME) missing.push('R2_BUCKET_NAME');
+        if (!result.data.R2_PUBLIC_URL) missing.push('R2_PUBLIC_URL');
+        if (missing.length > 0) {
+            throw new Error(`Invalid environment configuration: ${missing.join(', ')} required when STORAGE_DRIVER is r2`);
+        }
+    }
+
     return {
         nodeEnv: result.data.NODE_ENV,
         port: result.data.PORT,
@@ -89,12 +129,20 @@ export function parseEnv(input = process.env) {
         bcryptRounds: result.data.SALT_ROUNDS,
         uploadMaxBytes: result.data.UPLOAD_MAX_BYTES,
         uploadRoot: result.data.UPLOAD_ROOT,
+        storage: {
+            driver: resolvedStorageDriver,
+            r2Endpoint: result.data.R2_ENDPOINT,
+            r2AccessKeyId: result.data.R2_ACCESS_KEY_ID,
+            r2SecretAccessKey: result.data.R2_SECRET_ACCESS_KEY,
+            r2BucketName: result.data.R2_BUCKET_NAME,
+            r2PublicUrl: result.data.R2_PUBLIC_URL,
+        },
         twoFactorKey: result.data.SECRET_2FA_KEY,
         legacyTwoFactorIv: result.data.SECRET_2FA_IV,
         email: {
             host: result.data.EMAIL_HOST,
             port: result.data.EMAIL_PORT,
-            secure: result.data.EMAIL_SECURE === "true",
+            secure: result.data.EMAIL_SECURE === 'true',
             user: result.data.EMAIL_USER,
             password: result.data.EMAIL_PASSWORD,
         },

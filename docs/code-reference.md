@@ -85,6 +85,17 @@ Los limiters se saltan si `app.locals.enableRateLimits === false`.
 | `startSubscriptionListener(pool)` | Abre conexión persistente en PostgreSQL para `LISTEN subscription_changed` y despacha push silencioso. |
 | `stopSubscriptionListener()` | Detiene reintentos y libera de forma segura el cliente PostgreSQL en apagado del servidor. |
 
+### Almacenamiento Cloudflare R2 - `src/services/r2StorageService.js`
+
+| Función | Contrato |
+| --- | --- |
+| `getR2Client()` | Obtiene o inicializa la instancia singleton de `S3Client` para Cloudflare R2. |
+| `setR2Client(client)` | Permite inyectar un cliente personalizado o mock para testing. |
+| `isR2Url(url)` | Determina si una URL pertenece a R2 o almacenamiento externo frente a rutas locales. |
+| `extractR2Key(keyOrUrl)` | Extrae la key relativa S3 eliminando prefijos de dominio o protocolo. |
+| `uploadToR2(userId, file, customKey)` | Sube el buffer a R2 con `PutObjectCommand` y devuelve la URL pública. |
+| `deleteFromR2(keyOrUrl)` | Elimina el objeto en R2 mediante `DeleteObjectCommand`. |
+
 ## Utilidades y DTO
 
 | Export | Archivo | Contrato |
@@ -95,7 +106,9 @@ Los limiters se saltan si `app.locals.enableRateLimits === false`.
 | `detectImageType(buffer)` | `imageValidation.js` | Devuelve MIME/extensión de JPEG, PNG o WebP por magic bytes. |
 | `validateImage(file)` | `imageValidation.js` | Comprueba firma y coincidencia MIME; lanza `AppError` 415. |
 | `sendVerificationEmail(to, code)` | `mailer.js` | Inicializa Nodemailer lazy y espera `sendMail`. |
+| `getStorageDriver()` | `photoStorage.js` | Resuelve el driver de almacenamiento activo (`local` o `r2`). |
 | `profileUploadRoot()` | `photoStorage.js` | Resuelve `UPLOAD_ROOT` o la ubicación lógica por defecto. |
+| `uploadToR2(userId, file, customKey)` | `photoStorage.js` | Re-exporta la utilidad de subida directa a Cloudflare R2. |
 | `stagePhoto(userId, file, root)` | `photoStorage.js` | Crea directorio, UUID y archivo staging con modo 0600. |
 | `finalizePhoto(staged)` | `photoStorage.js` | Renombra staging a path final. |
 | `removePhotoFile(url, root)` | `photoStorage.js` | Borra de forma segura, tolera ENOENT. |
