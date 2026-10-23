@@ -104,3 +104,14 @@ El middleware se encuentra en `src/middleware/rateLimit.middleware.js`:
 
 No existen readiness de PostgreSQL, logging JSON, métricas, tracing, alertas ni despliegue automático. El diseño futuro está en [future-vps-deployment.md](future-vps-deployment.md).
 
+
+
+## Operación de suscripciones Google Play
+
+Respaldar la base y ejecutar `npm run db:migrate` para aplicar `021_subscription_confirmation.sql` antes de arrancar la nueva versión. La migración solo añade campos e índices a `user_subscriptions`. La base configurada del proyecto no se modificó durante este trabajo.
+
+Se conservan `GOOGLE_PLAY_SERVICE_ACCOUNT_FILE`, `GOOGLE_PLAY_RTDN_AUDIENCE`, `GOOGLE_PLAY_RTDN_EMAIL` y el worker `node --env-file=.env scripts/affinity-worker.js billing`. Su temporizador existente ejecuta cada hora. Los reintentos de confirmación usan fechas persistidas con espera de 1, 2, 4 y hasta 6 horas; un reinicio no pierde pendientes. Supervisar `acknowledgement_pending`, fechas y códigos sanitizados sin registrar tokens.
+
+Cada usuario tiene un solo plan. Un cambio con acceso vigente requiere sustitución confirmada por Google; un token independiente devuelve `PURCHASE_REPLACEMENT_REQUIRED` (409). El vencimiento pasa a Free, sin restaurar Plus. Premium conserva todos los permisos Plus durante su vigencia.
+
+Quedan por validar compra real, RTDN real y worker desplegado. `BILLING_TEST_DB_URL` y `AFFINITY_TEST_DB_URL` habilitan las pruebas de PostgreSQL aislado en localhost. [Evidencia](features/play_billing_reliability/verification.md).

@@ -58,3 +58,6 @@ Los enlaces entre repositorios apuntan a la rama de revisión codex/documentacio
 - [Especificación aprobada](features/documentacion_integral/spec.md)
 - [Plan aprobado](features/documentacion_integral/plan.md)
 - [Checklist y evidencia](features/documentacion_integral/tasks.md)
+
+
+- [Pagos y suscripciones entre Android, Google Play y backend](pagos-y-suscripciones.md).

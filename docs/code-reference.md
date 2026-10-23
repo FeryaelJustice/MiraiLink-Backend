@@ -198,3 +198,12 @@ Modo opcional de descubrimiento mutuo y fotos veladas con progreso compartido. [
 `scenarioUsers` y `peerAt` (scripts/test-scenarios.js) comparten el reparto por ID de cuentas existentes entre test-affinities, test-likes y test-capsules. `resetCapsules(client)` limpia el grafo Capsule antes de borrar chats o matches. `cleanupLegacyTestUsers(client)` solo elimina las cuentas del generador auxiliar erroneo con firma exacta.
 
 Capsule matching: verifySwipeMode(client, fromId, toId, mode, receivedLikeId = null) bloquea la pareja y comprueba el modo del actor, o el like entrante autenticado al devolverlo. likeWithMode(client, fromId, toId, mode, createCapsule, receivedLikeId = null) crea reciprocidad solo de Discovery, preserva el interes de Afinidades y crea sesion solo para un match capsule. requireMatch tambien autoriza solicitudes de Afinidades accepted con chat_id, sin insertar matches.
+
+
+## Persistencia y acceso Google Play
+
+`play-billing.js` conserva `googleRequest`, `parsePlayPurchase`, `verifyAndSavePurchase`, `reconcileSubscriptions`, `googlePlayNotification` y `accountHash`. La transacción y la lectura del plan actual son funciones internas. La confirmación se ejecuta después del COMMIT; su estado durable y revisión UUID se guardan en `user_subscriptions`. La revisión impide que una confirmación antigua altere otra compra.
+
+`subscription.dto.js` exporta `subscriptionDto(sub)`, una lista blanca pública con estado de Google, permisos actuales y confirmación pendiente. El controlador devuelve ese único plan. Autenticación, swipe, usuario, Explore, Afinidades y Capsule siguen consultando `user_subscriptions`. El trigger existente notifica cambios directamente desde esa tabla.
+
+`play_purchase_owners` conserva propiedad y sustituciones de tokens como protección histórica. No almacena planes simultáneos. Un token independiente no puede sobrescribir un plan vigente sin sustitución confirmada por Google.

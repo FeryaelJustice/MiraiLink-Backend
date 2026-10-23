@@ -85,3 +85,12 @@ Para una base nueva también puedes usar `npm run db:reset`, que aplica el basel
 - La unicidad de chat privado depende del advisory lock de aplicación.
 - No hay política incorporada de limpieza de blacklist o tokens expirados.
 - No hay índices ni análisis de carga documentados para todas las consultas N+1 de perfiles y matches.
+
+
+## Suscripción única y confirmación Google Play
+
+`021_subscription_confirmation.sql` altera únicamente `user_subscriptions`: añade intención de cancelación, revisión UUID, confirmación pendiente, contador, próxima fecha de confirmación, código sanitizado y próxima fecha de verificación. Conserva la restricción única por usuario y añade unicidad de token e índices de procesamiento.
+
+No se crea una tabla de compras ni una vista de acceso. Cada usuario mantiene un único plan. La tabla histórica `play_purchase_owners` sigue vinculando tokens y sustituciones para impedir reutilizaciones. Al vencer la suscripción actual, el acceso es Free. Los planes anteriores no se restauran.
+
+La migración de tabla y vista propuesta anteriormente se retiró antes de aplicar cambios en la base del proyecto. La nueva 021 se probó solo en PostgreSQL desechable. Si alguien aplicó por su cuenta la propuesta anterior, debe revisar ese entorno antes de migrar; no se elimina información desplegada automáticamente.

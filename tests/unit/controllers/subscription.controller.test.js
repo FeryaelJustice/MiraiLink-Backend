@@ -128,7 +128,7 @@ describe('subscription.controller', () => {
     });
 
     describe('cancelSubscriptionIntent', () => {
-        it('marks auto_renewing false and returns Google Play Store link', async () => {
+        it('records cancellation intent without changing provider renewal', async () => {
             query.mockResolvedValueOnce({
                 rows: [{ product_id: 'mirailink_premium' }],
             });
@@ -139,7 +139,8 @@ describe('subscription.controller', () => {
 
             await cancelSubscriptionIntent(req, res, next);
 
-            expect(query).toHaveBeenCalledWith(expect.stringContaining('UPDATE user_subscriptions'), [userId]);
+            expect(query).toHaveBeenCalledWith(expect.stringContaining('cancellation_intent_at=NOW()'), [userId]);
+            expect(query.mock.calls[0][0]).not.toContain('auto_renewing = FALSE');
             expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
                 message: 'Cancellation intent registered',
                 playStoreUrl: expect.stringContaining('https://play.google.com/store/account/subscriptions'),

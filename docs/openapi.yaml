@@ -715,7 +715,13 @@ paths:
       operationId: getSubscriptionStatus
       security: [ { bearerAuth: [] } ]
       responses:
-        '200': { $ref: '#/components/responses/Ok' }
+        '200':
+          description: Plan actual del usuario. Premium incluye permisos Plus; al vencer el acceso pasa a Free.
+          headers:
+            X-Subscription-Plan: { $ref: '#/components/headers/SubscriptionPlan' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SubscriptionStatus' }
         '401': { $ref: '#/components/responses/Unauthorized' }
   /api/subscription/verify:
     post:
@@ -735,16 +741,48 @@ paths:
                 basePlanId: { type: string, default: 'monthly-autorenew' }
                 orderId: { type: string }
       responses:
-        '200': { $ref: '#/components/responses/Ok' }
+        '200':
+          description: Plan verificado y guardado, incluso con confirmación pendiente.
+          headers:
+            X-Subscription-Plan: { $ref: '#/components/headers/SubscriptionPlan' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionStatus'
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: INVALID_PURCHASE, PURCHASE_ALREADY_BOUND o PURCHASE_ACCOUNT_MISMATCH.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '409':
+          description: PURCHASE_REPLACEMENT_REQUIRED. El plan vigente requiere sustitución confirmada por Google.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '503':
+          description: PLAY_NOT_CONFIGURED o PLAY_UNAVAILABLE durante la verificación. Un fallo de acknowledge tras guardar se informa con HTTP 200 y acknowledgementPending.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
   /api/subscription/cancel-intent:
     post:
       tags: [ Subscription ]
       operationId: cancelSubscriptionIntent
+      description: Registra intención para el plan actual sin modificar la renovación de Google.
       security: [ { bearerAuth: [] } ]
       responses:
-        '200': { $ref: '#/components/responses/Ok' }
+        '200':
+          description: Intención registrada y enlace de Google Play.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ message, playStoreUrl ]
+                properties:
+                  message: { type: string }
+                  playStoreUrl: { type: string, format: uri }
         '401': { $ref: '#/components/responses/Unauthorized' }
   /api/capsules/config:
     get:
@@ -1054,7 +1092,21 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
-    Uuid: { type: string, format: uuid }
+    SubscriptionStatus:
+      type: object
+      required: [isPremium, isPlus, plan, status, productId, basePlanId, expiresAt, autoRenewing, providerState, hasAccess, acknowledgementPending]
+      properties:
+        isPremium: { type: boolean }
+        isPlus: { type: boolean, description: Incluye Premium vigente. }
+        plan: { type: string, enum: [free, plus, premium] }
+        status: { type: string, enum: [free, active, expired] }
+        productId: { type: [string, 'null'] }
+        basePlanId: { type: [string, 'null'] }
+        expiresAt: { type: [string, 'null'], format: date-time }
+        autoRenewing: { type: boolean }
+        providerState: { type: [string, 'null'] }
+        hasAccess: { type: boolean }
+        acknowledgementPending: { type: boolean }
     Error:
       type: object
       required: [ code, message ]
