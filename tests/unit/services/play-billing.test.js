@@ -31,6 +31,22 @@ beforeEach(() => {
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); vi.restoreAllMocks(); });
 
 describe('Google Play authority', () => {
+    it('authenticates using inline credentials without reading the configured file', async () => {
+        vi.resetModules();
+        const { verifyAndSavePurchase: verify } = await import('../../../src/services/play-billing.js');
+        const { privateKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
+        vi.stubEnv('GOOGLE_PLAY_SERVICE_ACCOUNT_JSON', JSON.stringify({
+            client_email: 'fixture@example.test', private_key: privateKey.export({ format: 'pem', type: 'pkcs8' }),
+        }));
+        vi.stubEnv('GOOGLE_PLAY_SERVICE_ACCOUNT_FILE', 'must-not-read.json');
+        const read = vi.spyOn(fs, 'readFile').mockRejectedValue(new Error('File must not be read'));
+        vi.stubGlobal('fetch', vi.fn(async url => url.includes('oauth2.googleapis.com/token')
+            ? Response.json({ access_token: 'fixture-access', expires_in: 3600 })
+            : Response.json({ ...purchase(), acknowledgementState: 'ACKNOWLEDGEMENT_STATE_ACKNOWLEDGED' })));
+        await verify(user, 'token', 'mirailink_plus');
+        expect(read).not.toHaveBeenCalled();
+        expect(fetch.mock.calls.some(([url]) => url.includes('oauth2.googleapis.com/token'))).toBe(true);
+    });
     it.each(['SUBSCRIPTION_STATE_PENDING', 'SUBSCRIPTION_STATE_ON_HOLD', 'SUBSCRIPTION_STATE_EXPIRED', 'SUBSCRIPTION_STATE_PAUSED', 'SUBSCRIPTION_STATE_PENDING_PURCHASE_CANCELED'])('denies %s', state => {
         expect(parsePlayPurchase({ ...purchase(), subscriptionState: state }).status).toBe('expired');
     });

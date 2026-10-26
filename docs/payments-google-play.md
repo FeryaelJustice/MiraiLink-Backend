@@ -120,7 +120,8 @@ Esto permite recuperar una compra aunque Android se cierre antes de enviar su to
 
 | Variable | Función |
 | --- | --- |
-| GOOGLE_PLAY_SERVICE_ACCOUNT_FILE | Archivo de credenciales del servidor, nunca del APK |
+| GOOGLE_PLAY_SERVICE_ACCOUNT_JSON | JSON completo minificado en el entorno, con prioridad sobre el archivo; nunca del APK |
+| GOOGLE_PLAY_SERVICE_ACCOUNT_FILE | Archivo de credenciales del servidor, usado solo si GOOGLE_PLAY_SERVICE_ACCOUNT_JSON esta ausente o vacia |
 | GOOGLE_PLAY_RTDN_AUDIENCE | Audience esperado del JWT push |
 | GOOGLE_PLAY_RTDN_EMAIL | Identidad Google esperada para ese push |
 

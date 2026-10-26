@@ -34,10 +34,15 @@ Los scripts usan `cross-env` y `node --env-file`, por lo que funcionan en Window
 | `EMAIL_SECURE` | No | String `true` o `false` |
 | `EMAIL_USER` | Para correo | Usuario y remitente |
 | `EMAIL_PASSWORD` | Para correo | Secreto SMTP |
-| `FIREBASE_SERVICE_ACCOUNT_FILE_NAME` | Para push | Ruta al JSON de service account |
+| `FIREBASE_SERVICE_ACCOUNT_JSON` | Para push, alternativa al archivo | JSON completo como texto en una sola linea; tiene prioridad |
+| `FIREBASE_SERVICE_ACCOUNT_FILE_NAME` | Alternativa local para push | Ruta al JSON, usada si la variable JSON esta ausente o vacia |
+| `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` | Para pagos, alternativa al archivo | JSON completo como texto en una sola linea; tiene prioridad |
+| `GOOGLE_PLAY_SERVICE_ACCOUNT_FILE` | Alternativa local para pagos | Ruta al JSON, usada si la variable JSON esta ausente o vacia |
 | `REQUIRE_DATABASE_TESTS` | En CI | `true` obliga a ejecutar el test PostgreSQL |
 
 `parseEnv()` falla antes de escuchar si la configuración estructural es inválida. SMTP y Firebase pueden estar ausentes hasta que se invoque su función.
+
+Las credenciales JSON se leen directamente del entorno al primer uso del proveedor. En el panel del alojamiento, pegar el objeto JSON completo minificado como valor, sin comillas adicionales alrededor. Conservar los saltos de linea de `private_key` escapados como `\n` dentro del JSON; `JSON.parse` los convierte en saltos reales. En un archivo `.env`, envolver el JSON en comillas simples. No copiar claves a ejemplos, logs o Git. Un valor JSON presente pero invalido falla sin recurrir al archivo. No se buscan nombres de archivo automaticamente: se conservan las rutas configuradas y el fallback historico de Firebase `src/serviceAccountKey.json`. Reiniciar el proceso tras cambiar credenciales porque Firebase y OAuth mantienen cache.
 
 ## Arranque
 

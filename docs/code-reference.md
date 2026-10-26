@@ -14,6 +14,7 @@ Esta referencia cubre los archivos activos, la única clase propia y las funcion
 | `src/config/env.js` | `parseEnv(input=process.env)` | Valida y normaliza variables, incluido `TRUST_PROXY`; lanza `Error` con campos inválidos. |
 | `src/config/firebaseAdmin.js` | `getFcm()` | Inicializa Firebase Admin y devuelve Messaging solo al primer uso. |
 | `src/config/firebaseAdmin.js` | `resetFirebaseForTests()` | Limpia la referencia lazy usada por tests. |
+| `src/config/serviceAccount.js` | `loadServiceAccount(jsonVariable, filePath)` | Prioriza JSON del entorno; solo usa el archivo si esta ausente o vacio. Valida campos y sanitiza errores. |
 | `src/models/db.js` | default `pool` | Instancia compartida de `pg.Pool` construida con `DB_URL`. |
 
 ## Clase de error

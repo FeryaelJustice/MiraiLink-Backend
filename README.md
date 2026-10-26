@@ -1,5 +1,7 @@
 > **Estudio técnico del proyecto:** [Guía maestra en español](docs/guia-maestra.md), con documentos por tema, diagramas, configuración, casos de error y revisión conectada con el otro repositorio.
 
+> **Credenciales para despliegue:** [Copiar los JSON al portapapeles y configurar el .env](JSON-CREDENCIALES-ENV.md), con comandos para Windows, macOS y Linux.
+
 <p align="center">
   <img src="https://raw.githubusercontent.com/FeryaelJustice/MiraiLink/master/app/src/main/res/drawable/logomirailink.webp" alt="MiraiLink Logo" width="130" />
 </p>

@@ -1,4 +1,4 @@
-import fs from 'node:fs/promises';
+import { loadServiceAccount } from '../config/serviceAccount.js';
 import { createHash, createPublicKey } from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import db from '../models/db.js';
@@ -47,8 +47,12 @@ export async function googleRequest(url, options = {}, { emptyResponse = false }
 
 async function accessToken() {
     if (oauth?.expires > Date.now() + 60000) return oauth.token;
-    if (!process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_FILE) throw failure('PLAY_NOT_CONFIGURED', 503);
-    const credentials = JSON.parse(await fs.readFile(process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_FILE, 'utf8'));
+    let credentials;
+    try {
+        credentials = await loadServiceAccount('GOOGLE_PLAY_SERVICE_ACCOUNT_JSON', process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_FILE);
+    } catch {
+        throw failure('PLAY_NOT_CONFIGURED', 503);
+    }
     const assertion = jwt.sign({ scope: 'https://www.googleapis.com/auth/androidpublisher' }, credentials.private_key, {
         algorithm: 'RS256', issuer: credentials.client_email, audience: 'https://oauth2.googleapis.com/token', expiresIn: 3600,
     });
