@@ -1,3 +1,5 @@
+import { AppError } from '../errors/AppError.js';
+import { lockTwoFactorUser, storeEmailChallenge, consumeEmailChallenge } from '../services/twoFactorEmailService.js';
 import bcrypt from 'bcrypt';
 import { randomBytes, randomInt } from 'node:crypto';
 import speakeasy from 'speakeasy';
@@ -10,7 +12,7 @@ import {
 } from '../services/tokenService.js';
 import { hashRecoveryCodes, useRecoveryCode, verifyTotp } from '../services/twoFactorService.js';
 import { encrypt } from '../utils/cryptoUtils.js';
-import { sendPasswordResetEmail, sendVerificationEmail } from '../utils/mailer.js';
+import { sendTwoFactorEmail, sendPasswordResetEmail, sendVerificationEmail } from '../utils/mailer.js';
 
 const neutralEmailResponse = { message: 'If the account is eligible, a code will be sent' };
 const generateCode = () => randomInt(100000, 1000000).toString();
@@ -298,6 +300,10 @@ export const setup2FA = async (req, res, next) => {
         const recoveryCodes = Array.from({ length: 8 }, () => randomBytes(8).toString('hex'));
         const codeHashes = await hashRecoveryCodes(recoveryCodes);
         await withTransaction(async client => {
+            await lockTwoFactorUser(client, userId);
+            const state = await client.query('SELECT enabled FROM user_2fa WHERE user_id = $1', [userId]);
+            if (state.rows[0]?.enabled) throw new AppError({ status: 409, code: 'INVALID_INPUT', message: 'Two factor is already enabled' });
+            await client.query('DELETE FROM two_factor_email_challenges WHERE user_id = $1', [userId]);
             await client.query(
                 `INSERT INTO user_2fa (user_id, secret, enabled)
                  VALUES ($1, $2, FALSE)
@@ -322,35 +328,64 @@ export const setup2FA = async (req, res, next) => {
     }
 };
 
+
+export const requestTwoFactorEmail = async (req, res, next) => {
+    try {
+        const userId = req.user.id ?? req.user.sub;
+        const action = req.body.action;
+        const challenge = await withTransaction(client => storeEmailChallenge(client, userId, action));
+        const delivery = await sendTwoFactorEmail(challenge.email, challenge.code, action);
+        if (!delivery.success || (process.env.NODE_ENV === 'production' && delivery.simulated)) {
+            await db.query(
+                'DELETE FROM two_factor_email_challenges WHERE user_id = $1 AND action = $2 AND token_hash = $3',
+                [userId, action, challenge.hash],
+            );
+            throw new AppError({ status: 503, code: 'SERVICE_UNAVAILABLE', message: 'Unable to send confirmation email' });
+        }
+        const ready = await db.query(
+            'UPDATE two_factor_email_challenges SET ready = TRUE WHERE user_id = $1 AND action = $2 AND token_hash = $3',
+            [userId, action, challenge.hash],
+        );
+        if (ready.rowCount === 0) throw new AppError({ status: 409, code: 'INVALID_CODE', message: 'Request replaced; use the latest code' });
+        return res.json({ message: 'Confirmation code sent', expiresIn: 300, simulated: delivery.simulated });
+    } catch (error) { return next(error); }
+};
+
 export const verify2FA = async (req, res, next) => {
     try {
         const userId = req.user.id ?? req.user.sub;
-        const result = await db.query('SELECT secret FROM user_2fa WHERE user_id = $1', [userId]);
-        if (!result.rows[0] || !verifyTotp(result.rows[0].secret, req.body.token)) {
-            return res.status(400).json({ code: 'INVALID_CODE', message: 'Invalid code' });
-        }
-        await db.query('UPDATE user_2fa SET enabled = TRUE WHERE user_id = $1', [userId]);
+        const accepted = await withTransaction(async client => {
+            await lockTwoFactorUser(client, userId);
+            const result = await client.query('SELECT secret, enabled FROM user_2fa WHERE user_id = $1', [userId]);
+            const factor = result.rows[0];
+            if (!factor || factor.enabled) return false;
+            const valid = await consumeEmailChallenge(client, userId, 'enable', req.body.emailCode,
+                verifyTotp(factor.secret, req.body.token));
+            if (!valid) return false;
+            await client.query('UPDATE user_2fa SET enabled = TRUE WHERE user_id = $1', [userId]);
+            return true;
+        });
+        if (!accepted) return res.status(400).json({ code: 'INVALID_CODE', message: 'Invalid or expired confirmation' });
         return res.json({ message: '2FA enabled' });
-    } catch (error) {
-        return next(error);
-    }
+    } catch (error) { return next(error); }
 };
 
 export const disable2FA = async (req, res, next) => {
     try {
         const userId = req.user.id ?? req.user.sub;
-        const result = await db.query('SELECT 1 FROM user_2fa WHERE user_id = $1 AND enabled = TRUE', [userId]);
-        if (result.rowCount === 0) {
-            return res.status(400).json({ code: 'TWO_FACTOR_DISABLED', message: '2FA is not enabled' });
-        }
-        await withTransaction(async client => {
+        const accepted = await withTransaction(async client => {
+            await lockTwoFactorUser(client, userId);
+            const result = await client.query('SELECT enabled FROM user_2fa WHERE user_id = $1', [userId]);
+            if (!result.rows[0]?.enabled) return false;
+            if (!await consumeEmailChallenge(client, userId, 'disable', req.body.emailCode)) return false;
             await client.query('DELETE FROM user_2fa WHERE user_id = $1', [userId]);
             await client.query('DELETE FROM recovery_codes WHERE user_id = $1', [userId]);
+            await client.query('DELETE FROM two_factor_email_challenges WHERE user_id = $1', [userId]);
+            return true;
         });
+        if (!accepted) return res.status(400).json({ code: 'INVALID_CODE', message: 'Invalid or expired confirmation' });
         return res.json({ message: '2FA disabled' });
-    } catch (error) {
-        return next(error);
-    }
+    } catch (error) { return next(error); }
 };
 
 export const check2FAStatus = async (req, res, next) => {

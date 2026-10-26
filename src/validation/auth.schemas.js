@@ -114,3 +114,7 @@ export const verificationConfirmSchema = z.object({ token: code, type: z.enum(['
 export const totpSchema = z.object({ token: z.string().regex(/^\d{6}$/) });
 export const twoFactorCodeSchema = z.object({ code });
 export const twoFactorLoginSchema = z.object({ challengeToken: z.string().min(20).max(4096), code });
+
+export const twoFactorEmailRequestSchema = z.object({ action: z.enum(['enable', 'disable']) });
+export const twoFactorEmailConfirmSchema = z.object({ emailCode: z.string().regex(/^\d{6}$/) });
+export const twoFactorEnableSchema = totpSchema.extend({ emailCode: z.string().regex(/^\d{6}$/) });

@@ -281,3 +281,12 @@ Flujo completo y diagnóstico operativo de pagos: [Google Play y suscripciones](
 
 
 - [Flujo completo de pagos y operación](pagos-y-suscripciones.md).
+
+
+## Android App Links y confirmaciones 2FA (2026-10-26)
+
+GET /.well-known/assetlinks.json publica la asociacion Android. GET /verify, /verification, /reset-password, /recover_password y /recover-password sirven respaldo sin mutaciones.
+
+POST /api/auth/2fa/email/request requiere sesion y body { action: enable | disable }. POST /api/auth/2fa/verify requiere token TOTP y emailCode de seis cifras. POST /api/auth/2fa/disable requiere emailCode. El login TOTP no cambia.
+
+Los codigos de correo duran cinco minutos, son de un uso y permiten cinco intentos. La migracion 023 crea two_factor_email_challenges. Ver docs/features/render_app_links/plan.md.

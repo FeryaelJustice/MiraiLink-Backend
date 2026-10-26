@@ -23,6 +23,102 @@ tags:
   - name: Moderation
 
 paths:
+  /api/auth/2fa/email/request:
+    post:
+      operationId: requestTwoFactorEmail
+      tags:
+        - Auth
+      summary: Send a five minute code for a 2FA change
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - action
+              properties:
+                action:
+                  type: string
+                  enum:
+                    - enable
+                    - disable
+      responses:
+        "200":
+          description: Confirmation code delivered (or explicitly simulated outside
+            production)
+        "400":
+          description: Invalid factor state
+        "401":
+          description: Authentication required
+        "403":
+          description: Verified account required
+        "429":
+          description: Rate limited
+        "503":
+          description: Email delivery unavailable
+  /.well-known/assetlinks.json:
+    get:
+      operationId: getAndroidAssetLinks
+      summary: Android Digital Asset Links document
+      security: []
+      responses:
+        "200":
+          description: Android Digital Asset Links document
+        "400":
+          description: Invalid link parameters
+  /verify:
+    get:
+      operationId: openEmailVerification
+      summary: Email verification app fallback
+      security: []
+      responses:
+        "200":
+          description: Email verification app fallback
+        "400":
+          description: Invalid link parameters
+  /verification:
+    get:
+      operationId: openEmailVerificationAlias
+      summary: Verification alias
+      security: []
+      responses:
+        "200":
+          description: Verification alias
+        "400":
+          description: Invalid link parameters
+  /reset-password:
+    get:
+      operationId: openPasswordRecovery
+      summary: Password recovery app fallback
+      security: []
+      responses:
+        "200":
+          description: Password recovery app fallback
+        "400":
+          description: Invalid link parameters
+  /recover_password:
+    get:
+      operationId: openPasswordRecoveryLegacy
+      summary: Legacy recovery alias
+      security: []
+      responses:
+        "200":
+          description: Legacy recovery alias
+        "400":
+          description: Invalid link parameters
+  /recover-password:
+    get:
+      operationId: openPasswordRecoveryAlias
+      summary: Recovery alias
+      security: []
+      responses:
+        "200":
+          description: Recovery alias
+        "400":
+          description: Invalid link parameters
   /api/app/version/android:
     get:
       tags: [ App ]
@@ -126,24 +222,60 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
   /api/auth/2fa/verify:
     post:
-      tags: [ Auth ]
+      tags:
+        - Auth
       operationId: verifyTwoFactorSetup
-      security: [ { bearerAuth: [] } ]
-      requestBody: { $ref: '#/components/requestBodies/Totp' }
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+                - emailCode
+              properties:
+                token:
+                  type: string
+                  pattern: ^[0-9]{6}$
+                emailCode:
+                  type: string
+                  pattern: ^[0-9]{6}$
       responses:
-        '200': { $ref: '#/components/responses/Ok' }
-        '400': { $ref: '#/components/responses/BadRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
+        "200":
+          $ref: "#/components/responses/Ok"
+        "400":
+          description: Missing, invalid, expired or exhausted confirmation code
+        "401":
+          $ref: "#/components/responses/Unauthorized"
   /api/auth/2fa/disable:
     post:
-      tags: [ Auth ]
+      tags:
+        - Auth
       operationId: disableTwoFactor
-      security: [ { bearerAuth: [] } ]
-      requestBody: { $ref: '#/components/requestBodies/TwoFactorCode' }
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - emailCode
+              properties:
+                emailCode:
+                  type: string
+                  pattern: ^[0-9]{6}$
       responses:
-        '200': { $ref: '#/components/responses/Ok' }
-        '400': { $ref: '#/components/responses/BadRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
+        "200":
+          $ref: "#/components/responses/Ok"
+        "400":
+          description: Missing, invalid, expired or exhausted confirmation code
+        "401":
+          $ref: "#/components/responses/Unauthorized"
   /api/auth/2fa/status:
     post:
       tags: [ Auth ]

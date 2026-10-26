@@ -1,3 +1,4 @@
+import appLinksRoutes from './routes/app-links.routes.js';
 import compression from 'compression';
 import cors from 'cors';
 import express from 'express';
@@ -96,6 +97,7 @@ export function createApp({ uploadRoot, enableRateLimits = true, trustProxy = 'l
         next();
     }, express.static(resolvedProfileUploadRoot, { dotfiles: 'deny', index: false, fallthrough: false }));
 
+    app.use(appLinksRoutes);
     app.get('/', (_req, res) => res.json({ service: 'mirailink-backend' }));
     app.get('/healthz', (_req, res) => res.json({ status: 'ok' }));
     app.use(API_PREFIX, globalApiLimiter());
