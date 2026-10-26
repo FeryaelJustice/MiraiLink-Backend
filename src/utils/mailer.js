@@ -3,14 +3,41 @@ import nodemailer from 'nodemailer';
 
 let transporter = null;
 
+function smtpDiagnostic(error) {
+    const allowedCodes = new Set(['ETIMEDOUT', 'ESOCKET', 'ECONNECTION', 'ECONNREFUSED', 'ECONNRESET', 'ENOTFOUND', 'EAI_AGAIN', 'EAUTH', 'EENVELOPE', 'EMESSAGE', 'EDNS', 'ESTREAM']);
+    const command = String(error?.command || '').split(' ')[0];
+    return {
+        event: 'email_delivery_failed',
+        code: allowedCodes.has(error?.code) ? error.code : 'SMTP_ERROR',
+        ...(new Set(['CONN', 'AUTH', 'EHLO', 'HELO', 'MAIL', 'RCPT', 'DATA', 'STARTTLS']).has(command) ? { phase: command } : {}),
+        ...(Number.isInteger(error?.responseCode) ? { responseCode: error.responseCode } : {}),
+    };
+}
+
+export async function verifyEmailTransport() {
+    const transport = getTransporter();
+    if (!transport) return { success: false, code: 'EMAIL_NOT_CONFIGURED' };
+    try {
+        await transport.verify();
+        return { success: true };
+    } catch (error) {
+        return { success: false, ...smtpDiagnostic(error) };
+    }
+}
+
+
 function getTransporter() {
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
         return null;
     }
+    const port = Number(process.env.EMAIL_PORT || 587);
     transporter ??= nodemailer.createTransport({
         host: process.env.EMAIL_HOST || 'smtp.hostinger.com',
-        port: Number(process.env.EMAIL_PORT || 587),
-        secure: process.env.EMAIL_SECURE === 'true',
+        port,
+        secure: process.env.EMAIL_SECURE ? process.env.EMAIL_SECURE === 'true' : port === 465,
+        connectionTimeout: 5000,
+        greetingTimeout: 5000,
+        socketTimeout: 8000,
         auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASSWORD },
     });
     return transporter;
@@ -69,33 +96,41 @@ export function printSimulatorLog({ to, subject, type, code, deepLink, webLink, 
 }
 
 /**
- * Envía SMTP cuando hay credenciales; si faltan o falla, usa simulación por consola.
- * El resultado simulated no acredita entrega real y el log puede incluir códigos sensibles.
+ * Sends through Nodemailer with bounded SMTP timeouts. Production never simulates delivery.
+ * Diagnostics expose only a stable code and protocol phase, without recipient or secrets.
  */
 export async function sendGenericEmail({ to, subject, html, text, logData = {} }) {
     const transport = getTransporter();
 
     // Si no esta configurado SMTP, simular en consola de forma limpia
     if (!transport) {
-        if (process.env.NODE_ENV === 'production') return { success: false, simulated: false };
+        if (process.env.NODE_ENV === 'production') {
+            console.warn('[Mailer Warning]', JSON.stringify({ event: 'email_delivery_failed', code: 'EMAIL_NOT_CONFIGURED' }));
+            return { success: false, simulated: false, code: 'EMAIL_NOT_CONFIGURED' };
+        }
         printSimulatorLog({ to, subject, ...logData });
         return { success: true, simulated: true };
     }
 
     try {
-        await transport.sendMail({
+        const info = await transport.sendMail({
             from: `"MiraiLink" <${process.env.EMAIL_USER}>`,
             to,
             subject,
             text,
             html,
         });
+        if (Array.isArray(info?.accepted) && info.accepted.length === 0) {
+            console.warn('[Mailer Warning]', JSON.stringify({ event: 'email_delivery_failed', code: 'RECIPIENT_REJECTED' }));
+            return { success: false, simulated: false, code: 'RECIPIENT_REJECTED' };
+        }
         return { success: true, simulated: false };
     } catch (error) {
         // En caso de fallo de red o SMTP caido, registrar advertencia y simular sin romper la app
-        console.warn('[Mailer Warning] SMTP delivery failed');
+        const diagnostic = smtpDiagnostic(error);
+        console.warn('[Mailer Warning]', JSON.stringify(diagnostic));
         if (process.env.NODE_ENV !== 'production') printSimulatorLog({ to, subject, ...logData });
-        return { success: false, error: error.message, simulated: true };
+        return { success: false, code: diagnostic.code, simulated: process.env.NODE_ENV !== 'production' };
     }
 }
 

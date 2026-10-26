@@ -12,7 +12,7 @@ import {
 } from '../services/tokenService.js';
 import { hashRecoveryCodes, useRecoveryCode, verifyTotp } from '../services/twoFactorService.js';
 import { encrypt } from '../utils/cryptoUtils.js';
-import { sendTwoFactorEmail, sendPasswordResetEmail, sendVerificationEmail } from '../utils/mailer.js';
+import { verifyEmailTransport, sendTwoFactorEmail, sendPasswordResetEmail, sendVerificationEmail } from '../utils/mailer.js';
 
 const neutralEmailResponse = { message: 'If the account is eligible, a code will be sent' };
 const generateCode = () => randomInt(100000, 1000000).toString();
@@ -37,50 +37,66 @@ async function withTransaction(work) {
     }
 }
 
+function requireEmailDelivery(delivery) {
+    if (!delivery?.success || (process.env.NODE_ENV === 'production' && delivery.simulated)) {
+        throw new AppError({ status: 503, code: 'EMAIL_DELIVERY_FAILED', message: 'Unable to send confirmation email. Please retry.' });
+    }
+}
+
 export const register = async (req, res, next) => {
     try {
         const { username, email, password, gender, birthdate } = req.body;
         const existing = await db.query(
-            'SELECT 1 FROM users WHERE username = $1 OR email = $2 LIMIT 1',
+            'SELECT id, username, email, password_hash, auth_provider, is_verified, is_deleted FROM users WHERE username = $1 OR email = $2 LIMIT 1',
             [username, email],
         );
-        if (existing.rowCount > 0) {
+        const pending = existing.rows[0];
+        if (pending && (pending.is_verified || pending.is_deleted || pending.auth_provider !== 'email' ||
+            pending.username !== username || pending.email !== email || !pending.password_hash ||
+            !await bcrypt.compare(password, pending.password_hash))) {
             return res.status(409).json({ code: 'ACCOUNT_EXISTS', message: 'User already exists' });
         }
-
-        const passwordHash = await bcrypt.hash(password, rounds());
+        const code = generateCode();
+        const codeHash = await bcrypt.hash(code, rounds());
+        const passwordHash = pending ? null : await bcrypt.hash(password, rounds());
         const user = await withTransaction(async client => {
-            const result = await client.query(
-                `INSERT INTO users (username, email, password_hash, auth_provider, nickname, gender, birthdate, is_verified)
-                 VALUES ($1, $2, $3, 'email', $1, $4, $5, FALSE)
-                 RETURNING id, username, email, is_verified`,
-                [username, email, passwordHash, gender, birthdate],
-            );
-            const newUser = result.rows[0];
-
-            const code = generateCode();
-            const hash = await bcrypt.hash(code, rounds());
+            let newUser;
+            if (pending) {
+                const locked = await client.query(
+                    'SELECT id, username, email, password_hash FROM users WHERE id = $1 AND is_verified = FALSE AND is_deleted = FALSE FOR UPDATE',
+                    [pending.id],
+                );
+                newUser = locked.rows[0];
+                if (!newUser || newUser.password_hash !== pending.password_hash) {
+                    throw new AppError({ status: 409, code: 'ACCOUNT_EXISTS', message: 'User already exists' });
+                }
+            } else {
+                const result = await client.query(
+                    `INSERT INTO users (username, email, password_hash, auth_provider, nickname, gender, birthdate, is_verified)
+                     VALUES ($1, $2, $3, 'email', $1, $4, $5, FALSE)
+                     ON CONFLICT DO NOTHING RETURNING id, username, email, is_verified`,
+                    [username, email, passwordHash, gender, birthdate],
+                );
+                newUser = result.rows[0];
+                if (!newUser) throw new AppError({ status: 409, code: 'ACCOUNT_EXISTS', message: 'User already exists' });
+            }
+            await client.query("DELETE FROM verification_tokens WHERE user_id = $1 AND type = 'email'", [newUser.id]);
             await client.query(
                 `INSERT INTO verification_tokens (user_id, token_hash, type, expires_at)
                  VALUES ($1, $2, 'email', NOW() + INTERVAL '15 minutes')`,
-                [newUser.id, hash],
+                [newUser.id, codeHash],
             );
-
-            // Enviar correo de verificacion (simulado o SMTP)
-            await sendVerificationEmail(newUser.email, code, undefined, newUser.id);
-
             return newUser;
         });
-
-        return res.status(201).json({
-            message: 'User created',
+        // Commit before contacting SMTP. A retry resumes only the same unverified account.
+        requireEmailDelivery(await sendVerificationEmail(user.email, code, undefined, user.id));
+        return res.status(pending ? 200 : 201).json({
+            message: pending ? 'Registration resumed' : 'User created',
             userId: user.id,
             isVerified: false,
             token: createAccessToken(user),
         });
-    } catch (error) {
-        return next(error);
-    }
+    } catch (error) { return next(error); }
 };
 
 export const login = async (req, res, next) => {
@@ -146,6 +162,8 @@ export const autoLogin = (req, res) => res.json({
 
 export const requestPasswordReset = async (req, res, next) => {
     try {
+        // Check the global SMTP service before lookup; do not reveal whether an account exists.
+        if (process.env.NODE_ENV === 'production') requireEmailDelivery(await verifyEmailTransport());
         const result = await db.query(
             'SELECT id, email FROM users WHERE email = $1 AND is_deleted = FALSE LIMIT 1',
             [req.body.email],
@@ -162,6 +180,8 @@ export const requestPasswordReset = async (req, res, next) => {
                     [user.id, hash],
                 );
             });
+            // Keep the public response neutral even if a recipient-specific rejection occurs.
+            // The mailer records a safe diagnostic. Global SMTP failures are caught above.
             await sendPasswordResetEmail(user.email, code);
         }
         return res.json(neutralEmailResponse);
@@ -233,7 +253,7 @@ export const requestVerificationCode = async (req, res, next) => {
                     [userId, hash, req.body.type],
                 );
             });
-            await sendVerificationEmail(result.rows[0].email, code, undefined, userId);
+            requireEmailDelivery(await sendVerificationEmail(result.rows[0].email, code, undefined, userId));
         }
         return res.json(neutralEmailResponse);
     } catch (error) {
