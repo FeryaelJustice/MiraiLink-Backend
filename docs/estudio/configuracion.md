@@ -27,7 +27,10 @@ Revisión de fuentes: 2026-10-01. Las observaciones estáticas no certifican el 
 | EMAIL_PORT | 1..65535, default 587 | Inválido bloquea parseEnv; consumidor mailer default propio |
 | EMAIL_SECURE | true/false, default false | Define TLS del transporte; inválido bloquea parseEnv; TLS del proveedor puede requerir otro puerto |
 | EMAIL_USER / EMAIL_PASSWORD | Opcionales | Sin uno de ellos se simula en consola; no hay entrega real. Fallo SMTP también activa simulación y puede imprimir códigos |
-| FIREBASE_SERVICE_ACCOUNT_FILE_NAME | Archivo opcional | Default de código src/serviceAccountKey.json; ausencia del archivo falla al primer uso FCM, no necesariamente al arrancar |
+| FIREBASE_SERVICE_ACCOUNT_JSON | JSON opcional del entorno | Tiene prioridad sobre el archivo; objeto completo minificado, con private_key escapada como JSON. Invalido falla sin fallback |
+| FIREBASE_SERVICE_ACCOUNT_FILE_NAME | Archivo opcional | Solo si FIREBASE_SERVICE_ACCOUNT_JSON esta ausente o vacia. Default de codigo src/serviceAccountKey.json |
+| GOOGLE_PLAY_SERVICE_ACCOUNT_JSON | JSON opcional del entorno | Tiene prioridad sobre GOOGLE_PLAY_SERVICE_ACCOUNT_FILE; invalido produce PLAY_NOT_CONFIGURED sin fallback |
+| GOOGLE_PLAY_SERVICE_ACCOUNT_FILE | Archivo opcional | Solo si GOOGLE_PLAY_SERVICE_ACCOUNT_JSON esta ausente o vacia |
 | RAWG_API_KEY | Opcional | Catálogo games depende de clave del proveedor; Jikan se procesa aparte |
 | CATALOG_SYNC_INTERVAL_HOURS | Entero >=1, default 24 | Frecuencia; inválido bloquea parseEnv. Además hay ejecución inicial a 10 s |
 | PUBLIC_ORIGIN | Fuera del esquema central, URL media | Default req.protocol/host; falta detrás de proxy puede devolver origen incorrecto. URL inválida falla al resolver media |

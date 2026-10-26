@@ -1,6 +1,6 @@
 import { cert, getApps, initializeApp } from 'firebase-admin/app';
 import { getMessaging } from 'firebase-admin/messaging';
-import { readFile } from 'node:fs/promises';
+import { loadServiceAccount } from './serviceAccount.js';
 import { isAbsolute, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -17,7 +17,7 @@ function resolveServiceAccountPath() {
 
 async function initializeMessaging() {
     const serviceAccountPath = resolveServiceAccountPath();
-    const serviceAccount = JSON.parse(await readFile(serviceAccountPath, 'utf8'));
+    const serviceAccount = await loadServiceAccount('FIREBASE_SERVICE_ACCOUNT_JSON', serviceAccountPath);
     const app = getApps()[0] ?? initializeApp({
         credential: cert(serviceAccount),
     });
