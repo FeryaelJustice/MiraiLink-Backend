@@ -226,3 +226,10 @@ GET /.well-known/assetlinks.json publica la asociacion Android. GET /verify, /ve
 POST /api/auth/2fa/email/request requiere sesion y body { action: enable | disable }. POST /api/auth/2fa/verify requiere token TOTP y emailCode de seis cifras. POST /api/auth/2fa/disable requiere emailCode. El login TOTP no cambia.
 
 Los codigos de correo duran cinco minutos, son de un uso y permiten cinco intentos. La migracion 023 crea two_factor_email_challenges. Ver docs/features/render_app_links/plan.md.
+
+
+## Correccion de registro, envio SMTP y reintentos (2026-10-26)
+
+El registro confirma su transaccion antes de contactar con Nodemailer. Un fallo de entrega devuelve 503 EMAIL_DELIVERY_FAILED y conserva la cuenta pendiente. POST /api/auth/register puede devolver 200 al repetir exactamente las credenciales de esa misma cuenta no verificada; una cuenta verificada o credenciales distintas siguen devolviendo 409. No se hace login automatico.
+
+El mailer mantiene SMTP y sus variables existentes. Usa tiempos limite de conexion/saludo/socket y diagnosticos con codigo, fase y respuesta numerica, sin direcciones ni secretos. verifyEmailTransport y scripts/check-email.js comprueban conexion/autenticacion sin enviar un mensaje. El reset publico comprueba SMTP antes de buscar la cuenta y conserva la respuesta neutral ante rechazos particulares del destinatario.

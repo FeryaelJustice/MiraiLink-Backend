@@ -129,14 +129,25 @@ paths:
 
   /api/auth/register:
     post:
-      tags: [ Auth ]
+      tags:
+        - Auth
       operationId: register
-      requestBody: { $ref: '#/components/requestBodies/Register' }
+      requestBody:
+        $ref: "#/components/requestBodies/Register"
       responses:
-        '201': { $ref: '#/components/responses/Created' }
-        '400': { $ref: '#/components/responses/BadRequest' }
-        '409': { $ref: '#/components/responses/Conflict' }
-        '429': { $ref: '#/components/responses/RateLimited' }
+        "200":
+          description: Same unverified registration resumed after ambiguous timeout or
+            SMTP failure; credentials must match
+        "201":
+          $ref: "#/components/responses/Created"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "503":
+          description: Email delivery unavailable; retry the same operation
   /api/auth/login:
     post:
       tags: [ Auth ]
@@ -166,13 +177,20 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
   /api/auth/password/request-reset:
     post:
-      tags: [ Auth ]
+      tags:
+        - Auth
       operationId: requestPasswordReset
-      requestBody: { $ref: '#/components/requestBodies/Email' }
+      requestBody:
+        $ref: "#/components/requestBodies/Email"
       responses:
-        '200': { $ref: '#/components/responses/Ok' }
-        '400': { $ref: '#/components/responses/BadRequest' }
-        '429': { $ref: '#/components/responses/RateLimited' }
+        "200":
+          $ref: "#/components/responses/Ok"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "503":
+          description: Global SMTP unavailable; checked before account lookup
   /api/auth/password/confirm-reset:
     post:
       tags: [ Auth ]
@@ -184,15 +202,24 @@ paths:
         '429': { $ref: '#/components/responses/RateLimited' }
   /api/auth/verification/request:
     post:
-      tags: [ Auth ]
+      tags:
+        - Auth
       operationId: requestVerification
-      security: [ { bearerAuth: [] } ]
-      requestBody: { $ref: '#/components/requestBodies/VerificationType' }
+      security:
+        - bearerAuth: []
+      requestBody:
+        $ref: "#/components/requestBodies/VerificationType"
       responses:
-        '200': { $ref: '#/components/responses/Ok' }
-        '400': { $ref: '#/components/responses/BadRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '429': { $ref: '#/components/responses/RateLimited' }
+        "200":
+          $ref: "#/components/responses/Ok"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "503":
+          description: Email delivery unavailable; retry the same operation
   /api/auth/verification/confirm:
     post:
       tags: [ Auth ]
