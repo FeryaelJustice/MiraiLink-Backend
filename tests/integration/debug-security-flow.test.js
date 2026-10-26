@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const state = vi.hoisted(() => ({ query: vi.fn(), clientQuery: vi.fn(), release: vi.fn(), verify: vi.fn(), send: vi.fn(), sendVerification: vi.fn() }));
 vi.mock('../../src/models/db.js', () => ({ default: { query: state.query, connect: async () => ({ query: state.clientQuery, release: state.release }) } }));
 vi.mock('../../src/utils/mailer.js', () => ({ sendVerificationEmail: state.sendVerification, sendTwoFactorEmail: vi.fn(), verifyEmailTransport: state.verify, sendPasswordResetEmail: state.send }));
-const { requestPasswordReset, requestVerificationCode } = await import('../../src/controllers/auth.controller.js');
+const { requestPasswordReset, requestVerificationCode, register } = await import('../../src/controllers/auth.controller.js');
 const key = 'a-private-test-key-that-is-32-chars-long';
 const req = k => ({ body: { email: 'tester@example.com' }, get: () => k });
 function response() { const res = { set: vi.fn(), json: vi.fn(), status: vi.fn() }; res.set.mockReturnValue(res); res.status.mockReturnValue(res); return res; }
@@ -58,5 +58,24 @@ describe('verification private debug response', () => {
         expect(url.searchParams.get('userId')).toBe('user-123');
         const insert = state.clientQuery.mock.calls.find(([sql]) => sql.includes('INSERT INTO verification_tokens'));
         expect(await bcrypt.compare(url.searchParams.get('token'), insert[1][1])).toBe(true);
+    });
+});
+
+describe('registration private debug response', () => {
+    it('returns the verification link after committing a pending user when SMTP fails', async () => {
+        state.query.mockResolvedValue({ rowCount: 0, rows: [] });
+        state.clientQuery.mockImplementation(async sql => sql.includes('INSERT INTO users')
+            ? { rowCount: 1, rows: [{ id: 'new-user', username: 'tester', email: 'tester@example.com' }] }
+            : {});
+        const res = response(); const next = vi.fn();
+        await register({ body: { username: 'tester', email: 'tester@example.com', password: 'a-password', gender: 'male', birthdate: '2000-01-01' }, get: () => key }, res, next);
+        expect(next).not.toHaveBeenCalled();
+        expect(res.status).toHaveBeenCalledWith(503);
+        const url = new URL(res.json.mock.calls[0][0].debugLink);
+        expect(url.pathname).toBe('/verify');
+        expect(url.searchParams.get('userId')).toBe('new-user');
+        const insert = state.clientQuery.mock.calls.find(([sql]) => sql.includes('INSERT INTO verification_tokens'));
+        expect(await bcrypt.compare(url.searchParams.get('token'), insert[1][1])).toBe(true);
+        expect(res.json.mock.calls[0][0]).not.toHaveProperty('token');
     });
 });
