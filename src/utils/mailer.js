@@ -1,3 +1,4 @@
+import { securityLink } from '../config/appLinks.js';
 import nodemailer from 'nodemailer';
 
 let transporter = null;
@@ -76,6 +77,7 @@ export async function sendGenericEmail({ to, subject, html, text, logData = {} }
 
     // Si no esta configurado SMTP, simular en consola de forma limpia
     if (!transport) {
+        if (process.env.NODE_ENV === 'production') return { success: false, simulated: false };
         printSimulatorLog({ to, subject, ...logData });
         return { success: true, simulated: true };
     }
@@ -91,18 +93,17 @@ export async function sendGenericEmail({ to, subject, html, text, logData = {} }
         return { success: true, simulated: false };
     } catch (error) {
         // En caso de fallo de red o SMTP caido, registrar advertencia y simular sin romper la app
-        console.warn(`[Mailer Warning] No se pudo enviar el correo a ${to}:`, error.message);
-        printSimulatorLog({ to, subject, ...logData, additional: { fallbackReason: error.message } });
+        console.warn('[Mailer Warning] SMTP delivery failed');
+        if (process.env.NODE_ENV !== 'production') printSimulatorLog({ to, subject, ...logData });
         return { success: false, error: error.message, simulated: true };
     }
 }
 
 export async function sendVerificationEmail(to, code, token, userId) {
-    const APP_BASE_URL = process.env.APP_BASE_URL || 'https://mirailink.xyz';
     const verificationToken = token || code;
     const userParam = userId ? `&userId=${encodeURIComponent(userId)}` : '';
     const deepLink = `mirailink://verify?token=${encodeURIComponent(verificationToken)}${userParam}`;
-    const webLink = `${APP_BASE_URL}/verify?token=${encodeURIComponent(verificationToken)}${userParam}`;
+    const webLink = securityLink('/verify', { token: verificationToken, userId });
     const subject = 'Verifica tu cuenta en MiraiLink';
 
     const contentHtml = `
@@ -115,7 +116,7 @@ export async function sendVerificationEmail(to, code, token, userId) {
         </div>
         <div style="text-align:center;">
             <p style="font-size:14px; color:#94A3B8;">O si estas en tu dispositivo movil, pulsa en el boton directo:</p>
-            <a href="${deepLink}" class="btn">Abrir en la App</a>
+            <a href="${webLink}" class="btn">Abrir en la App</a>
             <p style="font-size:12px; margin-top:10px;"><a href="${webLink}" style="color:#38BDF8;">Enlace web: ${webLink}</a></p>
         </div>
         <p style="font-size:13px; color:#94A3B8; text-align:center; margin-top:20px;">
@@ -123,7 +124,7 @@ export async function sendVerificationEmail(to, code, token, userId) {
         </p>
     `;
 
-    const text = `Tu codigo de verificacion de MiraiLink es: ${code}\nApp Link: ${deepLink}\nWeb Link: ${webLink}\nEste codigo expira en 15 minutos.`;
+    const text = `Tu codigo de verificacion de MiraiLink es: ${code}\nApp Link: ${webLink}\nWeb Link: ${webLink}\nEste codigo expira en 15 minutos.`;
 
     return sendGenericEmail({
         to,
@@ -141,10 +142,9 @@ export async function sendVerificationEmail(to, code, token, userId) {
 }
 
 export async function sendPasswordResetEmail(to, code, token) {
-    const APP_BASE_URL = process.env.APP_BASE_URL || 'https://mirailink.xyz';
     const resetToken = token || code;
     const deepLink = `mirailink://reset-password?token=${encodeURIComponent(resetToken)}&email=${encodeURIComponent(to)}`;
-    const webLink = `${APP_BASE_URL}/reset-password?token=${encodeURIComponent(resetToken)}&email=${encodeURIComponent(to)}`;
+    const webLink = securityLink('/reset-password', { token: resetToken, email: to });
     const subject = 'Restablece tu contrasena en MiraiLink';
 
     const contentHtml = `
@@ -157,7 +157,7 @@ export async function sendPasswordResetEmail(to, code, token) {
         </div>
         <div style="text-align:center;">
             <p style="font-size:14px; color:#94A3B8;">Tambien puedes pulsar en el siguiente boton para abrir la app:</p>
-            <a href="${deepLink}" class="btn">Restablecer en la App</a>
+            <a href="${webLink}" class="btn">Restablecer en la App</a>
             <p style="font-size:12px; margin-top:10px;"><a href="${webLink}" style="color:#38BDF8;">Enlace web: ${webLink}</a></p>
         </div>
         <p style="font-size:13px; color:#94A3B8; text-align:center; margin-top:20px;">
@@ -165,7 +165,7 @@ export async function sendPasswordResetEmail(to, code, token) {
         </p>
     `;
 
-    const text = `Tu codigo para restablecer contrasena en MiraiLink es: ${code}\nApp Link: ${deepLink}\nWeb Link: ${webLink}\nEste codigo expira en 5 minutos.`;
+    const text = `Tu codigo para restablecer contrasena en MiraiLink es: ${code}\nApp Link: ${webLink}\nWeb Link: ${webLink}\nEste codigo expira en 5 minutos.`;
 
     return sendGenericEmail({
         to,
@@ -179,5 +179,22 @@ export async function sendPasswordResetEmail(to, code, token) {
             webLink,
             expiresIn: '5 minutos',
         },
+    });
+}
+
+export async function sendTwoFactorEmail(to, code, action) {
+    const verb = action === 'enable' ? 'activar' : 'desactivar';
+    const subject = 'Codigo para ' + verb + ' el doble factor de MiraiLink';
+    const contentHtml = '<h2>' + subject + '</h2><p>Introduce este codigo en MiraiLink:</p>' +
+        '<div class="code-box"><p class="code-text">' + code + '</p></div>' +
+        '<p>Caduca en 5 minutos. Si no solicitaste esta accion, no compartas el codigo.</p>';
+    if (process.env.NODE_ENV === 'production' && !getTransporter()) {
+        return { success: false, simulated: false };
+    }
+    return sendGenericEmail({
+        to, subject,
+        html: renderEmailShell({ title: subject, contentHtml }),
+        text: subject + ': ' + code + '. Caduca en 5 minutos.',
+        logData: { type: 'Confirmacion de doble factor' },
     });
 }

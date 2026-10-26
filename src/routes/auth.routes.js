@@ -1,3 +1,5 @@
+import { requestTwoFactorEmail } from '../controllers/auth.controller.js';
+import { twoFactorEmailRequestSchema, twoFactorEmailConfirmSchema, twoFactorEnableSchema } from '../validation/auth.schemas.js';
 /**
  * Compone rutas de acceso, verificación, reset y segundo factor: ordena guardas, validación y handler.
  * El prefijo /api lo monta createApp; consultar docs/estudio/flujos y OpenAPI al cambiar contratos.
@@ -7,7 +9,7 @@ import { autoLogin, check2FAStatus, checkIsVerified, confirmPasswordReset, confi
 import { authenticateToken, optionalAuthenticateToken } from '../middleware/auth.middleware.js';
 import { authLimiter, emailLimiter } from '../middleware/rateLimit.middleware.js';
 import { validate } from '../middleware/validate.middleware.js';
-import { emailSchema, loginSchema, passwordResetSchema, registerSchema, totpSchema, twoFactorLoginSchema, verificationConfirmSchema, verificationRequestSchema } from '../validation/auth.schemas.js';
+import { emailSchema, loginSchema, passwordResetSchema, registerSchema, twoFactorLoginSchema, verificationConfirmSchema, verificationRequestSchema } from '../validation/auth.schemas.js';
 
 const router = express.Router();
 router.post('/register', authLimiter, validate({ body: registerSchema }), register);
@@ -19,9 +21,10 @@ router.post('/password/confirm-reset', authLimiter, validate({ body: passwordRes
 router.post('/verification/request', emailLimiter, optionalAuthenticateToken(), validate({ body: verificationRequestSchema }), requestVerificationCode);
 router.post('/verification/confirm', authLimiter, optionalAuthenticateToken(), validate({ body: verificationConfirmSchema }), confirmVerificationCode);
 router.get('/verification/check', authenticateToken(true), checkIsVerified);
-router.post('/2fa/setup', authenticateToken(), setup2FA);
-router.post('/2fa/verify', authLimiter, authenticateToken(), validate({ body: totpSchema }), verify2FA);
-router.post('/2fa/disable', authLimiter, authenticateToken(), disable2FA);
+router.post('/2fa/email/request', emailLimiter, authenticateToken(), validate({ body: twoFactorEmailRequestSchema }), requestTwoFactorEmail);
+router.post('/2fa/setup', authLimiter, authenticateToken(), setup2FA);
+router.post('/2fa/verify', authLimiter, authenticateToken(), validate({ body: twoFactorEnableSchema }), verify2FA);
+router.post('/2fa/disable', authLimiter, authenticateToken(), validate({ body: twoFactorEmailConfirmSchema }), disable2FA);
 router.post('/2fa/status', authenticateToken(true), check2FAStatus);
 router.post('/2fa/loginVerifyLastStep', authLimiter, validate({ body: twoFactorLoginSchema }), loginVerify2FALastStep);
 export default router;

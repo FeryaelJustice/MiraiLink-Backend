@@ -1,3 +1,5 @@
+> **Enlaces Android y 2FA por correo:** [Configuracion de Render, firma de Play y pruebas](docs/render-app-links.md).
+
 > **Estudio técnico del proyecto:** [Guía maestra en español](docs/guia-maestra.md), con documentos por tema, diagramas, configuración, casos de error y revisión conectada con el otro repositorio.
 
 > **Credenciales para despliegue:** [Copiar los JSON al portapapeles y configurar el .env](JSON-CREDENCIALES-ENV.md), con comandos para Windows, macOS y Linux.

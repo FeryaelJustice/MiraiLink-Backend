@@ -1,3 +1,4 @@
+import { appLinksConfig } from './appLinks.js';
 import { z } from "zod";
 import { photoStorageConfig } from './photoStorage.js';
 
@@ -61,6 +62,7 @@ const environmentSchema = z.object({
  */
 export function parseEnv(input = process.env) {
     const photoStorage = photoStorageConfig(input);
+    appLinksConfig(input);
     const result = environmentSchema.safeParse(input);
     if (!result.success) {
         const details = result.error.issues

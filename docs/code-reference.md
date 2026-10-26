@@ -217,3 +217,12 @@ Capsule matching: verifySwipeMode(client, fromId, toId, mode, receivedLikeId = n
 `subscription.dto.js` exporta `subscriptionDto(sub)`, una lista blanca pública con estado de Google, permisos actuales y confirmación pendiente. El controlador devuelve ese único plan. Autenticación, swipe, usuario, Explore, Afinidades y Capsule siguen consultando `user_subscriptions`. El trigger existente notifica cambios directamente desde esa tabla.
 
 `play_purchase_owners` conserva propiedad y sustituciones de tokens como protección histórica. No almacena planes simultáneos. Un token independiente no puede sobrescribir un plan vigente sin sustitución confirmada por Google.
+
+
+## Android App Links y confirmaciones 2FA (2026-10-26)
+
+GET /.well-known/assetlinks.json publica la asociacion Android. GET /verify, /verification, /reset-password, /recover_password y /recover-password sirven respaldo sin mutaciones.
+
+POST /api/auth/2fa/email/request requiere sesion y body { action: enable | disable }. POST /api/auth/2fa/verify requiere token TOTP y emailCode de seis cifras. POST /api/auth/2fa/disable requiere emailCode. El login TOTP no cambia.
+
+Los codigos de correo duran cinco minutos, son de un uso y permiten cinco intentos. La migracion 023 crea two_factor_email_challenges. Ver docs/features/render_app_links/plan.md.
