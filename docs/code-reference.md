@@ -6,6 +6,15 @@ Esta referencia cubre los archivos activos, la única clase propia y las funcion
 
 ## Entry points y configuración
 
+Almacenamiento de fotos: [configuracion, operaciones y migracion a VPS](cloudinary-storage-and-vps-migration.md).
+
+- `src/config/photoStorage.js`: `photoStorageConfig(input)` valida proveedor y credenciales de Cloudinary.
+- `src/services/cloudinary-photos.js`: `uploadCloudPhoto(buffer,userId,prepare)` y `destroyCloudPhoto(photo)` usan el SDK oficial sin estado global de credenciales.
+- `src/utils/photoStorage.js`: fachada local/remota; `localPhotoPath`, `recordPhoto` y `photoDigest` proporcionan rutas confinadas, registro e integridad.
+- `src/services/photo-cleanup.js`: `queuePhotoRemoval`, `drainPhotoCleanup` y `tryPhotoCleanup` separan eliminacion externa y COMMIT SQL.
+- `src/services/photo-migration.js`: `preparePhotoMigration`, `applyPhotoMigration`, `downloadPhoto`, `externalRoot`, `confinedPath`, `saveManifest` y `loadManifest` implementan transferencia verificada y rollback.
+- `scripts/photo-storage.js`: CLI `plan`, `prepare`, `apply`, `rollback` y `cleanup`, expuesta mediante `npm run photos:storage -- ...`.
+
 | Archivo | Export | Contrato |
 | --- | --- | --- |
 | `src/app.js` | `createApp(options)` | Crea Express sin escuchar. `options.uploadRoot` inyecta media, `enableRateLimits=false` estabiliza tests y `trustProxy` limita las IPs proxy en las que se confia. |
@@ -97,10 +106,10 @@ Los limiters se saltan si `app.locals.enableRateLimits === false`.
 | `validateImage(file)` | `imageValidation.js` | Comprueba firma y coincidencia MIME; lanza `AppError` 415. |
 | `sendVerificationEmail(to, code)` | `mailer.js` | Inicializa Nodemailer lazy y espera `sendMail`. |
 | `profileUploadRoot()` | `photoStorage.js` | Resuelve `UPLOAD_ROOT` o la ubicación lógica por defecto. |
-| `stagePhoto(userId, file, root)` | `photoStorage.js` | Crea directorio, UUID y archivo staging con modo 0600. |
-| `finalizePhoto(staged)` | `photoStorage.js` | Renombra staging a path final. |
-| `removePhotoFile(url, root)` | `photoStorage.js` | Borra de forma segura, tolera ENOENT. |
-| `cleanupStagedPhoto(staged)` | `photoStorage.js` | Elimina staging y final durante compensación. |
+| `stagePhoto(userId, file, root, queryable)` | `photoStorage.js` | Sube a Cloudinary con registro previo o escribe staging local 0600. El queryable debe estar fuera de una transaccion SQL durante la subida. |
+| `finalizePhoto(staged)` | `photoStorage.js` | Promueve staging local; Cloudinary ya dispone del original subido. |
+| `removePhotoFile(url, root, queryable)` | `photoStorage.js` | Elimina por metadatos del proveedor, protege referencias compartidas y avatares locales globales. |
+| `cleanupStagedPhoto(staged, queryable)` | `photoStorage.js` | Compensa subidas no referenciadas; no borra un recurso confirmado tras un COMMIT incierto. |
 | `toPublicUser(row)` | `user.dto.js` | Allowlist de id, username, nickname, bio, gender y birthdate. |
 | `toPublicUsers(rows)` | `user.dto.js` | Aplica el DTO a una lista. |
 | `PUBLIC_USER_SQL_COLUMNS` | `user.dto.js` | Proyección SQL pública con alias `u`. |

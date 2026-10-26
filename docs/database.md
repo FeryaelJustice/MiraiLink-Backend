@@ -2,6 +2,12 @@
 
 # Base de datos
 
+## Fotos persistentes y migracion a VPS
+
+`022_photo_storage.sql` crea `photo_storage_objects` (metadatos por URL y proveedor) y `photo_cleanup_jobs` (borrados reintentables). No modifica los inserts existentes. `user_photos.url` acepta las rutas locales heredadas o la URL HTTPS publica de Cloudinary; se mantienen las proyecciones publicas actuales. La reordenacion no invalida el registro del recurso al estar asociado a URL, no al ID temporal de una fila reinsertada.
+
+La [guia de Cloudinary y VPS](cloudinary-storage-and-vps-migration.md) documenta respaldo de Neon, fotos antiguas y nuevas, aplicacion transaccional de referencias, manifiestos y rollback. SQL y archivos se respaldan por separado. No utilizar db:reset para este traslado.
+
 ## Fuentes
 
 - `src/database/db.sql`: esquema base histórico.

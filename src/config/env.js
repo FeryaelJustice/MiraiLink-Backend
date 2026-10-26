@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { photoStorageConfig } from './photoStorage.js';
 
 const hex = (length) => new RegExp(`^[a-fA-F0-9]{${length}}$`);
 
@@ -59,6 +60,7 @@ const environmentSchema = z.object({
  * Los defaults no se escriben en process.env; los consumidores directos mantienen sus propios fallbacks.
  */
 export function parseEnv(input = process.env) {
+    const photoStorage = photoStorageConfig(input);
     const result = environmentSchema.safeParse(input);
     if (!result.success) {
         const details = result.error.issues
@@ -89,6 +91,7 @@ export function parseEnv(input = process.env) {
         bcryptRounds: result.data.SALT_ROUNDS,
         uploadMaxBytes: result.data.UPLOAD_MAX_BYTES,
         uploadRoot: result.data.UPLOAD_ROOT,
+        photoStorageProvider: photoStorage.provider,
         twoFactorKey: result.data.SECRET_2FA_KEY,
         legacyTwoFactorIv: result.data.SECRET_2FA_IV,
         email: {

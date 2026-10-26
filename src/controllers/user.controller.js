@@ -8,10 +8,10 @@ import { localizedResidenceColumns, localizedResidenceJoins } from '../utils/geo
 import {
     cleanupStagedPhoto,
     finalizePhoto,
-    removePhotoFile,
     stagePhoto,
 } from '../utils/photoStorage.js';
 import { SUBSCRIPTION_FEATURES, SUBSCRIPTION_PRODUCTS } from '../consts/subscriptionConsts.js';
+import { queuePhotoRemoval, tryPhotoCleanup } from '../services/photo-cleanup.js';
 
 function parseInterestIds(value) {
     if (value === undefined) return null;
@@ -262,6 +262,7 @@ export const updateProfile = async (req, res, next) => {
     const client = await db.connect();
     const staged = [];
     const oldUrls = [];
+    let committed = false;
     try {
         const animeIds = parseInterestIds(req.body.animes);
         const gameIds = parseInterestIds(req.body.games);
@@ -301,7 +302,7 @@ export const updateProfile = async (req, res, next) => {
         }
         for (const [field, list] of Object.entries(req.files ?? {})) {
             const position = Number(field.split('_')[1]) + 1;
-            staged.push({ position, photo: await stagePhoto(req.user.id, list[0]) });
+            staged.push({ position, photo: await stagePhoto(req.user.id, list[0], undefined, client) });
         }
         const hasProfession = Object.hasOwn(req.body, 'profession');
         const hasReligion = Object.hasOwn(req.body, 'religion_id');
@@ -475,20 +476,25 @@ export const updateProfile = async (req, res, next) => {
             }
         }
         for (const item of staged) await finalizePhoto(item.photo);
+        await queuePhotoRemoval(client, oldUrls);
         await client.query('COMMIT');
-        await Promise.all(oldUrls.map(removePhotoFile));
+        committed = true;
         return res.json({ message: 'Profile updated' });
     } catch (error) {
-        await client.query('ROLLBACK').catch(() => {});
-        await Promise.all(staged.map(item => cleanupStagedPhoto(item.photo)));
+        if (!committed) {
+            await client.query('ROLLBACK').catch(() => {});
+            await Promise.all(staged.map(item => cleanupStagedPhoto(item.photo, client).catch(() => console.warn('[PhotoStorage] PHOTO_CLEANUP_PENDING'))));
+        }
         return next(error);
     } finally {
         client.release();
+        if (committed) await tryPhotoCleanup();
     }
 };
 
 export const deleteUserPhoto = async (req, res, next) => {
     const client = await db.connect();
+    let committed = false;
     try {
         await client.query('BEGIN');
         const deleted = await client.query(
@@ -500,14 +506,16 @@ export const deleteUserPhoto = async (req, res, next) => {
             return res.status(404).json({ code: 'PHOTO_NOT_FOUND', message: 'Photo not found' });
         }
         await client.query('UPDATE user_photos SET position = position - 1 WHERE user_id = $1 AND position > $2', [req.user.id, req.params.position]);
+        await queuePhotoRemoval(client, [deleted.rows[0].url]);
         await client.query('COMMIT');
-        await removePhotoFile(deleted.rows[0].url);
+        committed = true;
         return res.json({ message: 'Photo deleted' });
     } catch (error) {
         await client.query('ROLLBACK').catch(() => {});
         return next(error);
     } finally {
         client.release();
+        if (committed) await tryPhotoCleanup();
     }
 };
 

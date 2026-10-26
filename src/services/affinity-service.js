@@ -50,7 +50,7 @@ export async function profile(client,id,locale='es') {
         LEFT JOIN user_subscriptions s ON s.user_id=u.id WHERE u.id=$1`,[id,locale]);
     return result.rows[0];
 }
-export function publicPerson(p) {return {id:p.id,username:p.username,nickname:p.nickname,avatarUrl:p.avatar_url || DEFAULT_AVATAR_URL};}
+export function publicPerson(p) {return {id:p.id,username:p.username,nickname:p.nickname,avatarUrl:!p.avatar_url || p.avatar_url==='assets/img/profiles/Goku.webp' ? DEFAULT_AVATAR_URL : p.avatar_url};}
 export async function outbox(client,user,type,resource) {
     await client.query('INSERT INTO affinity_outbox(user_id,type,resource_id) VALUES($1,$2,$3) ON CONFLICT DO NOTHING',[user,type,resource]);
 }

@@ -2,6 +2,12 @@
 
 # Arquitectura
 
+## Almacenamiento de fotos configurable
+
+La fachada `photoStorage.js` conserva el modo local y usa Cloudinary como proveedor principal configurable. Se envian buffers ya validados mediante el SDK oficial; PostgreSQL guarda URL y metadatos de identidad del recurso. No existe fallback automatico al disco efimero. Las credenciales incompletas bloquean la configuracion; una caida del proveedor devuelve `PHOTO_STORAGE_UNAVAILABLE`.
+
+La eliminacion externa queda registrada en `photo_cleanup_jobs` antes del COMMIT y se intenta despues sin convertir un error de limpieza en rollback de una foto nueva confirmada. El ID remoto previsto se registra antes de subir para recuperar resultados inciertos. Las [herramientas y procedimientos de migracion](cloudinary-storage-and-vps-migration.md) permiten volver al disco propio con archivos verificados y referencias consistentes.
+
 ## Resumen
 
 MiraiLink Backend es un monolito modular Node.js. Se organiza por responsabilidades técnicas, conserva PostgreSQL como fuente de verdad y expone REST mediante Express 5. No implementa repositorios ni una capa de dominio separada: los controladores orquestan reglas, transacciones y SQL parametrizado.
@@ -62,7 +68,7 @@ Los schemas de `src/validation` parsean body, params y query. `validate()` susti
 
 ## Archivos
 
-Multer usa memoria acotada. `validateImage()` inspecciona firmas JPEG, PNG y WebP. `photoStorage.js` genera nombres UUID, escribe en staging y permite finalizar o compensar. Los controladores coordinan filesystem y transacción SQL y borran el archivo anterior después del commit.
+Multer usa memoria acotada. `validateImage()` inspecciona firmas JPEG, PNG y WebP. `photoStorage.js` genera identificadores UUID y permite subir a Cloudinary o escribir en staging local. Los controladores coordinan compensaciones y transacciones SQL; el borrado anterior se registra y se intenta despues del commit, una vez liberada la conexion del handler.
 
 ## Integraciones
 
