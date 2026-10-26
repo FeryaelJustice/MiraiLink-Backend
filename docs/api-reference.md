@@ -2,6 +2,10 @@
 
 # API Reference
 
+## Referencias de fotos
+
+Los campos `url` de fotos admiten rutas relativas locales heredadas y URLs publicas HTTPS absolutas de Cloudinary. El cliente debe usar una URL absoluta tal como llega, sin anteponer la base del backend. No cambian endpoints, autorizacion, orden ni formas de respuesta. El fallo del proveedor al subir devuelve 503 `PHOTO_STORAGE_UNAVAILABLE`; conserva las referencias anteriores y no usa disco temporal como fallback. La limpieza de recursos sustituidos o borrados puede quedar pendiente tras confirmar SQL, sin invalidar la respuesta de exito. Ver [configuracion y migracion](cloudinary-storage-and-vps-migration.md).
+
 ## Base y transporte
 
 - Base local: `http://localhost:3000`.

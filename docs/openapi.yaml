@@ -2,7 +2,11 @@ openapi: 3.1.0
 info:
   title: MiraiLink Backend API
   version: 2.0.0
-  description: Contrato REST vigente de MiraiLink, incluyendo Afinidades y verificación de Google Play.
+  description: >-
+    Contrato REST vigente de MiraiLink, incluyendo Afinidades y verificacion de Google Play.
+    Los campos url de fotos admiten rutas locales relativas heredadas o URLs HTTPS publicas
+    absolutas de Cloudinary. No anteponer la base del backend a una URL absoluta.
+    Un fallo del proveedor al subir produce 503 PHOTO_STORAGE_UNAVAILABLE sin fallback a disco.
 servers:
   - url: http://localhost:3000
 tags:
@@ -174,6 +178,7 @@ paths:
       security: [ { bearerAuth: [] } ]
       requestBody: { $ref: '#/components/requestBodies/ProfileUpdate' }
       responses:
+        '503': { $ref: '#/components/responses/PhotoStorageUnavailable' }
         '200': { $ref: '#/components/responses/Ok' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
@@ -312,6 +317,7 @@ paths:
       security: [ { bearerAuth: [] } ]
       requestBody: { $ref: '#/components/requestBodies/SinglePhoto' }
       responses:
+        '503': { $ref: '#/components/responses/PhotoStorageUnavailable' }
         '201': { $ref: '#/components/responses/Created' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
@@ -1727,5 +1733,10 @@ components:
     RateLimited:
       {
         description: Demasiadas peticiones,
+        content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+      }
+    PhotoStorageUnavailable:
+      {
+        description: PHOTO_STORAGE_UNAVAILABLE - proveedor temporalmente no disponible; se conserva la foto anterior,
         content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
       }

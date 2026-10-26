@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { parseEnv } from '../../../src/config/env.js';
 
 const validEnv = {
+    PHOTO_STORAGE_PROVIDER: 'local',
     DB_URL: 'postgres://postgres:postgres@localhost:5432/mirailink',
     JWT_SECRET: 'a-secure-jwt-secret-with-at-least-32-characters',
     ORIGIN: 'https://app.mirailink.example,http://localhost:5173',
@@ -11,6 +12,11 @@ const validEnv = {
 };
 
 describe('parseEnv', () => {
+    it('requires explicit cloud credentials and never silently switches to disk', () => {
+        expect(() => parseEnv({ ...validEnv, PHOTO_STORAGE_PROVIDER: 'cloudinary' })).toThrow('Missing CLOUDINARY_CLOUD_NAME');
+        expect(parseEnv({ ...validEnv, PHOTO_STORAGE_PROVIDER: 'cloudinary', CLOUDINARY_CLOUD_NAME: 'fixture',
+            CLOUDINARY_API_KEY: 'fixture-key', CLOUDINARY_API_SECRET: 'fixture-secret' }).photoStorageProvider).toBe('cloudinary');
+    });
     it('normalizes a valid environment', () => {
         const config = parseEnv(validEnv);
 

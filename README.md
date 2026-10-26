@@ -2,6 +2,8 @@
 
 > **Credenciales para despliegue:** [Copiar los JSON al portapapeles y configurar el .env](JSON-CREDENCIALES-ENV.md), con comandos para Windows, macOS y Linux.
 
+> **Fotos persistentes:** [Cloudinary, importacion de fotos antiguas y migracion reversible a VPS](docs/cloudinary-storage-and-vps-migration.md). Cloudinary es el proveedor por defecto; para disco propio configurar `PHOTO_STORAGE_PROVIDER=local` y `UPLOAD_ROOT`.
+
 <p align="center">
   <img src="https://raw.githubusercontent.com/FeryaelJustice/MiraiLink/master/app/src/main/res/drawable/logomirailink.webp" alt="MiraiLink Logo" width="130" />
 </p>
@@ -140,7 +142,7 @@ El contrato vigente documenta 59 operaciones. La siguiente tabla resume dominios
 | **Versión Android** | `/api/app` | `app.controller.js` | `app_versions` | Control de versiones requeridas y compatibilidad con el cliente móvil. |
 | **Autenticación y 2FA** | `/api/auth` | `auth.controller.js` | `users`, `user_2fa`, `token_blacklist` | Registro, login, verificación de email, recuperación de clave y flujo TOTP 2FA. |
 | **Perfil de Usuario** | `/api/user`, `/api/users` | `user.controller.js` | `users`, `user_anime_interests`, `user_game_interests` | Consulta y edición de biografía, animes, videojuegos, género y preferencias. |
-| **Fotografías y Media** | `/api/user/photos` | `photo.controller.js` | `user_photos`, filesystem | Subida transaccional con validación de magic bytes y gestión de avatar principal. |
+| **Fotografías y Media** | `/api/user/photos` | `photo.controller.js` | `user_photos`, Cloudinary o disco configurable | Subida validada, referencias SQL y limpieza reintentable del proveedor. |
 | **Descubrimiento (Swipes)** | `/api/swipe` | `swipe.controller.js` | `users`, `likes`, `dislikes` | Obtención de cartas de descubrimiento y registro de interacciones Like/Dislike. |
 | **Coincidencias (Matches)**| `/api/match` | `match.controller.js` | `matches` | Listado y detalle de matches mutuos activos. |
 | **Mensajería y Chat** | `/api/chats` | `chat.controller.js` | `chats`, `chat_members`, `messages`| Historial de chats privados, envío de mensajes, lectura y contador de no leidos. |

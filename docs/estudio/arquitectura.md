@@ -19,6 +19,6 @@ Los servicios compartidos separan JWT, TOTP, FCM, exploración y catálogos. `sr
 
 Timeout request 30 s, headers 35 s y keepalive 5 s. Sincronización inicial de catálogo a los 10 s y periódica según configuración; no se ejecuta en test. shutdown cierra HTTP y cancela intervalo, pero no llama a pool.end ni guarda referencia al timeout inicial.
 
-Rate limits y caché de recuentos viven en memoria de proceso; fotos en filesystem. Multiinstancia requiere diseño compartido antes de atribuir coherencia global. /healthz confirma respuesta del proceso, no consulta salud de PostgreSQL o SMTP.
+Rate limits y cache de recuentos viven en memoria de proceso. Las fotos usan Cloudinary por defecto o filesystem al seleccionar local; ver [migracion y operacion](../cloudinary-storage-and-vps-migration.md). Multiinstancia requiere diseno compartido antes de atribuir coherencia global. /healthz confirma respuesta del proceso, no consulta salud de PostgreSQL, Cloudinary o SMTP.
 
 Diagramas: [contexto/componentes/despliegue](../diagramas/arquitectura.md). Para estados de UI, leer [cliente](https://github.com/FeryaelJustice/MiraiLink/blob/codex/documentacion-integral/docs/guia-maestra.md).

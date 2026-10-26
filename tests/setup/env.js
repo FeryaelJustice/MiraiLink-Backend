@@ -1,4 +1,5 @@
 process.env.NODE_ENV = 'test';
+process.env.PHOTO_STORAGE_PROVIDER = 'local';
 process.env.JWT_SECRET ??= 'test-jwt-secret-at-least-32-characters-long';
 process.env.DB_URL ??= 'postgres://postgres:postgres@127.0.0.1:5432/mirailink_test';
 process.env.ORIGIN ??= 'http://localhost:5173';

@@ -27,6 +27,11 @@ Los scripts usan `cross-env` y `node --env-file`, por lo que funcionan en Window
 | `SALT_ROUNDS` | No | Entero 4-15; default 12 |
 | `UPLOAD_MAX_BYTES` | No | 1 KiB-20 MiB; default 5 MiB |
 | `UPLOAD_ROOT` | No | Directorio persistente de perfiles fuera del checkout en producción |
+| `PHOTO_STORAGE_PROVIDER` | No | `cloudinary` por defecto; `local` conserva el modo de disco propio |
+| `CLOUDINARY_CLOUD_NAME` | Con Cloudinary | Entorno de producto donde se guardan las fotos |
+| `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | Con Cloudinary | Credenciales de servidor; nunca en respuestas o logs |
+| `CLOUDINARY_FOLDER` | No | Prefijo de public_id, default `mirailink/profiles` |
+| `DEFAULT_AVATAR_URL` | No | URL HTTPS publica o referencia local del avatar de reserva; default local historico |
 | `SECRET_2FA_KEY` | Sí | 64 caracteres hex, 32 bytes para AES-256-GCM |
 | `SECRET_2FA_IV` | Solo legado | 32 hex, necesario para descifrar secretos AES-CBC antiguos |
 | `EMAIL_HOST` | Para correo | Host SMTP; default `smtp.hostinger.com` en la utilidad |
@@ -45,6 +50,8 @@ Los scripts usan `cross-env` y `node --env-file`, por lo que funcionan en Window
 Las credenciales JSON se leen directamente del entorno al primer uso del proveedor. En el panel del alojamiento, pegar el objeto JSON completo minificado como valor, sin comillas adicionales alrededor. Conservar los saltos de linea de `private_key` escapados como `\n` dentro del JSON; `JSON.parse` los convierte en saltos reales. En un archivo `.env`, envolver el JSON en comillas simples. No copiar claves a ejemplos, logs o Git. Un valor JSON presente pero invalido falla sin recurrir al archivo. No se buscan nombres de archivo automaticamente: se conservan las rutas configuradas y el fallback historico de Firebase `src/serviceAccountKey.json`. Reiniciar el proceso tras cambiar credenciales porque Firebase y OAuth mantienen cache.
 
 ## Arranque
+
+Antes de arrancar, configurar Cloudinary o seleccionar explicitamente `PHOTO_STORAGE_PROVIDER=local`. La migracion aditiva 022 registra recursos y trabajos de limpieza sin alterar las fotos existentes. Consultar la [guia de fotos y VPS](cloudinary-storage-and-vps-migration.md) para claves, importacion de referencias antiguas, manifiestos, Neon y rollback. Cambiar el proveedor de nuevas subidas no convierte referencias ya guardadas.
 
 ```powershell
 npm ci
