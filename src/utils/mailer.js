@@ -1,5 +1,6 @@
 import { securityLink } from '../config/appLinks.js';
 import nodemailer from 'nodemailer';
+import { verifyBridge, sendViaBridge } from './workerMailTransport.js';
 
 let transporter = null;
 
@@ -15,6 +16,10 @@ function smtpDiagnostic(error) {
 }
 
 export async function verifyEmailTransport() {
+    if (process.env.MAIL_BRIDGE_URL) {
+        try { await verifyBridge(); return { success: true }; }
+        catch { console.warn('[Mailer Warning]', JSON.stringify({ event: 'email_delivery_failed', code: 'BRIDGE_FAILED' })); return { success: false, code: 'BRIDGE_FAILED' }; }
+    }
     const transport = getTransporter();
     if (!transport) {
         console.warn('[Mailer Warning]', JSON.stringify({ event: 'email_delivery_failed', code: 'EMAIL_NOT_CONFIGURED' }));
@@ -105,6 +110,10 @@ export function printSimulatorLog({ to, subject, type, code, deepLink, webLink, 
  * Diagnostics expose only a stable code and protocol phase, without recipient or secrets.
  */
 export async function sendGenericEmail({ to, subject, html, text, logData = {} }) {
+    if (process.env.MAIL_BRIDGE_URL) {
+        try { await sendViaBridge({ to, subject, html, text }); return { success: true, simulated: false }; }
+        catch { console.warn('[Mailer Warning]', JSON.stringify({ event: 'email_delivery_failed', code: 'BRIDGE_FAILED' })); return { success: false, simulated: false, code: 'BRIDGE_FAILED' }; }
+    }
     const transport = getTransporter();
 
     // Si no esta configurado SMTP, simular en consola de forma limpia
@@ -228,9 +237,6 @@ export async function sendTwoFactorEmail(to, code, action) {
     const contentHtml = '<h2>' + subject + '</h2><p>Introduce este codigo en MiraiLink:</p>' +
         '<div class="code-box"><p class="code-text">' + code + '</p></div>' +
         '<p>Caduca en 5 minutos. Si no solicitaste esta accion, no compartas el codigo.</p>';
-    if (process.env.NODE_ENV === 'production' && !getTransporter()) {
-        return { success: false, simulated: false };
-    }
     return sendGenericEmail({
         to, subject,
         html: renderEmailShell({ title: subject, contentHtml }),

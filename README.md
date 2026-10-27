@@ -435,3 +435,5 @@ Guía completa del flujo Android/Google/backend, cambios y diagnóstico de permi
 
 
 - [Guía completa de pagos: Android, Google Play y backend](docs/pagos-y-suscripciones.md).
+
+El puente opcional de correo para Render Free se documenta en [netlify-mail-bridge/README.md](netlify-mail-bridge/README.md).
