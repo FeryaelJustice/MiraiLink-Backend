@@ -237,9 +237,6 @@ export async function sendTwoFactorEmail(to, code, action) {
     const contentHtml = '<h2>' + subject + '</h2><p>Introduce este codigo en MiraiLink:</p>' +
         '<div class="code-box"><p class="code-text">' + code + '</p></div>' +
         '<p>Caduca en 5 minutos. Si no solicitaste esta accion, no compartas el codigo.</p>';
-    if (process.env.NODE_ENV === 'production' && !getTransporter()) {
-        return { success: false, simulated: false };
-    }
     return sendGenericEmail({
         to, subject,
         html: renderEmailShell({ title: subject, contentHtml }),
