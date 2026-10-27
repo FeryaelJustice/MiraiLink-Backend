@@ -1,4 +1,6 @@
 import { AppError } from '../errors/AppError.js';
+import { mayReturnDebugLink } from '../utils/debugSecurityLinks.js';
+import { securityLink } from '../config/appLinks.js';
 import { lockTwoFactorUser, storeEmailChallenge, consumeEmailChallenge } from '../services/twoFactorEmailService.js';
 import bcrypt from 'bcrypt';
 import { randomBytes, randomInt } from 'node:crypto';
@@ -89,8 +91,15 @@ export const register = async (req, res, next) => {
             return newUser;
         });
         // Commit before contacting SMTP. A retry resumes only the same unverified account.
-        requireEmailDelivery(await sendVerificationEmail(user.email, code, undefined, user.id));
+        const delivery = await sendVerificationEmail(user.email, code, undefined, user.id);
+        const debugAllowed = mayReturnDebugLink(req, user.email);
+        if (!debugAllowed) requireEmailDelivery(delivery);
+        if (debugAllowed) {
+            res.set('Cache-Control', 'no-store');
+            if (!delivery?.success || delivery.simulated) return res.status(503).json({ code: 'EMAIL_DELIVERY_FAILED', message: 'Unable to send confirmation email. Please retry.', debugLink: securityLink('/verify', { token: code, userId: user.id }), debugMailDelivered: false });
+        }
         return res.status(pending ? 200 : 201).json({
+            ...(debugAllowed ? { debugLink: securityLink('/verify', { token: code, userId: user.id }), debugMailDelivered: !!delivery?.success && !delivery?.simulated } : {}),
             message: pending ? 'Registration resumed' : 'User created',
             userId: user.id,
             isVerified: false,
@@ -163,7 +172,8 @@ export const autoLogin = (req, res) => res.json({
 export const requestPasswordReset = async (req, res, next) => {
     try {
         // Check the global SMTP service before lookup; do not reveal whether an account exists.
-        if (process.env.NODE_ENV === 'production') requireEmailDelivery(await verifyEmailTransport());
+        const debugAllowed = mayReturnDebugLink(req, req.body.email);
+        if (process.env.NODE_ENV === 'production' && !debugAllowed) requireEmailDelivery(await verifyEmailTransport());
         const result = await db.query(
             'SELECT id, email FROM users WHERE email = $1 AND is_deleted = FALSE LIMIT 1',
             [req.body.email],
@@ -182,8 +192,15 @@ export const requestPasswordReset = async (req, res, next) => {
             });
             // Keep the public response neutral even if a recipient-specific rejection occurs.
             // The mailer records a safe diagnostic. Global SMTP failures are caught above.
-            await sendPasswordResetEmail(user.email, code);
+            const delivery = await sendPasswordResetEmail(user.email, code);
+            if (debugAllowed) {
+                res.set('Cache-Control', 'no-store');
+                const debugLink = securityLink('/reset-password', { token: code, email: user.email });
+                if (!delivery?.success || delivery.simulated) return res.status(503).json({ code: 'EMAIL_DELIVERY_FAILED', message: 'Unable to send confirmation email. Please retry.', debugLink, debugMailDelivered: false });
+                return res.json({ ...neutralEmailResponse, debugLink, debugMailDelivered: true });
+            }
         }
+        if (debugAllowed) res.set('Cache-Control', 'no-store');
         return res.json(neutralEmailResponse);
     } catch (error) {
         return next(error);
@@ -253,7 +270,14 @@ export const requestVerificationCode = async (req, res, next) => {
                     [userId, hash, req.body.type],
                 );
             });
-            requireEmailDelivery(await sendVerificationEmail(result.rows[0].email, code, undefined, userId));
+            const delivery = await sendVerificationEmail(result.rows[0].email, code, undefined, userId);
+            if (mayReturnDebugLink(req, result.rows[0].email)) {
+                res.set('Cache-Control', 'no-store');
+                const debugLink = securityLink('/verify', { token: code, userId });
+                if (!delivery?.success || delivery.simulated) return res.status(503).json({ code: 'EMAIL_DELIVERY_FAILED', message: 'Unable to send confirmation email. Please retry.', debugLink, debugMailDelivered: false });
+                return res.json({ ...neutralEmailResponse, debugLink, debugMailDelivered: true });
+            }
+            requireEmailDelivery(delivery);
         }
         return res.json(neutralEmailResponse);
     } catch (error) {

@@ -16,12 +16,17 @@ function smtpDiagnostic(error) {
 
 export async function verifyEmailTransport() {
     const transport = getTransporter();
-    if (!transport) return { success: false, code: 'EMAIL_NOT_CONFIGURED' };
+    if (!transport) {
+        console.warn('[Mailer Warning]', JSON.stringify({ event: 'email_delivery_failed', code: 'EMAIL_NOT_CONFIGURED' }));
+        return { success: false, code: 'EMAIL_NOT_CONFIGURED' };
+    }
     try {
         await transport.verify();
         return { success: true };
     } catch (error) {
-        return { success: false, ...smtpDiagnostic(error) };
+        const diagnostic = smtpDiagnostic(error);
+        console.warn('[Mailer Warning]', JSON.stringify(diagnostic));
+        return { success: false, ...diagnostic };
     }
 }
 

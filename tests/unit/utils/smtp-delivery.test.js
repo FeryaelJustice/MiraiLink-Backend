@@ -52,8 +52,11 @@ describe('Nodemailer delivery diagnostics', () => {
         expect(smtp.send).not.toHaveBeenCalled();
     });
     it('exposes only a safe authentication diagnostic', async () => {
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
         smtp.verify.mockRejectedValue(Object.assign(new Error('secret'), { code: 'EAUTH', command: 'AUTH PLAIN secret', responseCode: 535 }));
         const { verifyEmailTransport } = await import('../../../src/utils/mailer.js');
         expect(await verifyEmailTransport()).toEqual({ success: false, event: 'email_delivery_failed', code: 'EAUTH', phase: 'AUTH', responseCode: 535 });
+        expect(JSON.stringify(warn.mock.calls)).toContain('EAUTH');
+        expect(JSON.stringify(warn.mock.calls)).not.toContain('secret');
     });
 });
